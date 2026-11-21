@@ -3,6 +3,54 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/chat/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/chat/:match*"
+    },
+    {
+      "source": "/threads/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/threads/:match*"
+    },
+    {
+      "source": "/settings/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/settings/:match*"
+    },
+    {
+      "source": "/providers/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/providers/:match*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://orbit-backend-txwt.onrender.com/health"
+    },
+    {
+      "source": "/ag-ui/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/ag-ui/:match*"
+    },
+    {
+      "source": "/copilotkit/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/copilotkit/:match*"
+    },
+    {
+      "source": "/generative_ui/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/generative_ui/:match*"
+    },
+    {
+      "source": "/a2ui/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/a2ui/:match*"
+    },
+    {
+      "source": "/auth/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/auth/:match*"
+    },
+    {
+      "source": "/marketplace/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/marketplace/:match*"
+    },
+    {
+      "source": "/api/:match*",
+      "destination": "https://orbit-backend-txwt.onrender.com/api/:match*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
