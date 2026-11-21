@@ -1,0 +1,348 @@
+/* ============================================================
+   PROACTIVE ROUTINES & REMINDERS CHAT CARDS
+   Orbit Theme Sans-Serif Styling
+   ============================================================ */
+
+/* Setup Card */
+.routine-setup-card {
+  font-family: inherit;
+  background: var(--bg-surface-elevated, #242626);
+  border: 1px solid var(--line-strong, #323434);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin: 0.65rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.15s ease;
+}
+
+.routine-setup-card.is-reminder {
+  border-left: 3.5px solid #f59e0b;
+}
+
+.routine-setup-card.is-routine {
+  border-left: 3.5px solid var(--accent-primary, #20b8cd);
+}
+
+.routine-setup-card.deleted {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted, #a4a7a7);
+  font-size: 0.85rem;
+  padding: 0.6rem 0.85rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.routine-setup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.routine-setup-title-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.routine-setup-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.routine-setup-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main, #f5f5f5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.routine-setup-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.routine-setup-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+}
+
+.routine-setup-badge.status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.routine-setup-badge.status-paused {
+  background: rgba(161, 161, 170, 0.15);
+  color: #a1a1aa;
+}
+
+.routine-setup-badge.type-badge {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-soft, #d7d9d9);
+}
+
+.routine-setup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.routine-setup-prompt {
+  font-size: 0.85rem;
+  color: var(--text-soft, #d7d9d9);
+  line-height: 1.45;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  font-style: italic;
+}
+
+.routine-setup-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  font-size: 0.78rem;
+  color: var(--text-muted, #a4a7a7);
+}
+
+.routine-setup-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.meta-label {
+  color: var(--text-faint, #828686);
+}
+
+.meta-val {
+  color: var(--text-main, #f5f5f5);
+  font-weight: 500;
+}
+
+.meta-val.mono-val {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--accent-primary, #20b8cd);
+}
+
+.routine-setup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.routine-setup-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.routine-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line-strong, #323434);
+  color: var(--text-soft, #d7d9d9);
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.routine-card-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main, #ffffff);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.routine-card-btn.danger:hover:not(:disabled) {
+  background: rgba(244, 63, 94, 0.15);
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.routine-card-btn.secondary {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-faint, #828686);
+}
+
+.routine-card-btn.secondary:hover {
+  color: var(--text-main, #ffffff);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.routine-card-feedback {
+  font-size: 0.75rem;
+  color: var(--accent-primary, #20b8cd);
+  font-weight: 500;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ------------------------------------------------------------
+   TRIGGERED PROACTIVE ALERT CARD
+   ------------------------------------------------------------ */
+
+.proactive-alert-card {
+  font-family: inherit;
+  background: var(--bg-surface-elevated, #202222);
+  border: 1px solid var(--line-strong, #323434);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin: 0.65rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+}
+
+.proactive-alert-card.is-reminder {
+  border-left: 3.5px solid #f59e0b;
+}
+
+.proactive-alert-card.is-routine {
+  border-left: 3.5px solid var(--accent-primary, #20b8cd);
+}
+
+.proactive-alert-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.proactive-alert-title-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.proactive-alert-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.proactive-alert-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main, #ffffff);
+}
+
+.proactive-alert-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.12rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+
+.proactive-alert-card.is-reminder .proactive-alert-pill {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.proactive-alert-time {
+  font-size: 0.75rem;
+  color: var(--text-faint, #828686);
+  font-weight: 500;
+}
+
+.proactive-alert-body {
+  font-size: 0.9rem;
+  color: var(--text-soft, #f0f2f2);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.proactive-alert-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.proactive-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.proactive-alert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.proactive-alert-btn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.proactive-alert-btn.secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line-strong, #323434);
+  color: var(--text-soft, #d7d9d9);
+}
+
+.proactive-alert-btn.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main, #ffffff);
+}
+
+.proactive-alert-btn.subtle {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-faint, #828686);
+}
+
+.proactive-alert-btn.subtle:hover {
+  color: var(--text-main, #ffffff);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.proactive-alert-feedback {
+  font-size: 0.75rem;
+  color: #10b981;
+  font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}

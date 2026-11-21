@@ -1,0 +1,162 @@
+/* Generative UI Styles */
+.generative-ui-container {
+  margin: 14px 0;
+  width: 100%;
+}
+
+.generative-ui-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+.generative-ui-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--bg-surface-elevated);
+  border-bottom: 1px solid var(--line);
+}
+
+.gen-ui-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gen-ui-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-glow);
+  background: var(--accent-subtle);
+  border: 1px solid var(--line-accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.gen-ui-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.gen-ui-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gen-ui-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  transition: all 120ms ease;
+}
+
+.gen-ui-btn:hover {
+  background: var(--bg-hover);
+  color: #ffffff;
+}
+
+.gen-ui-desc {
+  padding: 8px 14px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.generative-ui-frame-wrapper {
+  width: 100%;
+  padding: 10px;
+}
+
+.generative-ui-iframe {
+  width: 100%;
+  min-height: 240px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+}
+
+.generative-ui-container.is-diagram {
+  max-width: 760px;
+  margin: 12px auto;
+}
+
+.generative-ui-container.is-diagram .generative-ui-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.generative-ui-container.is-diagram .generative-ui-header {
+  padding: 0 4px 4px;
+  background: transparent;
+  border: 0;
+}
+
+.generative-ui-container.is-diagram .gen-ui-header-left,
+.generative-ui-container.is-diagram .gen-ui-desc {
+  display: none;
+}
+
+.generative-ui-container.is-diagram .gen-ui-actions {
+  margin-left: auto;
+}
+
+.generative-ui-container.is-diagram .generative-ui-frame-wrapper {
+  padding: 0;
+}
+
+.generative-ui-container.is-diagram .generative-ui-iframe {
+  display: block;
+  height: 480px;
+  min-height: 0;
+  border-radius: 0;
+}
+
+.generative-ui-container.is-diagram .generative-ui-code-preview {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+/* Fullscreen Modal View */
+.generative-ui-container.fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  margin: 0;
+}
+
+.generative-ui-container.fullscreen-overlay .generative-ui-card {
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+}
+
+.generative-ui-container.fullscreen-overlay .generative-ui-iframe {
+  height: 600px;
+}
+
+@media (max-width: 600px) {
+  .generative-ui-container.is-diagram .generative-ui-iframe {
+    height: 360px;
+  }
+}

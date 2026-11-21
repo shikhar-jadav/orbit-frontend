@@ -1,0 +1,208 @@
+:root {
+  font-family: Montserrat, 'Segoe UI', Arial, sans-serif;
+  font-size-adjust: from-font;
+  color-scheme: dark;
+  color: #f1f5f9;
+  background: #191a1a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Orbit Cosmic Design Token System */
+  --bg-root: #191a1a;
+  --bg-sidebar: #191a1a;
+  --bg-sidebar-rail: #191a1a;
+  --bg-surface: #202222;
+  --bg-surface-elevated: #262828;
+  --bg-surface-card: #202222;
+  --bg-hover: #262828;
+  --bg-selected: #242525;
+  --bg-input: #202222;
+  --bg-user-card: #202222;
+
+  --line: #282a2a;
+  --line-strong: #323434;
+  --line-accent: rgba(32, 184, 205, 0.35);
+
+  --text-main: #f5f5f5;
+  --text-soft: #d7d9d9;
+  --text-muted: #a4a7a7;
+  --text-faint: #828686;
+
+  --accent-primary: #20b8cd;
+  --accent-glow: #20b8cd;
+  --accent-subtle: rgba(32, 184, 205, 0.12);
+  --accent-cyan: #20b8cd;
+  --accent-cyan-subtle: rgba(32, 184, 205, 0.12);
+
+  --success: #10b981;
+  --success-subtle: rgba(16, 185, 129, 0.14);
+  --warning: #f59e0b;
+  --error: #f43f5e;
+  --error-subtle: rgba(244, 63, 94, 0.14);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-root);
+  color: var(--text-main);
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 1px;
+}
+
+::selection {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.4);
+}
+
+/* Custom Scrollbar */
+:root {
+  --scrollbar-thumb: #232b3c;
+  --scrollbar-thumb-hover: #333e57;
+  --scrollbar-track: transparent;
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+/* Legacy fallback for WebKit/Blink browsers without standard scrollbar-color */
+@supports not (scrollbar-color: auto) {
+  * {
+    scrollbar-width: auto;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+/* ==========================================================================
+   Modern Native <dialog> Top Layer & Discrete Transitions
+   ========================================================================== */
+
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Base / closed exit state */
+dialog {
+  opacity: 0;
+  transition-property: opacity, transform, display, overlay;
+  transition-duration: 0.22s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-behavior: allow-discrete;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transform: scale(0.96);
+  }
+}
+
+/* Open state */
+dialog[open] {
+  opacity: 1;
+
+  @starting-style {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transform: scale(1);
+
+    @starting-style {
+      transform: scale(0.96);
+    }
+  }
+}
+
+/* Backdrop base / exit */
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  transition-property: background-color, backdrop-filter, display, overlay;
+  transition-duration: 0.22s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-behavior: allow-discrete;
+}
+
+/* Backdrop open */
+dialog[open]::backdrop {
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+
+  @starting-style {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog,
+  dialog::backdrop {
+    transition-duration: 0.08s;
+  }
+}

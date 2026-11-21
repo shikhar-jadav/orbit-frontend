@@ -1,0 +1,104 @@
+.workspace-file-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  gap: 12px;
+}
+
+.workspace-file-card.written {
+  border-left: 3px solid #238636;
+}
+
+.workspace-file-card.edited {
+  border-left: 3px solid #1f6feb;
+}
+
+.workspace-file-card.error {
+  border-left: 3px solid #da3633;
+}
+
+.ws-file-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ws-file-icon {
+  color: #8b949e;
+  display: flex;
+  align-items: center;
+}
+
+.ws-file-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ws-file-path {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f0f6fc;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-file-msg {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-file-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ws-file-pill {
+  font-size: 11px;
+  color: #c9d1d9;
+  background: #21262d;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ws-file-pill-muted {
+  font-size: 10px;
+  color: #8b949e;
+}
+
+.ws-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ws-badge.written {
+  background: rgba(46, 160, 67, 0.2);
+  color: #3fb950;
+}
+
+.ws-badge.edited {
+  background: rgba(56, 139, 253, 0.2);
+  color: #58a6ff;
+}
+
+.ws-badge.error {
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+}

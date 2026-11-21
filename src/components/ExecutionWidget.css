@@ -1,0 +1,145 @@
+.execution-widget-card {
+  margin: 12px 0;
+  background: #090c10;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.execution-widget-card.success {
+  border-left: 3px solid #2ea043;
+}
+
+.execution-widget-card.failed {
+  border-left: 3px solid #da3633;
+}
+
+.execution-widget-card.timeout {
+  border-left: 3px solid #d29922;
+}
+
+.execution-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+}
+
+.execution-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-indicator.success {
+  background: #3fb950;
+  box-shadow: 0 0 8px rgba(63, 185, 80, 0.6);
+}
+
+.status-indicator.failed {
+  background: #f85149;
+  box-shadow: 0 0 8px rgba(248, 81, 73, 0.6);
+}
+
+.status-indicator.timeout {
+  background: #e3b341;
+  box-shadow: 0 0 8px rgba(227, 179, 65, 0.6);
+}
+
+.execution-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.status-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.status-badge.success {
+  background: rgba(46, 160, 67, 0.2);
+  color: #3fb950;
+}
+
+.status-badge.failed {
+  background: rgba(218, 54, 51, 0.2);
+  color: #f85149;
+}
+
+.status-badge.timeout {
+  background: rgba(210, 153, 34, 0.2);
+  color: #e3b341;
+}
+
+.duration-badge {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.execution-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.exec-btn {
+  font-size: 11px;
+  color: #8b949e;
+  background: transparent;
+  border: 1px solid #30363d;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.exec-btn:hover {
+  color: #c9d1d9;
+  border-color: #8b949e;
+}
+
+.execution-body {
+  padding: 10px 14px;
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.exec-stdout {
+  margin: 0;
+  color: #7ee787;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.exec-stderr {
+  margin: 8px 0 0;
+  color: #ffa198;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.exec-empty {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.exec-truncated {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #8b949e;
+  font-style: italic;
+}

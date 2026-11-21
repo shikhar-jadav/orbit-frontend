@@ -1,0 +1,62 @@
+/* ==========================================================================
+   Modern Popover API (popover="hint") & CSS Anchor Positioning Tooltip
+   Conforms to modern-web-guidance interest-triggered-tooltips
+   ========================================================================== */
+
+.orbit-tooltip[popover] {
+  /* Position relative to trigger anchor with collision flipping */
+  position-area: block-start;
+  position-try-fallbacks: flip-block, inline-end;
+  inset: auto;
+  margin: 0;
+  margin-block-end: 6px;
+  padding: 5px 9px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #f3f4f6;
+  background: #18191b;
+  border: 1px solid #2e3035;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  pointer-events: auto; /* WCAG 1.4.13: hoverable */
+  white-space: nowrap;
+  user-select: none;
+  z-index: 10000;
+
+  /* Allow discrete transitions in top layer */
+  opacity: 0;
+  transition-property: opacity, display, overlay;
+  transition-duration: 0.12s;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+.orbit-tooltip[data-side="right"][popover] {
+  position-area: inline-end;
+  position-try-fallbacks: flip-inline, block-start;
+  margin-block-end: 0;
+  margin-inline-start: 10px;
+}
+
+.orbit-tooltip[data-side="bottom"][popover] {
+  position-area: block-end;
+  position-try-fallbacks: flip-block, inline-end;
+  margin-block-end: 0;
+  margin-block-start: 6px;
+}
+
+.orbit-tooltip[popover]:popover-open {
+  opacity: 1;
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-tooltip[popover] {
+    transition-duration: 0.04s;
+  }
+}

@@ -1,0 +1,401 @@
+/* A2UI 1.0 Component Catalog Styles */
+.a2ui-canvas-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.a2ui-canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.a2ui-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.a2ui-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: var(--accent-cyan);
+  background: var(--accent-cyan-subtle);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.a2ui-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.a2ui-canvas-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Metric KPI Component */
+.a2ui-metric-card {
+  background: var(--bg-input);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.a2ui-metric-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.a2ui-metric-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.a2ui-metric-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: var(--font-mono);
+}
+
+.a2ui-delta-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.a2ui-delta-badge.pos {
+  color: var(--success);
+  background: var(--success-subtle);
+}
+
+.a2ui-delta-badge.neg {
+  color: var(--error);
+  background: var(--error-subtle);
+}
+
+.a2ui-delta-badge.neutral {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Card Component */
+.a2ui-card {
+  background: var(--bg-input);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.a2ui-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.a2ui-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.a2ui-card-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--line-accent);
+  color: var(--accent-glow);
+}
+
+.a2ui-card-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.a2ui-card-content {
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.a2ui-card-pre {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--bg-root);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #93c5fd;
+  overflow-x: auto;
+}
+
+/* Chart Component */
+.a2ui-chart-card {
+  background: var(--bg-input);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.a2ui-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.a2ui-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.a2ui-bar-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.a2ui-bar-label {
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.a2ui-bar-val {
+  color: #ffffff;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.a2ui-bar-track {
+  height: 8px;
+  background: var(--bg-hover);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.a2ui-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Table Component */
+.a2ui-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.a2ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.a2ui-table th,
+.a2ui-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.a2ui-table th {
+  background: var(--bg-surface-elevated);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.a2ui-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.a2ui-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Action Button */
+.a2ui-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.a2ui-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+  border: 1px solid transparent;
+}
+
+.a2ui-btn-primary {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+.a2ui-btn-primary:hover {
+  background: #4f46e5;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+.a2ui-btn-secondary {
+  background: var(--bg-hover);
+  border-color: var(--line-strong);
+  color: var(--text-main);
+}
+
+.a2ui-btn-secondary:hover {
+  background: var(--bg-selected);
+}
+
+.a2ui-btn-outline {
+  background: transparent;
+  border-color: var(--line-accent);
+  color: var(--accent-glow);
+}
+
+.a2ui-btn-outline:hover {
+  background: var(--accent-subtle);
+}
+
+.a2ui-btn-destructive {
+  background: var(--error-subtle);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.a2ui-btn-destructive:hover {
+  background: var(--error);
+  color: #ffffff;
+}
+
+.a2ui-btn.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.a2ui-btn-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Alert Component */
+.a2ui-alert {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 3px solid transparent;
+}
+
+.a2ui-alert-info {
+  background: var(--accent-cyan-subtle);
+  border-left-color: var(--accent-cyan);
+  color: #a5f3fc;
+}
+
+.a2ui-alert-success {
+  background: var(--success-subtle);
+  border-left-color: var(--success);
+  color: #a7f3d0;
+}
+
+.a2ui-alert-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-left-color: var(--warning);
+  color: #fde68a;
+}
+
+.a2ui-alert-error {
+  background: var(--error-subtle);
+  border-left-color: var(--error);
+  color: #fecdd3;
+}
+
+/* Form Component */
+.a2ui-form {
+  background: var(--bg-input);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.a2ui-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.a2ui-field-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.a2ui-field-input {
+  background: var(--bg-root);
+  border: 1px solid var(--line-strong);
+  color: var(--text-main);
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.a2ui-field-input:focus {
+  border-color: var(--accent-glow);
+}

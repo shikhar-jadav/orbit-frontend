@@ -1,0 +1,404 @@
+/* --------------------------------------------------------------------------
+   Human In The Loop (HITL) Interactive Question & Approval Card
+   Matches the design from the reference screenshots
+   -------------------------------------------------------------------------- */
+
+.hitl-card {
+  background: #232529;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  padding: 14px 18px 12px;
+  margin-bottom: 12px;
+  color: #ececf1;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  animation: hitlFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+@keyframes hitlFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.hitl-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.hitl-title {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #f3f4f6;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.hitl-risk-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.hitl-risk-low {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.hitl-risk-medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.hitl-risk-high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.hitl-risk-critical {
+  background: rgba(220, 38, 38, 0.25);
+  color: #fca5a5;
+  border: 1px solid rgba(220, 38, 38, 0.5);
+}
+
+.hitl-policy-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 5px 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  border-left: 2px solid #3b82f6;
+}
+
+.hitl-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.hitl-pagination {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12.5px;
+  color: #9ca3af;
+  user-select: none;
+}
+
+.hitl-page-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.hitl-page-btn:hover:not(:disabled) {
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hitl-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.hitl-close-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.hitl-close-btn:hover {
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Options List */
+.hitl-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.hitl-option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hitl-option-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Active / Focused row with blue border (as in screenshot 1, 4, 5) */
+.hitl-option-item.focused {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.hitl-option-item.selected {
+  background: rgba(59, 130, 246, 0.09);
+}
+
+.hitl-option-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Number badge (single select) */
+.hitl-number-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hitl-option-item.focused .hitl-number-badge {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+/* Checkbox (multi select, screenshot 2) */
+.hitl-checkbox {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.hitl-checkbox.checked {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+/* Text block */
+.hitl-option-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hitl-option-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #f3f4f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hitl-option-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 1.5px;
+  line-height: 1.35;
+}
+
+/* Right indicators (arrow or enter icon) */
+.hitl-action-hint {
+  color: #9ca3af;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.hitl-option-item.focused .hitl-action-hint,
+.hitl-option-item:hover .hitl-action-hint {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* "Something else" row */
+.hitl-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  color: #9ca3af;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
+}
+
+.hitl-custom-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e5e7eb;
+}
+
+.hitl-custom-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hitl-custom-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #3b82f6;
+  border-radius: 7px;
+  padding: 6px 10px;
+  color: #ffffff;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+
+.hitl-custom-input::placeholder {
+  color: #6b7280;
+}
+
+.hitl-custom-submit-btn {
+  background: #2563eb;
+  border: none;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Footer */
+.hitl-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+.hitl-footer-right {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.hitl-selected-count {
+  font-size: 12.5px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.hitl-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hitl-btn-skip {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #d1d5db;
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.hitl-btn-skip:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+/* Terracotta / Orange multi-select submit button (screenshot 2) */
+.hitl-btn-submit-orange {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #e06d44;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 2px 8px rgba(224, 109, 68, 0.35);
+}
+
+.hitl-btn-submit-orange:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.hitl-btn-submit-orange:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

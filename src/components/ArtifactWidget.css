@@ -1,0 +1,157 @@
+.artifact-widget-card {
+  margin: 12px 0;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.artifact-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+  gap: 10px;
+}
+
+.artifact-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.artifact-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.artifact-type-badge.code {
+  background: #238636;
+  color: #ffffff;
+}
+
+.artifact-type-badge.plan {
+  background: #8957e5;
+  color: #ffffff;
+}
+
+.artifact-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f0f6fc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artifact-lang-tag {
+  font-size: 11px;
+  color: #8b949e;
+  background: #21262d;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.artifact-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.artifact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #c9d1d9;
+  background: #21262d;
+  border: 1px solid #30363d;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.artifact-btn:hover {
+  background: #30363d;
+  color: #ffffff;
+  border-color: #8b949e;
+}
+
+.artifact-btn.run-btn {
+  background: #1f6feb;
+  color: #ffffff;
+  border-color: #388bfd;
+}
+
+.artifact-btn.run-btn:hover {
+  background: #388bfd;
+}
+
+.artifact-body {
+  max-height: 480px;
+  overflow-y: auto;
+  background: #090d13;
+}
+
+.artifact-code-block {
+  margin: 0;
+}
+
+.artifact-code-pre {
+  margin: 0;
+  padding: 10px 0;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e6edf3;
+}
+
+.code-line {
+  display: flex;
+  padding: 0 12px;
+}
+
+.code-line:hover {
+  background: rgba(110, 118, 129, 0.1);
+}
+
+.line-num {
+  width: 38px;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 12px;
+  color: #484f58;
+  user-select: none;
+}
+
+.line-text {
+  flex-grow: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.artifact-markdown-view {
+  padding: 14px 18px;
+}
+
+.artifact-plan-pre {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #c9d1d9;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
