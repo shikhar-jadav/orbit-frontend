@@ -125,6 +125,9 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [gmailSubject, setGmailSubject] = useState('')
   const [webhookEventType, setWebhookEventType] = useState('webhook.received')
   const [webhookWhen, setWebhookWhen] = useState('')
+  const [webhookFilterField, setWebhookFilterField] = useState('')
+  const [webhookFilterOperator, setWebhookFilterOperator] = useState<'equals' | 'contains'>('equals')
+  const [webhookFilterValue, setWebhookFilterValue] = useState('')
   const [integrationStatus, setIntegrationStatus] = useState<{
     public_url_configured: boolean
     webhook_payload_limit_configured: boolean
@@ -510,6 +513,18 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         return
       }
       whenToRun = webhookWhen.trim() || `When the webhook receives ${resolvedEventType}`
+      if (webhookFilterField.trim() || webhookFilterValue.trim()) {
+        if (!webhookFilterField.trim().startsWith('payload.') || !webhookFilterValue.trim()) {
+          setFormError('For a webhook condition, enter a payload field path and its matching value.')
+          return
+        }
+        conditions.push({
+          field: webhookFilterField.trim(),
+          operator: webhookFilterOperator,
+          value: webhookFilterValue.trim(),
+        })
+        whenToRun += ` when ${webhookFilterField.trim()} ${webhookFilterOperator} “${webhookFilterValue.trim()}”`
+      }
     }
 
     setCreatingRoutine(true)
@@ -939,12 +954,20 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                   )}
                   <div className="event-webhook-example">
                     <span>Example JSON body</span>
-                    <pre>{'{\n  "event_type": "webhook.received",\n  "source_id": "your-event-id",\n  "data": {\n    "status": "paid"\n  }\n}'}</pre>
+                    <pre>{JSON.stringify({
+                      event_type: selectedRoutine.event_type || 'webhook.received',
+                      source_id: 'your-event-id',
+                      data: { status: 'paid' },
+                    }, null, 2)}</pre>
                     <button
                       type="button"
                       className="routine-action-btn"
                       onClick={() => void handleCopyValue(
-                        JSON.stringify({ event_type: 'webhook.received', source_id: 'your-event-id', data: { status: 'paid' } }, null, 2),
+                        JSON.stringify({
+                          event_type: selectedRoutine.event_type || 'webhook.received',
+                          source_id: 'your-event-id',
+                          data: { status: 'paid' },
+                        }, null, 2),
                         'Example JSON body',
                       )}
                     >
@@ -1389,8 +1412,26 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                           <small>Your sender can include this value as event_type in its JSON body. If it leaves event_type out, Orbit uses this configured event name.</small>
                         </div>
                         <div className="routines-form-field">
-                          <label htmlFor="webhook-when">When should it run?</label>
+                          <label htmlFor="webhook-when">Trigger description (optional)</label>
                           <input id="webhook-when" value={webhookWhen} onChange={(e) => setWebhookWhen(e.target.value)} placeholder="When a paid invoice event is received" />
+                        </div>
+                        <div className="routines-form-field">
+                          <label htmlFor="webhook-filter-field">Only when this JSON field matches (optional)</label>
+                          <input id="webhook-filter-field" value={webhookFilterField} onChange={(e) => setWebhookFilterField(e.target.value)} placeholder="payload.data.status" />
+                          <small>Use payload. followed by the field path from the JSON body.</small>
+                        </div>
+                        <div className="event-webhook-condition-row">
+                          <div className="routines-form-field">
+                            <label htmlFor="webhook-filter-operator">Condition</label>
+                            <select id="webhook-filter-operator" value={webhookFilterOperator} onChange={(e) => setWebhookFilterOperator(e.target.value as 'equals' | 'contains')}>
+                              <option value="equals">equals</option>
+                              <option value="contains">contains</option>
+                            </select>
+                          </div>
+                          <div className="routines-form-field">
+                            <label htmlFor="webhook-filter-value">Matching value</label>
+                            <input id="webhook-filter-value" value={webhookFilterValue} onChange={(e) => setWebhookFilterValue(e.target.value)} placeholder="paid" />
+                          </div>
                         </div>
                       </>
                     )}
