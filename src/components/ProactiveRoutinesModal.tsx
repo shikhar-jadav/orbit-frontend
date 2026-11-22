@@ -885,19 +885,56 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                 <div className="routine-webhook">
                   <h4>Webhook setup</h4>
                   <p>
-                    Send a signed POST from your event source to this address. Orbit checks the
-                    event type and conditions before queueing work.
+                    Send an HTTP POST to this URL when your event occurs. Add the key as a Bearer
+                    Authorization header. Orbit accepts the event and queues the routine; the run
+                    result appears in Orbit's history.
                   </p>
                   <div className="routine-copy-row">
                     <code>{webhookUrl}</code>
                     <button
                       type="button"
                       className="routine-action-btn"
-                      onClick={() => void handleCopyValue(webhookUrl, 'Webhook address')}
+                      onClick={() => void handleCopyValue(webhookUrl, 'Webhook URL')}
                     >
-                      Copy address
+                      Copy URL
                     </button>
                   </div>
+                  {selectedRoutine.webhook_secret && (
+                    <>
+                      <div className="routine-copy-row">
+                        <code>Authorization: Bearer {selectedRoutine.webhook_secret}</code>
+                        <button
+                          type="button"
+                          className="routine-action-btn"
+                          onClick={() =>
+                            void handleCopyValue(
+                              `Authorization: Bearer ${selectedRoutine.webhook_secret || ''}`,
+                              'Authorization header',
+                            )
+                          }
+                        >
+                          Copy header
+                        </button>
+                      </div>
+                      <small>Keep this key private. Store it on the server that sends the webhook, not in browser code.</small>
+                    </>
+                  )}
+                  <div className="event-webhook-example">
+                    <span>Example JSON body</span>
+                    <pre>{'{\n  "event_type": "webhook.received",\n  "source_id": "your-event-id",\n  "data": {\n    "status": "paid"\n  }\n}'}</pre>
+                    <button
+                      type="button"
+                      className="routine-action-btn"
+                      onClick={() => void handleCopyValue(
+                        JSON.stringify({ event_type: 'webhook.received', source_id: 'your-event-id', data: { status: 'paid' } }, null, 2),
+                        'Example JSON body',
+                      )}
+                    >
+                      Copy example
+                    </button>
+                  </div>
+                  <small>Only new events with the configured event name and matching conditions enter the execution queue.</small>
+                </div>
                   {selectedRoutine.webhook_secret && (
                     <div className="routine-copy-row">
                       <code>{selectedRoutine.webhook_secret}</code>
