@@ -495,13 +495,15 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       }
       resolvedEventType = eventType
       whenToRun = `When ${eventType === 'app_mention' ? 'Orbit is mentioned' : eventType === 'reaction_added' ? 'a reaction is added' : 'a new message is posted'} in #${slackChannel.trim().replace(/^#/, '')}`
-      if (eventType === 'reaction_added' && slackReaction.trim()) {
-        conditions.push({
-          field: 'payload.reaction',
-          operator: 'equals',
-          value: slackReaction.trim().replace(/^:/, '').replace(/:$/, ''),
-        })
-        whenToRun += ` with the :${slackReaction.trim().replace(/^:/, '').replace(/:$/, '')}: reaction`
+      if (eventType === 'reaction_added') {
+        if (slackReaction.trim()) {
+          conditions.push({
+            field: 'payload.reaction',
+            operator: 'equals',
+            value: slackReaction.trim().replace(/^:/, '').replace(/:$/, ''),
+          })
+          whenToRun += ` with the :${slackReaction.trim().replace(/^:/, '').replace(/:$/, '')}: reaction`
+        }
       } else if (slackPhrase.trim()) {
         conditions.push({
           field: 'payload.text',
@@ -1307,7 +1309,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                       {eventProvider === 'slack' && integrationStatus?.slack.accounts[0] && (
                         <div className="event-provider-help">
                           <strong>One extra Slack setup step</strong>
-                          <p>Slack delivers events to this shared URL. Add it in your Slack app under Event Subscriptions, turn events on, and subscribe to the event types you plan to use. Invite your Slack app into the channel you want Orbit to watch.</p>
+                          <p>Slack delivers events to this shared URL. In your Slack app, open Event Subscriptions, turn events on, and add this as the Request URL. Subscribe to the Bot Events you need: app_mention, message.channels, and/or reaction_added. Invite the Slack app into the channel you want Orbit to watch.</p>
                           {integrationStatus.slack.events_url && (
                             <div className="routine-copy-row">
                               <code>{integrationStatus.slack.events_url}</code>
