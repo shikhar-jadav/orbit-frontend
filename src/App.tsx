@@ -581,17 +581,54 @@ function App() {
 
       setLoggingOut(true)
       try {
-        if (revokeAll) {
-          await fetch('/auth/logout-all', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ keep_current: false }),
-          })
-        } else {
-          await fetch('/auth/logout', { method: 'POST' })
+        const response = revokeAll
+          ? await fetch('/auth/logout-all', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ keep_current: false }),
+            })
+          : await fetch('/auth/logout', {
+              method: 'POST',
+              credentials: 'same-origin',
+            })
+
+        const result = (await response.json().catch(() => ({}))) as {
+          logged_out?: boolean
+          signed_out_current?: boolean
+          detail?: string
         }
-      } catch {
-        // continue local cleanup even if offline
+        if (!response.ok) {
+          throw new Error(result.detail || `Logout failed (${response.status}).`)
+        }
+        const serverConfirmed = revokeAll
+          ? result.signed_out_current === true
+          : result.logged_out === true
+        if (!serverConfirmed) {
+          throw new Error('The server did not confirm that this session was signed out.')
+        }
+      } catch (logoutError) {
+        // A lost response can happen after the server has already cleared the session.
+        // Only leave the workspace when the session endpoint confirms it is no longer valid.
+        let serverConfirmsSignedOut = false
+        try {
+          const sessionResponse = await fetch('/auth/session', { credentials: 'same-origin' })
+          if (sessionResponse.ok) {
+            const session = (await sessionResponse.json()) as { authenticated?: boolean }
+            serverConfirmsSignedOut = session.authenticated === false
+          }
+        } catch {
+          // Keep the current workspace visible when the server cannot be reached.
+        }
+
+        if (!serverConfirmsSignedOut) {
+          setError(
+            logoutError instanceof Error
+              ? logoutError.message
+              : 'Orbit could not confirm sign out. Please try again.',
+          )
+          return
+        }
       } finally {
         setLoggingOut(false)
         setLogoutConfirmMode(null)
