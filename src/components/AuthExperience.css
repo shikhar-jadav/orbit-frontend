@@ -669,3 +669,61 @@
 #root .auth-page input:focus-visible {
   outline-color: rgba(32, 184, 205, 0.7);
 }
+
+/* Scroll container fix: the application shell locks body scrolling, so auth
+   must own a fixed-height scroll viewport when signup/recovery is taller. */
+#root .auth-page {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  max-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+#root .auth-page .auth-split,
+#root .auth-page .auth-split.auth-split--centered {
+  flex: 0 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
+  overflow: visible;
+}
+
+#root .auth-page .auth-main-col,
+#root .auth-page .auth-split--centered .auth-main-col {
+  flex: 0 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
+  overflow: visible;
+}
+
+#root .auth-page .auth-form-stage,
+#root .auth-page .auth-form-stage.auth-form-stage--wide {
+  flex: 0 0 auto;
+}
+
+#root .auth-page .auth-form {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+  #root .auth-page {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  #root .auth-page .auth-main-col,
+  #root .auth-page .auth-split--centered .auth-main-col {
+    flex: 0 0 auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
