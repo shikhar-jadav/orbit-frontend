@@ -70,6 +70,18 @@ type RoutineEvent = {
   routine_error?: string | null
 }
 
+type RoutineRun = {
+  id: string
+  status: string
+  trigger_source: string
+  created_at: string
+  started_at?: string | null
+  completed_at?: string | null
+  duration_ms?: number | null
+  result_summary?: string | null
+  error?: string | null
+}
+
 type Props = {
   isOpen: boolean
   onClose: () => void
@@ -121,6 +133,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [routineActionStatus, setRoutineActionStatus] = useState('')
   const [testingRoutine, setTestingRoutine] = useState(false)
   const [routineEvents, setRoutineEvents] = useState<RoutineEvent[]>([])
+  const [routineRuns, setRoutineRuns] = useState<RoutineRun[]>([])
 
   const loadRoutines = useCallback(async () => {
     setLoading(true)
@@ -259,9 +272,14 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       if (!res.ok) throw new Error(data.detail || 'The routine test failed.')
       setRoutineActionStatus(
         data.status === 'completed'
-          ? 'Test completed. See the result in History & Alerts.'
+          ? 'Test completed. The latest run is shown below.'
           : data.error || 'The routine test did not complete.',
       )
+      const runsResponse = await fetch('/api/routines/' + encodeURIComponent(routineId) + '/runs?limit=20')
+      if (runsResponse.ok) {
+        const runsData = await runsResponse.json()
+        setRoutineRuns((runsData.runs || []) as RoutineRun[])
+      }
       void loadNotifications()
     } catch (err: unknown) {
       setRoutineActionStatus(err instanceof Error ? err.message : 'The routine test failed.')
@@ -282,16 +300,20 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const handleOpenRoutine = async (routineId: string) => {
     setRoutineActionStatus('')
     try {
-      const [res, eventResponse] = await Promise.all([
+      const [res, eventResponse, runsResponse] = await Promise.all([
         fetch(`/api/routines/${encodeURIComponent(routineId)}`),
         fetch(`/api/routines/${encodeURIComponent(routineId)}/events`),
+        fetch(`/api/routines/${encodeURIComponent(routineId)}/runs?limit=20`),
       ])
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Could not open routine.')
       const eventData = await eventResponse.json()
       if (!eventResponse.ok) throw new Error(eventData.detail || 'Could not load event history.')
+      const runsData = await runsResponse.json()
+      if (!runsResponse.ok) throw new Error(runsData.detail || 'Could not load run history.')
       setSelectedRoutine(data.routine as Routine)
       setRoutineEvents((eventData.events || []) as RoutineEvent[])
+      setRoutineRuns((runsData.runs || []) as RoutineRun[])
       setWebhookUrl(data.webhook_url || '')
       setEditName(data.routine.name)
       setEditInstruction(data.routine.action_prompt)
@@ -863,6 +885,41 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                     </small>
                   </div>
                 )}
+
+              <section className="routine-run-history" aria-label="Routine run history">
+                <div className="routine-run-history-header">
+                  <h4>Run history</h4>
+                  <button
+                    type="button"
+                    className="routine-action-btn"
+                    onClick={() => void handleOpenRoutine(selectedRoutine.id)}
+                  >
+                    Refresh
+                  </button>
+                </div>
+                {routineRuns.length === 0 ? (
+                  <p>No runs yet. Use Test or wait for the next matching event.</p>
+                ) : (
+                  routineRuns.map((run) => (
+                    <article className="routine-run-item" key={run.id}>
+                      <div className="routine-run-item-header">
+                        <strong>{run.trigger_source.replaceAll('_', ' ')}</strong>
+                        <span className={'routine-run-status ' + run.status.toLowerCase()}>
+                          {run.status}
+                        </span>
+                      </div>
+                      <time dateTime={run.created_at}>
+                        {new Date(run.created_at).toLocaleString()}
+                      </time>
+                      {run.result_summary && <p>{run.result_summary}</p>}
+                      {run.error && <p className="routine-run-error" role="alert">{run.error}</p>}
+                      {typeof run.duration_ms === 'number' && (
+                        <small>{run.duration_ms.toLocaleString()} ms</small>
+                      )}
+                    </article>
+                  ))
+                )}
+              </section>
 
               {selectedRoutine.trigger_type === 'event' && (
                 <section className="routine-event-history" aria-label="Recent matched events">
