@@ -935,27 +935,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                   </div>
                   <small>Only new events with the configured event name and matching conditions enter the execution queue.</small>
                 </div>
-                  {selectedRoutine.webhook_secret && (
-                    <div className="routine-copy-row">
-                      <code>{selectedRoutine.webhook_secret}</code>
-                      <button
-                        type="button"
-                        className="routine-action-btn"
-                        onClick={() =>
-                          void handleCopyValue(selectedRoutine.webhook_secret || '', 'Webhook key')
-                        }
-                      >
-                        Copy key
-                      </button>
-                    </div>
-                  )}
-                  <small>
-                    Send <code>x-signature</code> as the HMAC-SHA256 hex digest of
-                    <code> timestamp + "." + canonical JSON body</code>. Include
-                    <code> x-timestamp</code> when signing. Timestamps expire after five minutes.
-                  </small>
-                  <small>Only matching event types and conditions enter the execution queue.</small>
-                </div>
               )}
 
               {selectedRoutine.trigger_type === 'event' &&
