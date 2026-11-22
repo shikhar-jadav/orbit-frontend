@@ -866,22 +866,30 @@ export function AuthScreen({
               </span>
               <span>Orbit</span>
             </div>
-            {step !== 'backup-codes' && step !== 'logged-out' && step !== 'recovery' && (
-              <nav className="auth-topbar-nav auth-mode-switcher" aria-label="Authentication views">
-                <button type="button" className={`auth-topbar-btn ${activeNavTab === 'login' ? 'active' : ''}`} onClick={() => goToLoginGateway(false)}>
-                  Sign in
-                </button>
-                <button type="button" className={`auth-topbar-btn ${activeNavTab === 'signup' ? 'active' : ''}`} onClick={() => goToSignupPage(email.trim() || undefined, false)}>
-                  Create account
-                </button>
-              </nav>
-            )}
+
           </header>
 
           <main
             className={`auth-form-stage ${step === 'backup-codes' ? 'auth-form-stage--wide' : ''}`}
           >
-
+            {step !== 'backup-codes' && step !== 'logged-out' && step !== 'recovery' && (
+              <nav className="auth-topbar-nav auth-mode-switcher" aria-label="Authentication views">
+                <button
+                  type="button"
+                  className={`auth-topbar-btn ${activeNavTab === 'login' ? 'active' : ''}`}
+                  onClick={() => goToLoginGateway(false)}
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  className={`auth-topbar-btn ${activeNavTab === 'signup' ? 'active' : ''}`}
+                  onClick={() => goToSignupPage(email.trim() || undefined, false)}
+                >
+                  Create account
+                </button>
+              </nav>
+            )}
             {step === 'logged-out' && (
               <>
                 <div className="auth-logout-seal">
@@ -993,12 +1001,12 @@ export function AuthScreen({
               <>
                 <div className="auth-header">
                   <h1 className="auth-title">
-                    {'The AI for problem solvers.'}
+                    {hasUsers ? 'All your AI, in one place.' : 'Start your Orbit workspace.'}
                   </h1>
                   <p className="auth-subtitle">
                     {hasUsers
-                      ? 'Models, agents, skills and connected tools — all working together in Orbit.'
-                      : 'Create your Orbit account and bring your work into one intelligent workspace.'}
+                      ? 'Bring your models, agents, skills and connected tools into one workspace.'
+                      : 'Create the administrator account for your Orbit workspace.'}
                   </p>
                 </div>
 
@@ -1320,12 +1328,12 @@ export function AuthScreen({
               <>
                 <div className="auth-header">
                   <h1 className="auth-title">
-                    {isFirstAccount ? 'Set up your Orbit workspace' : 'The AI for problem solvers.'}
+                    {isFirstAccount ? 'Set up your Orbit workspace' : 'Create your Orbit account'}
                   </h1>
                   <p className="auth-subtitle">
                     {isFirstAccount
                       ? 'Create the administrator account for this Orbit instance.'
-                      : 'Models, agents, skills and connected tools — all working together in Orbit.'}
+                      : 'One account for your models, agents, skills and connected tools.'}
                   </p>
                 </div>
 
