@@ -1037,3 +1037,16 @@ dialog.routines-modal-dialog {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+
+.event-webhook-condition-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.65rem;
+}
+
+@media (max-width: 560px) {
+  .event-webhook-condition-row {
+    grid-template-columns: 1fr;
+  }
+}
