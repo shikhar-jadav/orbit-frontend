@@ -766,3 +766,90 @@
 #root .auth-page button:focus-visible,#root .auth-page input:focus-visible{outline:3px solid rgba(21,159,176,.45);outline-offset:2px}
 @media(max-width:640px){#root .auth-page .auth-split,#root .auth-page .auth-split.auth-split--centered{padding:0 20px 40px}#root .auth-page .auth-main-col{padding-top:18px}#root .auth-page .auth-form-stage{margin-top:52px}#root .auth-page .auth-header{margin-bottom:30px}#root .auth-page .auth-title{font-size:clamp(43px,12vw,62px)}#root .auth-page .auth-subtitle{font-size:14px;margin-top:14px}#root .auth-page .auth-form--gateway{border-radius:22px;padding:20px}#root .auth-page .auth-topbar-nav{gap:0}#root .auth-page .auth-topbar-btn{padding:0 10px;font-size:12px}}
 @media(max-height:760px) and (min-width:641px){#root .auth-page .auth-form-stage{margin-top:38px}#root .auth-page .auth-header{margin-bottom:26px}#root .auth-page .auth-title{font-size:clamp(48px,5vw,68px)}}
+
+/* Apply the editorial Orbit sign-in visual system to every auth step, including signup. */
+#root .auth-page .auth-form:not(.auth-form--gateway) {
+  width: 100%;
+  max-width: 730px;
+  margin: 0 auto;
+  padding: clamp(22px, 3.4vw, 38px);
+  gap: 16px;
+  border: 1px solid #d8e1e2;
+  border-radius: 30px;
+  background: rgba(255,255,255,0.72);
+  box-shadow: 0 18px 55px rgba(21,54,59,0.055);
+}
+#root .auth-page .auth-form:not(.auth-form--gateway) .auth-label {
+  color: #244247;
+  font-size: 14px;
+  font-weight: 600;
+}
+#root .auth-page .auth-form:not(.auth-form--gateway) .auth-input {
+  min-height: 56px;
+  color: #172629;
+  border: 1px solid #d4dfe0;
+  border-radius: 13px;
+  background: #ffffff;
+  font-size: 16px;
+}
+#root .auth-page .auth-form:not(.auth-form--gateway) .auth-input::placeholder { color: #89989a; }
+#root .auth-page .auth-form:not(.auth-form--gateway) .auth-input:focus {
+  border-color: #159fb0;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(21,159,176,0.13);
+}
+#root .auth-page .auth-form:not(.auth-form--gateway) .auth-primary-btn {
+  min-height: 60px;
+  margin-top: 2px;
+  color: #ffffff;
+  border-color: #087f90;
+  border-radius: 14px;
+  background: #087f90;
+  font-size: 17px;
+}
+#root .auth-page .auth-form:not(.auth-form--gateway) .auth-primary-btn:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: #066d7b;
+  background: #066d7b;
+}
+#root .auth-page .auth-avatar-row {
+  border-color: #d8e1e2;
+  border-radius: 14px;
+  background: #f7fbfb;
+}
+#root .auth-page .auth-avatar-caption,
+#root .auth-page .auth-checkbox-label,
+#root .auth-page .auth-field-hint,
+#root .auth-page .auth-strength-label { color: #647477; }
+#root .auth-page .auth-checkbox-label input[type='checkbox'] { accent-color: #087f90; }
+#root .auth-page .auth-strength-track { background: #dce7e8; }
+#root .auth-page .auth-email-chip {
+  color: #245157;
+  border-color: #d4e0e1;
+  background: rgba(255,255,255,.8);
+}
+#root .auth-page .auth-email-chip-edit { color: #087f90; }
+#root .auth-page .auth-otp-box,
+#root .auth-page .auth-recovery-seg,
+#root .auth-page .auth-recovery-prefix {
+  color: #172629;
+  border-color: #d4dfe0;
+  background: #ffffff;
+}
+#root .auth-page .auth-codes-frame,
+#root .auth-page .auth-logout-card {
+  color: #172629;
+  border-color: #d8e1e2;
+  background: rgba(255,255,255,.8);
+}
+#root .auth-page .auth-logout-account-name { color: #172629; }
+#root .auth-page .auth-logout-account-email { color: #647477; }
+#root .auth-page .auth-bottom-note { color: #748487; }
+@media(max-width:640px) {
+  #root .auth-page .auth-form:not(.auth-form--gateway) {
+    border-radius: 22px;
+    padding: 20px;
+    gap: 14px;
+  }
+  #root .auth-page .auth-form:not(.auth-form--gateway) .auth-input { min-height: 52px; }
+}
