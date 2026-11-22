@@ -1001,12 +1001,12 @@ export function AuthScreen({
               <>
                 <div className="auth-header">
                   <h1 className="auth-title">
-                    {hasUsers ? 'Welcome back' : 'Start with Orbit'}
+                    {hasUsers ? 'All your AI, in one place.' : 'Start your Orbit workspace.'}
                   </h1>
                   <p className="auth-subtitle">
                     {hasUsers
-                      ? 'Your AI workspace for models, agents and tools. Enter your email to continue.'
-                      : 'Create the administrator account for this Orbit workspace.'}
+                      ? 'Bring your models, agents, skills and connected tools into one workspace.'
+                      : 'Create the administrator account for your Orbit workspace.'}
                   </p>
                 </div>
 
@@ -1069,7 +1069,7 @@ export function AuthScreen({
                   </div>
                 )}
 
-                <form className="auth-form" onSubmit={handleDiscoverSubmit}>
+                <form className="auth-form auth-form--gateway" onSubmit={handleDiscoverSubmit}>
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="auth-email">
                       Email address
@@ -1078,7 +1078,7 @@ export function AuthScreen({
                       id="auth-email"
                       type="email"
                       className="auth-input"
-                      placeholder="name@example.com"
+                      placeholder="Enter your email"
                       value={email}
                       autoComplete="email"
                       autoFocus
@@ -1088,14 +1088,23 @@ export function AuthScreen({
                   </div>
 
                   <button type="submit" className="auth-primary-btn" disabled={loading}>
-                    {loading ? 'Checking account...' : 'Continue'}
+                    {loading ? 'Checking account...' : 'Continue with email'}
                   </button>
                 </form>
 
                 {renderAllOptionsDrawer()}
 
                 {hasUsers && (
-                  <div className="auth-footer-nav">
+                  <div className="auth-footer-nav auth-footer-nav--gateway">
+                    <span>New to Orbit?</span>
+                    <button
+                      type="button"
+                      className="auth-link-btn"
+                      onClick={() => goToSignupPage(email.trim() || undefined, false)}
+                    >
+                      Create an account
+                    </button>
+                    <span className="auth-footer-separator" aria-hidden="true">·</span>
                     <button
                       type="button"
                       className="auth-link-btn"
