@@ -444,7 +444,9 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
           ? 'Routine created. GitHub will send new matching events.'
           : created.event_source === 'slack'
             ? 'Routine created. Slack will send new matching events.'
-            : 'Routine created. Add the signed webhook to your event source.',
+            : created.event_source === 'gmail'
+              ? 'Routine created. New matching Gmail messages will start runs.'
+              : 'Routine created. Add the signed webhook to your event source.',
       )
       setRoutineEvents([])
       setTab('detail')
@@ -925,7 +927,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                 <section className="routine-event-history" aria-label="Recent matched events">
                   <h4>Recent matches</h4>
                   {routineEvents.length === 0 ? (
-                    <p>No matching events yet. Send a test webhook to see an event here.</p>
+                    <p>No matching events yet. Wait for a matching provider event, or send a test webhook if this routine uses a custom webhook.</p>
                   ) : (
                     routineEvents.map((event) => (
                       <details key={event.id}>
@@ -970,7 +972,11 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                       disabled={testingRoutine}
                       onClick={() => void handleRunNow(selectedRoutine.id)}
                     >
-                      {testingRoutine ? 'Running…' : 'Test'}
+                      {testingRoutine
+                        ? 'Running…'
+                        : selectedRoutine.trigger_type === 'event'
+                          ? 'Run latest event'
+                          : 'Test'}
                     </button>
                     <button
                       className="routine-action-btn"
