@@ -639,6 +639,18 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     }
   }
 
+  const eventProviderReady =
+    eventProvider === 'webhook' ||
+    Boolean(
+      integrationStatus &&
+      integrationStatus[eventProvider].accounts[0] &&
+      integrationStatus.token_storage_configured &&
+      integrationStatus.public_url_configured &&
+      integrationStatus.webhook_payload_limit_configured &&
+      (eventProvider !== 'slack' || integrationStatus.slack.signing_configured) &&
+      (eventProvider !== 'gmail' || integrationStatus.gmail.pubsub_configured),
+    )
+
   return (
     <ModernDialog
       isOpen={isOpen}
@@ -1165,7 +1177,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                       <span className="event-step-number">1</span>
                       <div>
                         <h3>Choose the service</h3>
-                        <p>Pick the app or system that should wake Orbit when something happens.</p>
+                        <p>Pick the app or system that should wake Orbit. This event connection is separate from installing a regular connector for chat tools.</p>
                       </div>
                     </div>
                     <div className="event-provider-grid">
@@ -1270,8 +1282,14 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                         </div>
                       )}
 
-                      {eventProvider !== 'webhook' && !integrationStatus?.token_storage_configured && (
-                        <p className="event-inline-warning">The Orbit server needs INTEGRATION_TOKEN_ENCRYPTION_KEY before it can store connected service accounts.</p>
+                      {integrationStatus && eventProvider !== 'webhook' && (
+                        <div className="event-prerequisite-list">
+                          {!integrationStatus.token_storage_configured && <small>Server setup needed: set INTEGRATION_TOKEN_ENCRYPTION_KEY to store provider tokens securely.</small>}
+                          {!integrationStatus.public_url_configured && <small>Server setup needed: set ORBIT_PUBLIC_URL to a public HTTPS address so the provider can deliver events.</small>}
+                          {!integrationStatus.webhook_payload_limit_configured && <small>Server setup needed: set ORBIT_PROVIDER_WEBHOOK_MAX_BYTES to a positive body-size limit.</small>}
+                          {eventProvider === 'slack' && !integrationStatus.slack.signing_configured && <small>Server setup needed: set SLACK_SIGNING_SECRET to verify Slack event deliveries.</small>}
+                          {eventProvider === 'gmail' && !integrationStatus.gmail.pubsub_configured && <small>Server setup needed: configure the Gmail Pub/Sub topic, audience and push service account.</small>}
+                        </div>
                       )}
                     </section>
                   )}
@@ -1403,7 +1421,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                     <strong>Only new matching events will start this routine.</strong>
                     <span>Orbit checks the service, event type and conditions before starting the agent. Older activity is not replayed.</span>
                   </div>
-                  <button type="submit" className="routines-submit-btn" disabled={creatingRoutine || (eventProvider !== 'webhook' && !integrationStatus?.[eventProvider].accounts[0])}>
+                  <button type="submit" className="routines-submit-btn" disabled={creatingRoutine || !eventProviderReady}>
                     {creatingRoutine ? 'Creating event trigger…' : 'Create event trigger'}
                   </button>
                 </form>
