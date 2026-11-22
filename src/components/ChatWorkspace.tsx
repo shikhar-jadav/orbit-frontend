@@ -481,9 +481,34 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
           <div className={`chat-layout ${!loadingThread && !messages.length ? 'empty-chat' : ''}`}>
             <div className="chat-scroll" ref={scrollRef}>
               {loadingThread ? (
-                <div className="loading-indicator">
-                  <span className="spinner" />
-                  <span>Loading session history...</span>
+                <div className="loading-history" role="status" aria-live="polite" aria-label="Loading conversation">
+                  <span className="loading-history-announcement">Loading conversation</span>
+                  <div className="loading-history-stack" aria-hidden="true">
+                    <div className="loading-history-user">
+                      <span className="loading-history-line user-line-primary" />
+                      <span className="loading-history-line user-line-secondary" />
+                    </div>
+                    <div className="loading-history-assistant">
+                      <span className="loading-history-avatar" />
+                      <div className="loading-history-copy">
+                        <span className="loading-history-line assistant-line-wide" />
+                        <span className="loading-history-line assistant-line-full" />
+                        <span className="loading-history-line assistant-line-medium" />
+                        <span className="loading-history-line assistant-line-short" />
+                      </div>
+                    </div>
+                    <div className="loading-history-user loading-history-user-short">
+                      <span className="loading-history-line user-line-primary" />
+                    </div>
+                    <div className="loading-history-assistant">
+                      <span className="loading-history-avatar" />
+                      <div className="loading-history-copy">
+                        <span className="loading-history-line assistant-line-full" />
+                        <span className="loading-history-line assistant-line-medium" />
+                        <span className="loading-history-line assistant-line-wide" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : messages.length ? (
                 <div className="messages-inner">
@@ -984,7 +1009,7 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
               )}
             </div>
 
-            {messages.length > 0 && <div className="composer-container">
+            {(messages.length > 0 || loadingThread) && <div className="composer-container">
               {hitlRequest && (
                 <HumanInTheLoopCard
                   request={hitlRequest}
@@ -1025,7 +1050,7 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                       : 'Ask a follow-up...'
                   }
                   rows={1}
-                  disabled={sending && !hitlRequest}
+                  disabled={loadingThread || (sending && !hitlRequest)}
                 />
                 <div className="composer-toolbar">
                   <Tooltip content="Attach files">
@@ -1056,7 +1081,7 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                         <button
                           type="submit"
                           className={`circle-action-btn send-circle ${input.trim() || attachments.length ? 'active' : ''}`}
-                          disabled={!input.trim() && !attachments.length}
+                          disabled={loadingThread || (!input.trim() && !attachments.length)}
                           aria-label="Execute command (Enter)"
                         >
                           <Icon name="arrowUp" size={16} />

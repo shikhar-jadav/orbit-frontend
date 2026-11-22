@@ -10,6 +10,150 @@
   font-size: 13.5px;
 }
 
+/* Conversation history placeholder: keep the chat's normal rhythm while it loads. */
+.loading-history {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 0 28px;
+}
+
+.loading-history-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.loading-history-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 38px;
+  padding: clamp(34px, 7vh, 68px) 0 28px;
+}
+
+.loading-history-user {
+  align-self: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(330px, 62%);
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.loading-history-user-short {
+  width: min(245px, 52%);
+}
+
+.loading-history-assistant {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 15px;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.loading-history-avatar,
+.loading-history-line {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.loading-history-avatar::after,
+.loading-history-line::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.085),
+    transparent
+  );
+  animation: history-shimmer 1.7s ease-in-out infinite;
+}
+
+.loading-history-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.loading-history-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding-top: 3px;
+}
+
+.loading-history-line {
+  height: 10px;
+  border-radius: 999px;
+}
+
+.user-line-primary { width: 82%; }
+.user-line-secondary { width: 48%; }
+.assistant-line-full { width: 100%; }
+.assistant-line-wide { width: 88%; }
+.assistant-line-medium { width: 72%; }
+.assistant-line-short { width: 43%; }
+
+@keyframes history-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (max-width: 640px) {
+  .loading-history-stack {
+    gap: 30px;
+    padding-top: 34px;
+  }
+
+  .loading-history-user {
+    width: min(280px, 76%);
+    padding: 14px 15px;
+  }
+
+  .loading-history-user-short {
+    width: min(220px, 66%);
+  }
+
+  .loading-history-assistant {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .loading-history-avatar {
+    width: 24px;
+    height: 24px;
+  }
+
+  .loading-history-copy {
+    gap: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-history-avatar::after,
+  .loading-history-line::after {
+    animation: none;
+    transform: none;
+    opacity: 0;
+  }
+}
+
 .spinner {
   width: 16px;
   height: 16px;
