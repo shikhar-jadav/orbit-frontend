@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { AuthShowcase } from './AuthShowcase'
 import { Icon } from './Icon'
 import type { AuthDiscoverResponse, AuthUser } from './types'
 import {
@@ -12,6 +11,7 @@ import {
   type RecentAuthAccount,
 } from './userUtils'
 import './AuthScreen.css'
+import './AuthExperience.css'
 
 export type AuthViewMode = 'login' | 'signup' | 'recovery' | 'logged-out'
 
@@ -1799,7 +1799,6 @@ export function AuthScreen({
           </footer>
         </section>
 
-        {!isCenteredLayout && <AuthShowcase emailOtpEnabled={effectiveOtpEnabled} />}
       </div>
     </div>
   )
