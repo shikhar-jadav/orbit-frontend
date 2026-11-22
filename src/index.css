@@ -1,40 +1,40 @@
 :root {
-  font-family: Montserrat, 'Segoe UI', Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size-adjust: from-font;
   color-scheme: dark;
   color: #f1f5f9;
-  background: #191a1a;
+  background: #212121;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
   /* Orbit Cosmic Design Token System */
-  --bg-root: #191a1a;
-  --bg-sidebar: #191a1a;
-  --bg-sidebar-rail: #191a1a;
-  --bg-surface: #202222;
-  --bg-surface-elevated: #262828;
-  --bg-surface-card: #202222;
-  --bg-hover: #262828;
-  --bg-selected: #242525;
-  --bg-input: #202222;
-  --bg-user-card: #202222;
+  --bg-root: #212121;
+  --bg-sidebar: #171717;
+  --bg-sidebar-rail: #171717;
+  --bg-surface: #2b2b2b;
+  --bg-surface-elevated: #333333;
+  --bg-surface-card: #292929;
+  --bg-hover: #353535;
+  --bg-selected: #2a2a2a;
+  --bg-input: #2f2f2f;
+  --bg-user-card: #303030;
 
-  --line: #282a2a;
-  --line-strong: #323434;
-  --line-accent: rgba(32, 184, 205, 0.35);
+  --line: rgba(255, 255, 255, 0.075);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --line-accent: rgba(66, 196, 214, 0.28);
 
-  --text-main: #f5f5f5;
-  --text-soft: #d7d9d9;
-  --text-muted: #a4a7a7;
-  --text-faint: #828686;
+  --text-main: #f4f4f4;
+  --text-soft: #dedede;
+  --text-muted: #a1a1a1;
+  --text-faint: #777777;
 
   --accent-primary: #20b8cd;
   --accent-glow: #20b8cd;
-  --accent-subtle: rgba(32, 184, 205, 0.12);
+  --accent-subtle: rgba(66, 196, 214, 0.12);
   --accent-cyan: #20b8cd;
-  --accent-cyan-subtle: rgba(32, 184, 205, 0.12);
+  --accent-cyan-subtle: rgba(66, 196, 214, 0.12);
 
   --success: #10b981;
   --success-subtle: rgba(16, 185, 129, 0.14);
@@ -101,8 +101,8 @@ select:focus-visible {
 
 /* Custom Scrollbar */
 :root {
-  --scrollbar-thumb: #232b3c;
-  --scrollbar-thumb-hover: #333e57;
+  --scrollbar-thumb: #414141;
+  --scrollbar-thumb-hover: #5a5a5a;
   --scrollbar-track: transparent;
 }
 
@@ -204,5 +204,49 @@ dialog[open]::backdrop {
   dialog,
   dialog::backdrop {
     transition-duration: 0.08s;
+  }
+}
+
+
+/* Shared interaction polish */
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled) {
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+  accent-color: var(--accent-primary);
+}
+
+::selection {
+  color: #ffffff;
+  background: rgba(66, 196, 214, 0.34);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

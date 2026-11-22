@@ -696,3 +696,253 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+
+/* -------------------- ORBIT SIDEBAR REFRESH -------------------- */
+.sidebar {
+  background: var(--bg-sidebar);
+  border-right: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.sidebar-full {
+  width: 256px;
+  flex-basis: 256px;
+  padding: 16px 12px 12px;
+}
+
+.sidebar-rail {
+  background: var(--bg-sidebar-rail);
+  border-right: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.sidebar-header {
+  height: 32px;
+  margin-bottom: 18px;
+}
+
+.orbit-brand {
+  gap: 9px;
+  padding: 4px 5px;
+  border-radius: 10px;
+}
+
+.orbit-brand-mark {
+  width: 27px;
+  height: 27px;
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.orbit-brand-name {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+
+.orbit-brand-pill {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  letter-spacing: 0.09em;
+  padding: 3px 7px;
+}
+
+.sidebar-header-actions {
+  gap: 4px;
+}
+
+.icon-btn {
+  width: 31px;
+  height: 31px;
+  border-radius: 9px;
+  color: #929292;
+}
+
+.icon-btn:hover,
+.icon-btn.active {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: transparent;
+  color: #f5f5f5;
+}
+
+.search-box {
+  height: 38px;
+  border-radius: 11px;
+  background: #232323;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.search-box:focus-within {
+  border-color: rgba(66, 196, 214, 0.48);
+  box-shadow: 0 0 0 3px rgba(66, 196, 214, 0.08);
+}
+
+.nav-menu {
+  gap: 3px;
+  margin-bottom: 16px;
+}
+
+.nav-item {
+  min-height: 37px;
+  height: 37px;
+  padding-inline: 11px;
+  gap: 10px;
+  border-radius: 10px;
+  color: #b8b8b8;
+  font-size: 12.5px;
+  font-weight: 480;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: transparent;
+  color: #f5f5f5;
+}
+
+.nav-item.nav-primary-item {
+  margin-bottom: 5px;
+  background: #252525;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  color: #f5f5f5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.nav-item.nav-primary-item:hover {
+  background: #303030;
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+.nav-shortcut {
+  color: #898989;
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+}
+
+.sidebar-section-divider {
+  padding: 7px 10px 9px;
+}
+
+.section-label {
+  color: #858585;
+  font-size: 10px;
+  letter-spacing: 0.095em;
+}
+
+.recents-scroll {
+  gap: 3px;
+  padding-right: 1px;
+}
+
+.recent-item {
+  min-height: 35px;
+  padding-right: 3px;
+  border-radius: 9px;
+}
+
+.recent-item:hover {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.recent-item.selected {
+  background: #292929;
+  box-shadow: inset 2px 0 0 rgba(66, 196, 214, 0.86);
+}
+
+.recent-link {
+  padding-inline: 10px;
+  font-size: 12.5px;
+}
+
+.recent-title {
+  color: #bcbcbc;
+  font-size: 12.5px;
+}
+
+.recent-item.selected .recent-title {
+  color: #ffffff;
+  font-weight: 550;
+}
+
+.thread-menu-toggle {
+  border-radius: 8px;
+}
+
+.thread-menu {
+  background: #292929;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.45);
+}
+
+.thread-menu button {
+  min-height: 35px;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.thread-menu button:hover,
+.thread-menu button:focus-visible {
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.sidebar-footer {
+  border-top-color: rgba(255, 255, 255, 0.075);
+  padding-top: 10px;
+}
+
+.profile-row {
+  min-height: 42px;
+  padding: 7px 7px;
+  border-radius: 10px;
+}
+
+.profile-row:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: transparent;
+}
+
+.profile-menu {
+  background: #292929;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.profile-menu button {
+  min-height: 36px;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.profile-menu button:hover {
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.rail-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.rail-btn:hover {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: transparent;
+}
+
+.rail-brand-btn {
+  background: rgba(66, 196, 214, 0.12);
+  border-color: rgba(66, 196, 214, 0.18);
+}
+
+.sidebar-load-more {
+  border-color: rgba(255, 255, 255, 0.085);
+  border-radius: 9px;
+  padding: 9px 10px;
+  color: #a7a7a7;
+}
+
+.sidebar-load-more:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.055);
+  color: #fff;
+}

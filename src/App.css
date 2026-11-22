@@ -205,3 +205,66 @@
   cursor: not-allowed;
 }
 
+
+
+/* -------------------- ORBIT INTERFACE REFRESH -------------------- */
+.app-shell {
+  background: var(--bg-root);
+  color: var(--text-main);
+}
+
+.main-panel {
+  background: var(--bg-root);
+}
+
+.topbar {
+  height: 56px;
+  padding-inline: clamp(16px, 2.5vw, 28px);
+  background: rgba(33, 33, 33, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(18px);
+}
+
+.active-title-pill {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13.5px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+.workspace-split-container {
+  background: var(--bg-root);
+}
+
+.workspace-chat-pane {
+  background: var(--bg-root);
+}
+
+.workspace-canvas-pane {
+  background: #1b1b1b;
+  border-left-color: rgba(255, 255, 255, 0.075);
+}
+
+.error-toast {
+  top: 68px;
+  padding: 11px 14px;
+  border: 1px solid rgba(248, 113, 113, 0.26);
+  border-radius: 14px;
+  background: rgba(48, 25, 27, 0.94);
+  backdrop-filter: blur(16px);
+}
+
+.panel-lazy-loading {
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    height: 52px;
+    padding-inline: 14px;
+  }
+
+  .workspace-split-container {
+    height: calc(100% - 52px);
+  }
+}

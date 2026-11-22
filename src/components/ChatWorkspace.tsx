@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { Dispatch, FormEvent, RefObject, SetStateAction } from 'react'
 import { AttachmentChips } from './AttachmentChips'
 import { Icon } from './Icon'
@@ -263,6 +264,14 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
     onHITLSkip,
     onHITLDismiss,
   } = props
+
+  // Keep the composer compact after send/clear and grow it with the current draft.
+  useEffect(() => {
+    const textarea = inputRef.current
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 220)}px`
+  }, [input, inputRef])
 
   const shouldSendOnKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== 'Enter') return false
