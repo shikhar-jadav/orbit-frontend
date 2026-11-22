@@ -866,7 +866,7 @@ export function AuthScreen({
               </span>
               <span>Orbit</span>
             </div>
-
+}
           </header>
 
           <main
@@ -1001,12 +1001,12 @@ export function AuthScreen({
               <>
                 <div className="auth-header">
                   <h1 className="auth-title">
-                    {hasUsers ? 'All your AI, in one place.' : 'Start your Orbit workspace.'}
+                    {'The AI for problem solvers.'}
                   </h1>
                   <p className="auth-subtitle">
                     {hasUsers
-                      ? 'Bring your models, agents, skills and connected tools into one workspace.'
-                      : 'Create the administrator account for your Orbit workspace.'}
+                      ? 'Models, agents, skills and connected tools — all working together in Orbit.'
+                      : 'Create your Orbit account and bring your work into one intelligent workspace.'}
                   </p>
                 </div>
 
