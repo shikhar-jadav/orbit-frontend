@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
+import './OrbitDesign.css'
 import { Icon } from './components/Icon'
 import { ThreadSidebar } from './components/ThreadSidebar'
 import { ChatWorkspace } from './components/ChatWorkspace'
