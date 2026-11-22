@@ -1277,6 +1277,13 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                             <strong>Connected as {integrationStatus[eventProvider].accounts[0].account_name}</strong>
                             <p>Orbit can use this account for event triggers.</p>
                           </div>
+                          <button
+                            type="button"
+                            className="routine-action-btn"
+                            onClick={() => void handleDisconnectIntegration(eventProvider)}
+                          >
+                            Disconnect
+                          </button>
                         </div>
                       ) : (
                         <div className="event-connection-panel">
@@ -1331,7 +1338,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                         </div>
                       )}
 
-                      {integrationStatus && eventProvider !== 'webhook' && (
+                      {integrationStatus && (
                         <div className="event-prerequisite-list">
                           {!integrationStatus.token_storage_configured && <small>Server setup needed: set INTEGRATION_TOKEN_ENCRYPTION_KEY to store provider tokens securely.</small>}
                           {!integrationStatus.public_url_configured && <small>Server setup needed: set ORBIT_PUBLIC_URL to a public HTTPS address so the provider can deliver events.</small>}
