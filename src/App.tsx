@@ -270,7 +270,7 @@ function App() {
 
             if (activeThreadId) {
               getJson<ThreadHistoryResponse>(
-                `/threads/${encodeURIComponent(activeThreadId)}?limit=50&include_extras=false`,
+                `/threads/${encodeURIComponent(activeThreadId)}?limit=20&include_extras=false`,
               ).then((data) => {
                 if (data.messages) {
                   setMessages(data.messages)
@@ -759,7 +759,7 @@ function App() {
     setLoadingThread(true)
     setHasOlderMessages(false)
     getJson<ThreadHistoryResponse>(
-      `/threads/${encodeURIComponent(activeThreadId)}?limit=50&include_extras=false`,
+      `/threads/${encodeURIComponent(activeThreadId)}?limit=20&include_extras=false`,
     )
       .then((data) => {
         if (!active) return

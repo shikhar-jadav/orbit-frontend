@@ -77,6 +77,9 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  /* Skip layout and painting for messages outside the visible scroll region. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
 }
 
 .branch-continuation {
