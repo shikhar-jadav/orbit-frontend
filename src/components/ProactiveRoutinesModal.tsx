@@ -129,6 +129,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [webhookFilterOperator, setWebhookFilterOperator] = useState<'equals' | 'contains'>('equals')
   const [webhookFilterValue, setWebhookFilterValue] = useState('')
   const [integrationStatus, setIntegrationStatus] = useState<{
+    public_url?: string | null
     public_url_configured: boolean
     webhook_payload_limit_configured: boolean
     token_storage_configured: boolean
@@ -150,6 +151,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [testingRoutine, setTestingRoutine] = useState(false)
   const [routineEvents, setRoutineEvents] = useState<RoutineEvent[]>([])
   const [routineRuns, setRoutineRuns] = useState<RoutineRun[]>([])
+  const integrationPopupRef = React.useRef<Window | null>(null)
 
   const loadRoutines = useCallback(async () => {
     setLoading(true)
@@ -183,6 +185,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       const res = await fetch('/api/integrations/status')
       if (!res.ok) throw new Error('Could not load connected event integrations.')
       setIntegrationStatus((await res.json()) as {
+        public_url?: string | null
         public_url_configured: boolean
         webhook_payload_limit_configured: boolean
         token_storage_configured: boolean
@@ -207,11 +210,24 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
 
   useEffect(() => {
     const handleIntegrationMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return
+      // The OAuth callback is served by the backend domain, not the Vercel frontend domain.
+      // Only accept messages from the popup opened by this component and the configured API origin.
+      if (!integrationPopupRef.current || event.source !== integrationPopupRef.current) return
+      const apiOrigin = integrationStatus?.public_url
+      if (!apiOrigin) return
+      let expectedOrigin = ''
+      try {
+        expectedOrigin = new URL(apiOrigin).origin
+      } catch {
+        return
+      }
+      if (event.origin !== expectedOrigin) return
+      if (!['github', 'slack', 'gmail'].includes(String(event.data?.provider || ''))) return
       if (
         event.data?.type === 'orbit_integration_connected' ||
         event.data?.type === 'orbit_integration_error'
       ) {
+        integrationPopupRef.current = null
         if (event.data.type === 'orbit_integration_error') {
           setFormError(String(event.data.message || 'The integration could not be connected.'))
         } else {
@@ -222,7 +238,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     }
     window.addEventListener('message', handleIntegrationMessage)
     return () => window.removeEventListener('message', handleIntegrationMessage)
-  }, [loadIntegrationStatus])
+  }, [loadIntegrationStatus, integrationStatus?.public_url])
 
   const handleTogglePause = async (routine: Routine) => {
     try {
@@ -586,6 +602,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         'popup,width=600,height=720',
       )
       if (!popup) throw new Error('Allow pop-ups to connect this account.')
+      integrationPopupRef.current = popup
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : `Could not connect ${provider}.`)
     }
@@ -1272,7 +1289,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                           <button
                             type="button"
                             className="routine-action-btn event-connect-btn"
-                            disabled={!integrationStatus?.[eventProvider].configured || !integrationStatus?.token_storage_configured || creatingRoutine}
+                            disabled={!integrationStatus?.[eventProvider].configured || !integrationStatus?.token_storage_configured || !integrationStatus?.public_url_configured || creatingRoutine}
                             onClick={() => void handleConnectIntegration(eventProvider)}
                           >
                             Connect {eventProvider === 'github' ? 'GitHub' : eventProvider === 'slack' ? 'Slack' : 'Gmail'}
