@@ -36,6 +36,7 @@ type IntegrationStatus = {
   configured: boolean
   signing_configured?: boolean
   pubsub_configured?: boolean
+  pubsub_limits_configured?: boolean
   events_url?: string | null
   public_url_configured?: boolean
   accounts: Array<{
@@ -376,10 +377,14 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         : Object.keys(existingFilters).length
           ? [existingFilters]
           : []
-      const requiredProviderConditions = existingConditions.filter(
+      const editableConditionIndex = existingConditions.findIndex(
         (condition) =>
-          condition.field === 'payload.repository' ||
-          condition.field === 'payload.channel_id',
+          condition.field !== 'payload.repository' &&
+          condition.field !== 'payload.channel_id',
+      )
+      // Keep every additional condition intact when editing the first visible condition.
+      const preservedConditions = existingConditions.filter(
+        (_condition, index) => index !== editableConditionIndex,
       )
       const editedCondition = editFilterField.trim()
         ? {
@@ -389,7 +394,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
           }
         : null
       const updatedConditions = [
-        ...requiredProviderConditions,
+        ...preservedConditions,
         ...(editedCondition ? [editedCondition] : []),
       ]
       const updatedFilters =
@@ -648,7 +653,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       integrationStatus.public_url_configured &&
       integrationStatus.webhook_payload_limit_configured &&
       (eventProvider !== 'slack' || integrationStatus.slack.signing_configured) &&
-      (eventProvider !== 'gmail' || integrationStatus.gmail.pubsub_configured),
+      (eventProvider !== 'gmail' ||
+        (integrationStatus.gmail.pubsub_configured && integrationStatus.gmail.pubsub_limits_configured)),
     )
 
   return (
@@ -1278,6 +1284,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                           <strong>Gmail push setup</strong>
                           <p>Orbit uses Gmail push notifications to detect new mail. You connect your mailbox here; the Orbit server must also have its Gmail Pub/Sub push subscription configured.</p>
                           {!integrationStatus.gmail.pubsub_configured && <small>Gmail Pub/Sub is not configured on the Orbit server yet. A mailbox connection alone is not enough to receive events.</small>}
+                          {!integrationStatus.gmail.pubsub_limits_configured && <small>Gmail processing limits are not configured on the Orbit server yet.</small>}
                           {!integrationStatus.public_url_configured && <small>Set ORBIT_PUBLIC_URL to a public HTTPS address for provider event delivery.</small>}
                         </div>
                       )}
