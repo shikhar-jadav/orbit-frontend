@@ -867,8 +867,13 @@ export function AuthScreen({
               <span>Orbit</span>
             </div>
 
+          </header>
+
+          <main
+            className={`auth-form-stage ${step === 'backup-codes' ? 'auth-form-stage--wide' : ''}`}
+          >
             {step !== 'backup-codes' && step !== 'logged-out' && step !== 'recovery' && (
-              <nav className="auth-topbar-nav" aria-label="Authentication views">
+              <nav className="auth-topbar-nav auth-mode-switcher" aria-label="Authentication views">
                 <button
                   type="button"
                   className={`auth-topbar-btn ${activeNavTab === 'login' ? 'active' : ''}`}
@@ -885,11 +890,6 @@ export function AuthScreen({
                 </button>
               </nav>
             )}
-          </header>
-
-          <main
-            className={`auth-form-stage ${step === 'backup-codes' ? 'auth-form-stage--wide' : ''}`}
-          >
             {step === 'logged-out' && (
               <>
                 <div className="auth-logout-seal">
