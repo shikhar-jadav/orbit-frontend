@@ -853,3 +853,13 @@
   }
   #root .auth-page .auth-form:not(.auth-form--gateway) .auth-input { min-height: 52px; }
 }
+
+/* The nav now lives in the top bar, not inside the form stage. */
+#root .auth-page .auth-topbar .auth-mode-switcher {
+  display: inline-flex !important;
+  align-items: center;
+  margin-left: auto;
+}
+#root .auth-page .auth-form-stage > .auth-mode-switcher {
+  display: none !important;
+}
