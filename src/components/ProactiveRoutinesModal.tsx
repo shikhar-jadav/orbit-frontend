@@ -973,7 +973,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                     <span>Example JSON body</span>
                     <pre>{JSON.stringify({
                       event_type: selectedRoutine.event_type || 'webhook.received',
-                      source_id: 'your-event-id',
+                      event_id: 'your-event-id',
                       data: { status: 'paid' },
                     }, null, 2)}</pre>
                     <button
@@ -982,7 +982,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                       onClick={() => void handleCopyValue(
                         JSON.stringify({
                           event_type: selectedRoutine.event_type || 'webhook.received',
-                          source_id: 'your-event-id',
+                          event_id: 'your-event-id',
                           data: { status: 'paid' },
                         }, null, 2),
                         'Example JSON body',
@@ -1425,16 +1425,16 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                       <>
                         <div className="routines-form-field">
                           <label htmlFor="webhook-event-type">Event name</label>
-                          <input id="webhook-event-type" value={webhookEventType} onChange={(e) => setWebhookEventType(e.target.value)} placeholder="invoice.paid" required />
+                          <input id="webhook-event-type" value={webhookEventType} onChange={(e) => setWebhookEventType(e.target.value)} placeholder="invoice.paid" required maxLength={120} />
                           <small>Your sender can include this value as event_type in its JSON body. If it leaves event_type out, Orbit uses this configured event name.</small>
                         </div>
                         <div className="routines-form-field">
                           <label htmlFor="webhook-when">Trigger description (optional)</label>
-                          <input id="webhook-when" value={webhookWhen} onChange={(e) => setWebhookWhen(e.target.value)} placeholder="When a paid invoice event is received" />
+                          <input id="webhook-when" value={webhookWhen} onChange={(e) => setWebhookWhen(e.target.value)} placeholder="When a paid invoice event is received" maxLength={500} />
                         </div>
                         <div className="routines-form-field">
                           <label htmlFor="webhook-filter-field">Only when this JSON field matches (optional)</label>
-                          <input id="webhook-filter-field" value={webhookFilterField} onChange={(e) => setWebhookFilterField(e.target.value)} placeholder="payload.data.status" />
+                          <input id="webhook-filter-field" value={webhookFilterField} onChange={(e) => setWebhookFilterField(e.target.value)} placeholder="payload.data.status" maxLength={128} />
                           <small>Use payload. followed by the field path from the JSON body.</small>
                         </div>
                         <div className="event-webhook-condition-row">
@@ -1447,7 +1447,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                           </div>
                           <div className="routines-form-field">
                             <label htmlFor="webhook-filter-value">Matching value</label>
-                            <input id="webhook-filter-value" value={webhookFilterValue} onChange={(e) => setWebhookFilterValue(e.target.value)} placeholder="paid" />
+                            <input id="webhook-filter-value" value={webhookFilterValue} onChange={(e) => setWebhookFilterValue(e.target.value)} placeholder="paid" maxLength={500} />
                           </div>
                         </div>
                       </>
