@@ -961,3 +961,29 @@ dialog.thread-delete-dialog {
     opacity: 1;
   }
 }
+
+
+.older-messages-control {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 18px;
+}
+
+.older-messages-control button {
+  padding: 7px 12px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-soft, #b8bec8);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.older-messages-control button:hover:not(:disabled) {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.older-messages-control button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

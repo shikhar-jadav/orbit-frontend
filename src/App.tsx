@@ -44,6 +44,23 @@ import type {
   HITLSubmission,
 } from './components/types'
 
+type ThreadPageResponse = {
+  items: Thread[]
+  has_more: boolean
+  next_offset: number
+}
+
+type ThreadHistoryResponse = {
+  thread: Thread
+  messages: Message[]
+  has_more_messages: boolean
+}
+
+type ThreadUpdatesResponse = {
+  messages: Message[]
+  has_more: boolean
+}
+
 let onUnauthorizedCallback: (() => void) | null = null
 
 const initialSessionPromise: Promise<AuthSessionResponse | null> =
@@ -188,7 +205,11 @@ function App() {
   )
   const [searchOpen, setSearchOpen] = useState(false)
   const [threads, setThreads] = useState<Thread[]>([])
+  const [hasMoreThreads, setHasMoreThreads] = useState(false)
+  const [loadingMoreThreads, setLoadingMoreThreads] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
+  const [hasOlderMessages, setHasOlderMessages] = useState(false)
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false)
   const [activeThreadId, setActiveThreadId] = useState<string | null>(initialRoute.threadId)
   const [settingsPage, setSettingsPage] = useState(initialRoute.settings)
   const [settingsSection, setSettingsSection] = useState<SettingsSection>(initialRoute.settingsSection)
@@ -248,10 +269,13 @@ function App() {
             }
 
             if (activeThreadId) {
-              getJson<{ thread: Thread; messages: Message[] }>(
-                `/threads/${encodeURIComponent(activeThreadId)}`,
+              getJson<ThreadHistoryResponse>(
+                `/threads/${encodeURIComponent(activeThreadId)}?limit=50&include_extras=false`,
               ).then((data) => {
-                if (data.messages) setMessages(data.messages)
+                if (data.messages) {
+                  setMessages(data.messages)
+                  setHasOlderMessages(data.has_more_messages)
+                }
               }).catch(() => {})
             }
 
@@ -308,6 +332,8 @@ function App() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const skipLoadThreadRef = useRef<string | null>(null)
+  const preserveHistoryScrollRef = useRef<{ height: number; top: number } | null>(null)
+  const latestMessageIdRef = useRef(0)
 
   useEffect(() => {
     if (!activeThreadId) return
@@ -383,19 +409,44 @@ function App() {
 
   const refreshThreads = useCallback(async () => {
     try {
-      const data = await getJson<Thread[]>('/threads')
-      setThreads(data)
+      const limit = Math.max(30, Math.min(threads.length, 150))
+      const data = await getJson<ThreadPageResponse>(`/threads/page?limit=${limit}&offset=0`)
+      setThreads(data.items)
+      setHasMoreThreads(data.has_more)
     } catch {
       // silently fail if refresh fails
     }
-  }, [])
+  }, [threads.length])
+
+  const loadMoreThreads = useCallback(async () => {
+    if (!hasMoreThreads || loadingMoreThreads) return
+    setLoadingMoreThreads(true)
+    try {
+      const data = await getJson<ThreadPageResponse>(
+        `/threads/page?limit=30&offset=${threads.length}`,
+      )
+      setThreads((current) => {
+        const existing = new Set(current.map((thread) => thread.thread_id))
+        return [...current, ...data.items.filter((thread) => !existing.has(thread.thread_id))]
+      })
+      setHasMoreThreads(data.has_more)
+    } catch {
+      // Keep already-loaded sidebar items available if another page fails.
+    } finally {
+      setLoadingMoreThreads(false)
+    }
+  }, [hasMoreThreads, loadingMoreThreads, threads])
 
   const clearWorkspaceState = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
     setThreads([])
+    setHasMoreThreads(false)
+    setLoadingMoreThreads(false)
     setMessages([])
+    setHasOlderMessages(false)
+    setLoadingOlderMessages(false)
     setActiveCanvas(null)
     setAttachments([])
     setSettings({ model: null, provider_index: null })
@@ -561,10 +612,14 @@ function App() {
   useEffect(() => {
     if (!currentUserId) return
     let active = true
-    Promise.all([getJson<Thread[]>('/threads'), getJson<Settings>('/settings')])
+    Promise.all([
+      getJson<ThreadPageResponse>('/threads/page?limit=30&offset=0'),
+      getJson<Settings>('/settings'),
+    ])
       .then(([threadData, settingData]) => {
         if (!active) return
-        setThreads(threadData)
+        setThreads(threadData.items)
+        setHasMoreThreads(threadData.has_more)
         setSettings(settingData)
       })
       .catch((loadError: unknown) => {
@@ -592,6 +647,8 @@ function App() {
       const route = readRoute()
       if (route.threadId !== activeThreadId) {
         setMessages([])
+        setHasOlderMessages(false)
+        setLoadingOlderMessages(false)
         setAttachments([])
         setActiveCanvas(null)
       }
@@ -602,6 +659,7 @@ function App() {
       setError('')
       if (!route.threadId) {
         setMessages([])
+        setHasOlderMessages(false)
         setAttachments([])
         setLoadingThread(false)
       }
@@ -623,6 +681,8 @@ function App() {
     setSettingsPage(false)
     setMarketplacePage(false)
     setMessages([])
+    setHasOlderMessages(false)
+    setLoadingOlderMessages(false)
     setLoadingThread(false)
     setError('')
     window.setTimeout(() => inputRef.current?.focus(), 40)
@@ -697,12 +757,14 @@ function App() {
     }
     let active = true
     setLoadingThread(true)
-    getJson<{ thread: Thread; messages: Message[] }>(
-      `/threads/${encodeURIComponent(activeThreadId)}`,
+    setHasOlderMessages(false)
+    getJson<ThreadHistoryResponse>(
+      `/threads/${encodeURIComponent(activeThreadId)}?limit=50&include_extras=false`,
     )
       .then((data) => {
         if (!active) return
         setMessages(data.messages)
+        setHasOlderMessages(data.has_more_messages)
       })
       .catch((loadError: unknown) => {
         if (!active) return
@@ -710,6 +772,7 @@ function App() {
           setError(loadError instanceof Error ? loadError.message : 'Unable to load session history.')
         }
         setMessages([])
+        setHasOlderMessages(false)
         setAttachments([])
       })
       .finally(() => {
@@ -723,6 +786,42 @@ function App() {
   const sendingRef = useRef(sending)
   sendingRef.current = sending
 
+  const loadOlderMessages = useCallback(async () => {
+    if (!activeThreadId || !hasOlderMessages || loadingOlderMessages || !messages.length) return
+    const beforeId = Number(messages[0].id)
+    if (!Number.isFinite(beforeId) || beforeId <= 0) return
+
+    setLoadingOlderMessages(true)
+    const scrollElement = scrollRef.current
+    const previousScroll = scrollElement
+      ? { height: scrollElement.scrollHeight, top: scrollElement.scrollTop }
+      : null
+
+    try {
+      const data = await getJson<ThreadHistoryResponse>(
+        `/threads/${encodeURIComponent(activeThreadId)}?limit=50&before_id=${beforeId}&include_extras=false`,
+      )
+      if (data.messages.length && previousScroll) {
+        preserveHistoryScrollRef.current = previousScroll
+      }
+      if (data.messages.length) {
+        setMessages((current) => [...data.messages, ...current])
+      }
+      setHasOlderMessages(data.has_more_messages)
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load older messages.')
+    } finally {
+      setLoadingOlderMessages(false)
+    }
+  }, [activeThreadId, hasOlderMessages, loadingOlderMessages, messages, scrollRef])
+
+  useEffect(() => {
+    const ids = messages
+      .map((message) => Number(message.id))
+      .filter((id) => Number.isFinite(id))
+    latestMessageIdRef.current = ids.length ? Math.max(...ids) : 0
+  }, [messages])
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
@@ -735,20 +834,17 @@ function App() {
     if (!currentUser || !activeThreadId) return
     const pollInterval = window.setInterval(() => {
       if (sendingRef.current || document.visibilityState === 'hidden') return
-      getJson<{ thread: Thread; messages: Message[] }>(
-        `/threads/${encodeURIComponent(activeThreadId)}`,
+      getJson<ThreadUpdatesResponse>(
+        `/threads/${encodeURIComponent(activeThreadId)}/updates?after_id=${latestMessageIdRef.current}`,
       )
         .then((data) => {
-          if (!data || !Array.isArray(data.messages)) return
+          if (!data || !Array.isArray(data.messages) || !data.messages.length) return
           setMessages((current) => {
-            if (
-              current.length !== data.messages.length ||
-              (data.messages.length > 0 &&
-                current[current.length - 1]?.id !== data.messages[data.messages.length - 1]?.id)
-            ) {
-              return data.messages
-            }
-            return current
+            const knownIds = new Set(current.map((message) => String(message.id)))
+            const newMessages = data.messages.filter(
+              (message) => !knownIds.has(String(message.id)),
+            )
+            return newMessages.length ? [...current, ...newMessages] : current
           })
         })
         .catch(() => {})
@@ -759,6 +855,13 @@ function App() {
 
   useEffect(() => {
     if (!scrollRef.current) return
+    const preservedScroll = preserveHistoryScrollRef.current
+    if (preservedScroll) {
+      preserveHistoryScrollRef.current = null
+      scrollRef.current.scrollTop =
+        preservedScroll.top + (scrollRef.current.scrollHeight - preservedScroll.height)
+      return
+    }
     scrollRef.current.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: 'smooth',
@@ -785,6 +888,8 @@ function App() {
     }
     if (threadId !== activeThreadId) {
       setMessages([])
+      setHasOlderMessages(false)
+      setLoadingOlderMessages(false)
     }
     window.history.pushState({}, '', `/c/${encodeURIComponent(threadId)}`)
     setActiveThreadId(threadId)
@@ -1881,6 +1986,9 @@ function App() {
         search={search}
         setSearch={setSearch}
         visibleThreads={visibleThreads}
+        hasMoreThreads={hasMoreThreads}
+        loadingMoreThreads={loadingMoreThreads}
+        onLoadMoreThreads={loadMoreThreads}
         activeThreadId={activeThreadId}
         renamingThreadId={renamingThreadId}
         setRenamingThreadId={setRenamingThreadId}
@@ -2063,6 +2171,9 @@ function App() {
               <ChatWorkspace
                 loadingThread={loadingThread}
                 messages={messages}
+                hasOlderMessages={hasOlderMessages}
+                loadingOlderMessages={loadingOlderMessages}
+                loadOlderMessages={loadOlderMessages}
                 scrollRef={scrollRef}
                 editingMessageId={editingMessageId}
                 setEditingMessageId={setEditingMessageId}

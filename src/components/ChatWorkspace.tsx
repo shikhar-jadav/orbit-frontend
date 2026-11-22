@@ -18,6 +18,9 @@ import './ChatWorkspace.css'
 type ChatWorkspaceProps = {
   loadingThread: boolean
   messages: Message[]
+  hasOlderMessages: boolean
+  loadingOlderMessages: boolean
+  loadOlderMessages: () => void
   scrollRef: RefObject<HTMLDivElement | null>
   editingMessageId: string | number | null
   setEditingMessageId: Dispatch<SetStateAction<string | number | null>>
@@ -226,6 +229,9 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
   const {
     loadingThread,
     messages,
+    hasOlderMessages,
+    loadingOlderMessages,
+    loadOlderMessages,
     scrollRef,
     editingMessageId,
     setEditingMessageId,
@@ -481,6 +487,17 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                 </div>
               ) : messages.length ? (
                 <div className="messages-inner">
+                  {hasOlderMessages && (
+                    <div className="older-messages-control">
+                      <button
+                        type="button"
+                        onClick={loadOlderMessages}
+                        disabled={loadingOlderMessages}
+                      >
+                        {loadingOlderMessages ? 'Loading earlier messages…' : 'Load older messages'}
+                      </button>
+                    </div>
+                  )}
                   {messages.map((message) => (
                     <div
                       className={`message-entry ${message.role === 'user' ? 'user-entry' : 'assistant-entry'}`}

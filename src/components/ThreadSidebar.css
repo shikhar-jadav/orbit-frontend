@@ -672,3 +672,27 @@
     opacity: 1;
   }
 }
+
+
+.sidebar-load-more {
+  display: block;
+  width: calc(100% - 12px);
+  margin: 8px 6px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.sidebar-load-more:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.sidebar-load-more:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

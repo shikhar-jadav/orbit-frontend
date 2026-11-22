@@ -17,6 +17,9 @@ type ThreadSidebarProps = {
   search: string
   setSearch: Dispatch<SetStateAction<string>>
   visibleThreads: SidebarThread[]
+  hasMoreThreads: boolean
+  loadingMoreThreads: boolean
+  onLoadMoreThreads: () => void
   activeThreadId: string | null
   renamingThreadId: string | null
   setRenamingThreadId: Dispatch<SetStateAction<string | null>>
@@ -54,6 +57,9 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
     search,
     setSearch,
     visibleThreads,
+    hasMoreThreads,
+    loadingMoreThreads,
+    onLoadMoreThreads,
     activeThreadId,
     renamingThreadId,
     setRenamingThreadId,
@@ -316,6 +322,16 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
               ))
             ) : (
               <p className="empty-recents">{search ? 'No matching sessions.' : 'No sessions recorded yet.'}</p>
+            )}
+            {hasMoreThreads && !search && (
+              <button
+                type="button"
+                className="sidebar-load-more"
+                onClick={onLoadMoreThreads}
+                disabled={loadingMoreThreads}
+              >
+                {loadingMoreThreads ? 'Loading more sessions…' : 'Load more sessions'}
+              </button>
             )}
           </div>
 
