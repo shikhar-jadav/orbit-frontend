@@ -449,6 +449,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
               : 'Routine created. Add the signed webhook to your event source.',
       )
       setRoutineEvents([])
+      setRoutineRuns([])
       setTab('detail')
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not create event routine.')
