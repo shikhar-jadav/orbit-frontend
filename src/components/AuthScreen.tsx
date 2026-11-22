@@ -290,8 +290,8 @@ export function AuthScreen({
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [avatarColor, setAvatarColor] = useState<string>(AVATAR_SWATCHES[0])
-  const [rememberMe, setRememberMe] = useState(false)
+  const [avatarColor] = useState<string>(AVATAR_SWATCHES[0])
+  const rememberMe = true
   const [showPassword, setShowPassword] = useState(false)
   const [capsLockOn, setCapsLockOn] = useState(false)
 
@@ -1190,16 +1190,7 @@ export function AuthScreen({
                     )}
                   </div>
 
-                  <div className="auth-inline-row">
-                    <label className="auth-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                      />
-                      <span>Keep me signed in (30 days)</span>
-                    </label>
-
+                  <div className="auth-inline-row auth-inline-row-end">
                     <button
                       type="button"
                       className="auth-link-btn"
@@ -1278,16 +1269,7 @@ export function AuthScreen({
                     }}
                   />
 
-                  <div className="auth-inline-row">
-                    <label className="auth-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                      />
-                      <span>Keep me signed in (30 days)</span>
-                    </label>
-
+                  <div className="auth-inline-row auth-inline-row-end">
                     <button
                       type="button"
                       className="auth-link-btn"
@@ -1467,36 +1449,6 @@ export function AuthScreen({
                       </span>
                     )}
                   </div>
-
-                  <div className="auth-avatar-row">
-                    <div className="auth-avatar-preview-wrap">
-                      <span className="auth-avatar-preview" style={{ background: avatarColor }}>
-                        {computeInitials(email)}
-                      </span>
-                      <span className="auth-avatar-caption">Profile badge</span>
-                    </div>
-                    <div className="auth-swatches" role="radiogroup" aria-label="Avatar color">
-                      {AVATAR_SWATCHES.map((swatch) => (
-                        <button
-                          key={swatch}
-                          type="button"
-                          className={`auth-swatch ${avatarColor === swatch ? 'selected' : ''}`}
-                          style={{ background: swatch }}
-                          aria-label={`Select color ${swatch}`}
-                          onClick={() => setAvatarColor(swatch)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <label className="auth-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                    />
-                    <span>Keep me signed in on this browser (30 days)</span>
-                  </label>
 
                   <button type="submit" className="auth-primary-btn" disabled={loading}>
                     {loading ? 'Creating account...' : 'Create account'}

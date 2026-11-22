@@ -475,6 +475,10 @@
   flex-wrap: wrap;
 }
 
+.auth-inline-row-end {
+  justify-content: flex-end;
+}
+
 .auth-checkbox-label {
   display: inline-flex;
   align-items: center;
