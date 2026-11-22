@@ -290,7 +290,6 @@ export function AuthScreen({
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
   const [avatarColor, setAvatarColor] = useState<string>(AVATAR_SWATCHES[0])
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -434,7 +433,6 @@ export function AuthScreen({
           setRecentAccounts(forgetRecentAccount(matchedCard.email))
         }
         setSelectedAccount(null)
-        setDisplayName(matchedCard?.display_name || '')
         goToSignupPage(data.email, true)
       }
     } catch {
@@ -564,12 +562,16 @@ export function AuthScreen({
       setError('Enter your email address.')
       return
     }
-    if (!displayName.trim()) {
-      setError('Enter your display name.')
-      return
-    }
     if (password.length < 8) {
       setError('Password must be at least 8 characters.')
+      return
+    }
+    if (password.length > 128) {
+      setError('Password must be 128 characters or fewer.')
+      return
+    }
+    if (!confirmPassword) {
+      setError('Confirm your password.')
       return
     }
     if (password !== confirmPassword) {
@@ -584,7 +586,6 @@ export function AuthScreen({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({
-          display_name: displayName.trim(),
           email: email.trim(),
           password,
           remember_me: rememberMe,
@@ -1383,23 +1384,6 @@ export function AuthScreen({
                   )}
 
                   <div className="auth-field">
-                    <label className="auth-label" htmlFor="auth-display-name">
-                      Display name
-                    </label>
-                    <input
-                      id="auth-display-name"
-                      type="text"
-                      className="auth-input"
-                      placeholder="Alex Mercer"
-                      value={displayName}
-                      autoComplete="name"
-                      autoFocus={emailLockedInSignup}
-                      disabled={loading}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="auth-field">
                     <label className="auth-label" htmlFor="auth-signup-password">
                       Password
                     </label>
@@ -1411,10 +1395,17 @@ export function AuthScreen({
                         placeholder="At least 8 characters"
                         value={password}
                         autoComplete="new-password"
+                        minLength={8}
+                        maxLength={128}
+                        required
+                        autoFocus={emailLockedInSignup}
                         disabled={loading}
                         onKeyDown={checkCapsLock}
                         onKeyUp={checkCapsLock}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => {
+                          setPassword(e.target.value)
+                          setError((current) => current === 'Passwords do not match.' ? '' : current)
+                        }}
                       />
                       <button
                         type="button"
@@ -1460,18 +1451,27 @@ export function AuthScreen({
                       placeholder="Re-enter password"
                       value={confirmPassword}
                       autoComplete="new-password"
+                      maxLength={128}
+                      required
+                      aria-invalid={Boolean(confirmPassword && confirmPassword !== password)}
+                      aria-describedby={confirmPassword && confirmPassword !== password ? 'auth-signup-confirm-error' : undefined}
                       disabled={loading}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value)
+                        setError((current) => current === 'Passwords do not match.' ? '' : current)
+                      }}
                     />
                     {confirmPassword && confirmPassword !== password && (
-                      <span className="auth-field-hint">Passwords do not match</span>
+                      <span id="auth-signup-confirm-error" className="auth-field-hint" role="alert">
+                        Passwords do not match. Please enter the same password in both fields.
+                      </span>
                     )}
                   </div>
 
                   <div className="auth-avatar-row">
                     <div className="auth-avatar-preview-wrap">
                       <span className="auth-avatar-preview" style={{ background: avatarColor }}>
-                        {computeInitials(displayName || email)}
+                        {computeInitials(email)}
                       </span>
                       <span className="auth-avatar-caption">Profile badge</span>
                     </div>
