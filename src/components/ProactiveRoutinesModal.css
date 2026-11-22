@@ -990,3 +990,50 @@ dialog.routines-modal-dialog {
     padding: 0.8rem;
   }
 }
+
+
+.event-prerequisite-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.event-prerequisite-list small {
+  color: #fbbf24;
+  font-size: 0.71rem;
+  line-height: 1.45;
+}
+
+.event-webhook-example {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border-color, #33333d);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.event-webhook-example > span {
+  color: var(--text-3, #a1a1aa);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.event-webhook-example pre {
+  margin: 0;
+  max-height: 170px;
+  overflow: auto;
+  padding: 0.65rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.26);
+  color: var(--text-2, #d4d4d8);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
