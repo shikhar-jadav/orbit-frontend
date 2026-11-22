@@ -111,7 +111,19 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [creatingRoutine, setCreatingRoutine] = useState(false)
   const [formError, setFormError] = useState('')
   const [createMode, setCreateMode] = useState<'schedule' | 'event'>('schedule')
-  const [eventRequest, setEventRequest] = useState('')
+  const [eventProvider, setEventProvider] = useState<'github' | 'slack' | 'gmail' | 'webhook'>('github')
+  const [eventRoutineName, setEventRoutineName] = useState('')
+  const [eventActionInstruction, setEventActionInstruction] = useState('')
+  const [eventType, setEventType] = useState('issues.opened')
+  const [githubRepository, setGithubRepository] = useState('')
+  const [githubLabel, setGithubLabel] = useState('')
+  const [slackChannel, setSlackChannel] = useState('')
+  const [slackPhrase, setSlackPhrase] = useState('')
+  const [slackReaction, setSlackReaction] = useState('')
+  const [gmailSender, setGmailSender] = useState('')
+  const [gmailSubject, setGmailSubject] = useState('')
+  const [webhookEventType, setWebhookEventType] = useState('webhook.received')
+  const [webhookWhen, setWebhookWhen] = useState('')
   const [integrationStatus, setIntegrationStatus] = useState<{
     public_url_configured: boolean
     webhook_payload_limit_configured: boolean
@@ -420,33 +432,117 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const handleCreateEvent = async (event: FormEvent) => {
     event.preventDefault()
     setFormError('')
-    if (!eventRequest.trim()) {
-      setFormError('Describe what should start the routine and what it should do.')
+
+    if (!eventRoutineName.trim() || !eventActionInstruction.trim()) {
+      setFormError('Add a routine name and describe what Orbit should do.')
       return
     }
+
+    const connectedAccount =
+      eventProvider === 'webhook' ? true : Boolean(integrationStatus?.[eventProvider].accounts[0])
+    if (!connectedAccount) {
+      setFormError('Connect this service before creating its event trigger.')
+      return
+    }
+
+    const conditions: Array<Record<string, unknown>> = []
+    let resolvedEventType = eventType
+    let whenToRun = ''
+
+    if (eventProvider === 'github') {
+      if (!githubRepository.trim() || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(githubRepository.trim())) {
+        setFormError('Enter a GitHub repository as owner/repository.')
+        return
+      }
+      resolvedEventType = eventType
+      whenToRun = `When ${eventType.replaceAll('.', ' ')} occurs in ${githubRepository.trim()}`
+      if (githubLabel.trim()) {
+        conditions.push({
+          field: 'payload.labels',
+          operator: 'contains',
+          value: githubLabel.trim(),
+        })
+        whenToRun += ` with the label “${githubLabel.trim()}”`
+      }
+    } else if (eventProvider === 'slack') {
+      if (!slackChannel.trim()) {
+        setFormError('Enter the Slack channel Orbit should watch.')
+        return
+      }
+      resolvedEventType = eventType
+      whenToRun = `When ${eventType === 'app_mention' ? 'Orbit is mentioned' : eventType === 'reaction_added' ? 'a reaction is added' : 'a new message is posted'} in #${slackChannel.trim().replace(/^#/, '')}`
+      if (eventType === 'reaction_added' && slackReaction.trim()) {
+        conditions.push({
+          field: 'payload.reaction',
+          operator: 'equals',
+          value: slackReaction.trim().replace(/^:/, '').replace(/:$/, ''),
+        })
+        whenToRun += ` with the :${slackReaction.trim().replace(/^:/, '').replace(/:$/, '')}: reaction`
+      } else if (slackPhrase.trim()) {
+        conditions.push({
+          field: 'payload.text',
+          operator: 'contains',
+          value: slackPhrase.trim(),
+        })
+        whenToRun += ` containing “${slackPhrase.trim()}”`
+      }
+    } else if (eventProvider === 'gmail') {
+      resolvedEventType = 'email.received'
+      const mailbox = integrationStatus?.gmail.accounts[0]?.account_name || 'the connected inbox'
+      whenToRun = `When a new email arrives in ${mailbox}`
+      if (gmailSender.trim()) {
+        conditions.push({ field: 'payload.from', operator: 'contains', value: gmailSender.trim() })
+        whenToRun += ` from ${gmailSender.trim()}`
+      }
+      if (gmailSubject.trim()) {
+        conditions.push({ field: 'payload.subject', operator: 'contains', value: gmailSubject.trim() })
+        whenToRun += ` with subject containing “${gmailSubject.trim()}”`
+      }
+    } else {
+      resolvedEventType = webhookEventType.trim()
+      if (!resolvedEventType) {
+        setFormError('Enter the event name your webhook sender will send.')
+        return
+      }
+      whenToRun = webhookWhen.trim() || `When the webhook receives ${resolvedEventType}`
+    }
+
     setCreatingRoutine(true)
     try {
-      const res = await fetch('/api/routines/events/from-prompt', {
+      const requestBody = {
+        name: eventRoutineName.trim(),
+        instruction: eventActionInstruction.trim(),
+        source: eventProvider,
+        event_type: resolvedEventType,
+        when_to_run: whenToRun,
+        filters: conditions.length
+          ? { operator: 'AND', conditions }
+          : null,
+        ...(eventProvider === 'github' ? { repository: githubRepository.trim() } : {}),
+        ...(eventProvider === 'slack' ? { channel_name: slackChannel.trim().replace(/^#/, '') } : {}),
+      }
+
+      const res = await fetch('/api/routines/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: eventRequest.trim() }),
+        body: JSON.stringify(requestBody),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Could not create event routine.')
+
       const created = data.routine as Routine
       setRoutines((items) => [created, ...items.filter((item) => item.id !== created.id)])
       setSelectedRoutine(created)
       setWebhookUrl(data.webhook_url || '')
-      setEventRequest('')
       setEditingRoutine(false)
       setRoutineActionStatus(
-        created.event_source === 'github'
-          ? 'Routine created. GitHub will send new matching events.'
-          : created.event_source === 'slack'
-            ? 'Routine created. Slack will send new matching events.'
-            : created.event_source === 'gmail'
-              ? 'Routine created. New matching Gmail messages will start runs.'
-              : 'Routine created. Add the signed webhook to your event source.',
+        eventProvider === 'github'
+          ? 'Routine created. Orbit registered a webhook on the selected repository.'
+          : eventProvider === 'slack'
+            ? 'Routine created. Finish the Slack Events API setup shown below to start receiving events.'
+            : eventProvider === 'gmail'
+              ? 'Routine created. New matching emails will start runs.'
+              : 'Routine created. Copy the webhook URL and key below, then send a POST when your event occurs.',
       )
       setRoutineEvents([])
       setRoutineRuns([])
@@ -1047,95 +1143,252 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                   </button>
                 </form>
               ) : (
-                <form className="routines-form" onSubmit={(event) => void handleCreateEvent(event)}>
-                  <div className="routines-form-field">
-                    <label htmlFor="event-request">What should start it, and what should it do?</label>
-                    <textarea
-                      id="event-request"
-                      rows={5}
-                      maxLength={1500}
-                      placeholder='For example: When a new issue labeled "bug" opens in owner/repo, investigate it and summarize the likely cause here.'
-                      value={eventRequest}
-                      onChange={(e) => setEventRequest(e.target.value)}
-                      disabled={creatingRoutine}
-                      required
-                    />
-                    <p className="schedule-help-text">
-                      Use plain language. Choose one channel or repository and one narrow condition.
-                      Existing events won’t run; only new matching activity starts a routine.
-                    </p>
-                  </div>
-                  <div className="routine-integration-connections">
-                    <p>Event accounts are separate from regular app connectors.</p>
-                    {(['gmail', 'github', 'slack'] as const).map((provider) => {
-                      const status = integrationStatus?.[provider]
-                      const account = status?.accounts[0]
-                      const providerName =
-                        provider === 'github' ? 'GitHub' : provider === 'slack' ? 'Slack' : 'Gmail'
-                      return (
-                        <div className="routine-copy-row" key={provider}>
-                          <span>
-                            {providerName}:{' '}
-                            {account ? `Connected as ${account.account_name}` : 'Not connected'}
-                          </span>
-                          {!account && (
-                            <button
-                              type="button"
-                              className="routine-action-btn"
-                              disabled={!status?.configured || !integrationStatus?.token_storage_configured}
-                              onClick={() => void handleConnectIntegration(provider)}
-                              title={
-                                !integrationStatus?.token_storage_configured
-                                  ? 'Configure INTEGRATION_TOKEN_ENCRYPTION_KEY on the server'
-                                  : status?.configured
-                                  ? `Connect ${provider}`
-                                  : `Configure ${provider} OAuth credentials in the server environment`
-                              }
-                            >
-                              Connect {providerName}
-                            </button>
-                          )}
-                          {account && (
-                            <button
-                              type="button"
-                              className="routine-action-btn"
-                              onClick={() => void handleDisconnectIntegration(provider)}
-                            >
-                              Disconnect
-                            </button>
-                          )}
+                <form className="routines-form event-routine-form" onSubmit={(event) => void handleCreateEvent(event)}>
+                  <section className="event-setup-section">
+                    <div className="event-step-heading">
+                      <span className="event-step-number">1</span>
+                      <div>
+                        <h3>Choose the service</h3>
+                        <p>Pick the app or system that should wake Orbit when something happens.</p>
+                      </div>
+                    </div>
+                    <div className="event-provider-grid">
+                      {([
+                        ['github', 'GitHub', 'Issues, pull requests and comments'],
+                        ['slack', 'Slack', 'Mentions, messages and reactions'],
+                        ['gmail', 'Gmail', 'New incoming email'],
+                        ['webhook', 'Custom webhook', 'Any app that can send an HTTP event'],
+                      ] as const).map(([provider, title, description]) => {
+                        const providerStatus = provider === 'webhook' ? null : integrationStatus?.[provider]
+                        const connected = provider === 'webhook' || Boolean(providerStatus?.accounts[0])
+                        return (
+                          <button
+                            type="button"
+                            key={provider}
+                            className={'event-provider-card' + (eventProvider === provider ? ' selected' : '')}
+                            aria-pressed={eventProvider === provider}
+                            onClick={() => {
+                              setEventProvider(provider)
+                              if (provider === 'github') setEventType('issues.opened')
+                              if (provider === 'slack') setEventType('app_mention')
+                              if (provider === 'gmail') setEventType('email.received')
+                            }}
+                          >
+                            <span className="event-provider-title">{title}</span>
+                            <span className="event-provider-description">{description}</span>
+                            <span className={'event-provider-state' + (connected ? ' connected' : '')}>
+                              {provider === 'webhook' ? 'No app connection needed' : connected ? 'Connected' : 'Connection required'}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  {eventProvider !== 'webhook' && (
+                    <section className="event-setup-section">
+                      <div className="event-step-heading">
+                        <span className="event-step-number">2</span>
+                        <div>
+                          <h3>Connect {eventProvider === 'github' ? 'GitHub' : eventProvider === 'slack' ? 'Slack' : 'Gmail'}</h3>
+                          <p>This connection is used to receive events for your routines.</p>
                         </div>
-                      )
-                    })}
-                    {integrationStatus &&
-                      (!integrationStatus.github.configured || !integrationStatus.slack.configured) && (
-                        <small>
-                          Provider connections need OAuth app credentials in the server environment.
-                        </small>
+                      </div>
+                      {integrationStatus?.[eventProvider].accounts[0] ? (
+                        <div className="event-connection-panel connected">
+                          <span className="event-connection-dot" />
+                          <div>
+                            <strong>Connected as {integrationStatus[eventProvider].accounts[0].account_name}</strong>
+                            <p>Orbit can use this account for event triggers.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="event-connection-panel">
+                          <div>
+                            <strong>{integrationStatus ? 'Service not connected' : 'Checking connection…'}</strong>
+                            <p>
+                              {integrationStatus?.[eventProvider].configured
+                                ? 'Connect your account in a secure sign-in window. You can return here when it is finished.'
+                                : 'This service needs OAuth credentials configured by the Orbit server before it can be connected.'}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="routine-action-btn event-connect-btn"
+                            disabled={!integrationStatus?.[eventProvider].configured || !integrationStatus?.token_storage_configured || creatingRoutine}
+                            onClick={() => void handleConnectIntegration(eventProvider)}
+                          >
+                            Connect {eventProvider === 'github' ? 'GitHub' : eventProvider === 'slack' ? 'Slack' : 'Gmail'}
+                          </button>
+                        </div>
                       )}
-                      {integrationStatus &&
-                        (!integrationStatus.gmail.configured ||
-                          !integrationStatus.gmail.pubsub_configured) && (
-                          <small>
-                            Gmail also needs Google OAuth credentials and an authenticated Pub/Sub push
-                            subscription. See the Gmail event setup in README.md.
-                          </small>
+
+                      {eventProvider === 'github' && integrationStatus?.github.accounts[0] && (
+                        <div className="event-provider-help">
+                          <strong>GitHub setup</strong>
+                          <p>After you create the routine, Orbit automatically registers a signed webhook on the repository you choose. You do not need to paste a webhook URL into GitHub.</p>
+                        </div>
+                      )}
+
+                      {eventProvider === 'slack' && integrationStatus?.slack.accounts[0] && (
+                        <div className="event-provider-help">
+                          <strong>One extra Slack setup step</strong>
+                          <p>Slack delivers events to this shared URL. Add it in your Slack app under Event Subscriptions, turn events on, and subscribe to the event types you plan to use. Invite your Slack app into the channel you want Orbit to watch.</p>
+                          {integrationStatus.slack.events_url && (
+                            <div className="routine-copy-row">
+                              <code>{integrationStatus.slack.events_url}</code>
+                              <button type="button" className="routine-action-btn" onClick={() => void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')}>Copy URL</button>
+                            </div>
+                          )}
+                          {!integrationStatus.slack.signing_configured && <small>Orbit's Slack signing secret is not configured on the server yet.</small>}
+                          {!integrationStatus.public_url_configured && <small>Set ORBIT_PUBLIC_URL to a public HTTPS address before Slack can deliver events.</small>}
+                        </div>
+                      )}
+
+                      {eventProvider === 'gmail' && integrationStatus?.gmail.accounts[0] && (
+                        <div className="event-provider-help">
+                          <strong>Gmail push setup</strong>
+                          <p>Orbit uses Gmail push notifications to detect new mail. You connect your mailbox here; the Orbit server must also have its Gmail Pub/Sub push subscription configured.</p>
+                          {!integrationStatus.gmail.pubsub_configured && <small>Gmail Pub/Sub is not configured on the Orbit server yet. A mailbox connection alone is not enough to receive events.</small>}
+                          {!integrationStatus.public_url_configured && <small>Set ORBIT_PUBLIC_URL to a public HTTPS address for provider event delivery.</small>}
+                        </div>
+                      )}
+
+                      {eventProvider !== 'webhook' && !integrationStatus?.token_storage_configured && (
+                        <p className="event-inline-warning">The Orbit server needs INTEGRATION_TOKEN_ENCRYPTION_KEY before it can store connected service accounts.</p>
+                      )}
+                    </section>
+                  )}
+
+                  <section className="event-setup-section">
+                    <div className="event-step-heading">
+                      <span className="event-step-number">{eventProvider === 'webhook' ? '2' : '3'}</span>
+                      <div>
+                        <h3>Choose the event</h3>
+                        <p>Tell Orbit exactly what kind of activity should start this routine.</p>
+                      </div>
+                    </div>
+
+                    {eventProvider !== 'webhook' && (
+                      <div className="routines-form-field">
+                        <label htmlFor="event-type">Event</label>
+                        <select id="event-type" value={eventType} onChange={(e) => setEventType(e.target.value)}>
+                          {(eventProvider === 'github'
+                            ? [
+                                ['issues.opened', 'A new issue is opened'],
+                                ['issues.labeled', 'A label is added to an issue'],
+                                ['pull_request.opened', 'A pull request is opened'],
+                                ['issue_comment.created', 'A comment is created on an issue or pull request'],
+                              ]
+                            : eventProvider === 'slack'
+                              ? [
+                                  ['app_mention', 'Orbit is mentioned'],
+                                  ['message.channels', 'A new channel message is posted'],
+                                  ['reaction_added', 'A reaction is added to a message'],
+                                ]
+                              : [['email.received', 'A new email arrives']]
+                          ).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {eventProvider === 'github' && (
+                      <>
+                        <div className="routines-form-field">
+                          <label htmlFor="github-repository">Repository</label>
+                          <input id="github-repository" value={githubRepository} onChange={(e) => setGithubRepository(e.target.value)} placeholder="owner/repository" required />
+                          <small>Orbit installs the webhook only on this repository.</small>
+                        </div>
+                        <div className="routines-form-field">
+                          <label htmlFor="github-label">Only when the issue has this label (optional)</label>
+                          <input id="github-label" value={githubLabel} onChange={(e) => setGithubLabel(e.target.value)} placeholder="bug, support, urgent…" />
+                        </div>
+                      </>
+                    )}
+
+                    {eventProvider === 'slack' && (
+                      <>
+                        <div className="routines-form-field">
+                          <label htmlFor="slack-channel">Channel</label>
+                          <input id="slack-channel" value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="customer-escalations" required />
+                          <small>Enter the channel name without the #. The Slack app must be a member of this channel.</small>
+                        </div>
+                        {eventType === 'reaction_added' ? (
+                          <div className="routines-form-field">
+                            <label htmlFor="slack-reaction">Only this reaction (optional)</label>
+                            <input id="slack-reaction" value={slackReaction} onChange={(e) => setSlackReaction(e.target.value)} placeholder="eyes" />
+                          </div>
+                        ) : (
+                          <div className="routines-form-field">
+                            <label htmlFor="slack-phrase">Only messages containing this phrase (optional)</label>
+                            <input id="slack-phrase" value={slackPhrase} onChange={(e) => setSlackPhrase(e.target.value)} placeholder="needs review" />
+                          </div>
                         )}
-                    {integrationStatus && !integrationStatus.token_storage_configured && (
-                      <small>Set INTEGRATION_TOKEN_ENCRYPTION_KEY to protect saved provider tokens.</small>
+                      </>
                     )}
-                    {integrationStatus && !integrationStatus.webhook_payload_limit_configured && (
-                      <small>Set ORBIT_PROVIDER_WEBHOOK_MAX_BYTES before receiving GitHub or Slack events.</small>
+
+                    {eventProvider === 'gmail' && (
+                      <>
+                        <div className="routines-form-field">
+                          <label htmlFor="gmail-sender">Only from this sender (optional)</label>
+                          <input id="gmail-sender" type="email" value={gmailSender} onChange={(e) => setGmailSender(e.target.value)} placeholder="alerts@example.com" />
+                        </div>
+                        <div className="routines-form-field">
+                          <label htmlFor="gmail-subject">Subject contains (optional)</label>
+                          <input id="gmail-subject" value={gmailSubject} onChange={(e) => setGmailSubject(e.target.value)} placeholder="Invoice or Support request" />
+                        </div>
+                      </>
                     )}
-                    {integrationStatus && !integrationStatus.public_url_configured && (
-                      <small>Provider triggers also need ORBIT_PUBLIC_URL set to a public HTTPS address.</small>
+
+                    {eventProvider === 'webhook' && (
+                      <>
+                        <div className="routines-form-field">
+                          <label htmlFor="webhook-event-type">Event name</label>
+                          <input id="webhook-event-type" value={webhookEventType} onChange={(e) => setWebhookEventType(e.target.value)} placeholder="invoice.paid" required />
+                          <small>Your sender can include this value as event_type in its JSON body. If it leaves event_type out, Orbit uses this configured event name.</small>
+                        </div>
+                        <div className="routines-form-field">
+                          <label htmlFor="webhook-when">When should it run?</label>
+                          <input id="webhook-when" value={webhookWhen} onChange={(e) => setWebhookWhen(e.target.value)} placeholder="When a paid invoice event is received" />
+                        </div>
+                      </>
                     )}
-                    {integrationStatus && !integrationStatus.slack.signing_configured && (
-                      <small>Slack triggers need SLACK_SIGNING_SECRET configured on the server.</small>
-                    )}
+                  </section>
+
+                  <section className="event-setup-section">
+                    <div className="event-step-heading">
+                      <span className="event-step-number">{eventProvider === 'webhook' ? '3' : '4'}</span>
+                      <div>
+                        <h3>What should Orbit do?</h3>
+                        <p>Give the routine a name and describe the work it should perform after a match.</p>
+                      </div>
+                    </div>
+                    <div className="routines-form-field">
+                      <label htmlFor="event-routine-name">Routine name</label>
+                      <input id="event-routine-name" value={eventRoutineName} onChange={(e) => setEventRoutineName(e.target.value)} placeholder="Triage new support issues" required maxLength={120} />
+                    </div>
+                    <div className="routines-form-field">
+                      <label htmlFor="event-action-instruction">Instructions for Orbit</label>
+                      <textarea
+                        id="event-action-instruction"
+                        rows={5}
+                        maxLength={4000}
+                        placeholder="Review the new issue, identify the likely cause, check related files, and write a concise summary in Orbit."
+                        value={eventActionInstruction}
+                        onChange={(e) => setEventActionInstruction(e.target.value)}
+                        disabled={creatingRoutine}
+                        required
+                      />
+                      <small>Describe the task and where the result should be delivered. Keep external actions such as sending messages or publishing behind an approval step.</small>
+                    </div>
+                  </section>
+
+                  <div className="event-final-note">
+                    <strong>Only new matching events will start this routine.</strong>
+                    <span>Orbit checks the service, event type and conditions before starting the agent. Older activity is not replayed.</span>
                   </div>
-                  <button type="submit" className="routines-submit-btn" disabled={creatingRoutine}>
-                    {creatingRoutine ? 'Creating routine...' : 'Create event routine'}
+                  <button type="submit" className="routines-submit-btn" disabled={creatingRoutine || (eventProvider !== 'webhook' && !integrationStatus?.[eventProvider].accounts[0])}>
+                    {creatingRoutine ? 'Creating event trigger…' : 'Create event trigger'}
                   </button>
                 </form>
               )}
