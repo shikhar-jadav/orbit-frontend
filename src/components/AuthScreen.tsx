@@ -701,8 +701,6 @@ export function AuthScreen({
       setLoading(false)
     }
   }
-
-  const signupStrength = passwordStrength(password)
   const resetStrength = passwordStrength(newPassword)
   const isCenteredLayout = step === 'logged-out' || step === 'backup-codes'
   const activeNavTab: 'login' | 'signup' | 'recovery' =
@@ -1388,22 +1386,6 @@ export function AuthScreen({
                         <Icon name="alertTriangle" size={13} />
                         <span>Caps Lock is on</span>
                       </span>
-                    )}
-
-                    {password.length > 0 && (
-                      <div className="auth-strength">
-                        <div className="auth-strength-track">
-                          {[1, 2, 3].map((idx) => (
-                            <div
-                              key={idx}
-                              className={`auth-strength-bar ${
-                                idx <= signupStrength.score ? `filled ${signupStrength.tone}` : ''
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="auth-strength-label">{signupStrength.label}</span>
-                      </div>
                     )}
                   </div>
 
