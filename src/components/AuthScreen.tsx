@@ -289,7 +289,6 @@ export function AuthScreen({
   const [serverOtpEnabled, setServerOtpEnabled] = useState(emailOtpEnabled)
 
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [avatarColor] = useState<string>(AVATAR_SWATCHES[0])
   const rememberMe = true
   const [showPassword, setShowPassword] = useState(false)
@@ -349,7 +348,6 @@ export function AuthScreen({
   const goToLoginGateway = (clearPrefill = false) => {
     resetMessages()
     setPassword('')
-    setConfirmPassword('')
     setOtpCode('')
     setShowPassword(false)
     setCapsLockOn(false)
@@ -367,7 +365,6 @@ export function AuthScreen({
     if (prefillEmail !== undefined) setEmail(prefillEmail)
     setEmailLockedInSignup(lockEmail)
     setPassword('')
-    setConfirmPassword('')
     setShowPassword(false)
     setCapsLockOn(false)
     setShowAllOptions(false)
@@ -416,7 +413,6 @@ export function AuthScreen({
       setRecoveryMethod(data.email_otp_enabled ? 'otp' : 'backup')
       setShowPassword(false)
       setPassword('')
-      setConfirmPassword('')
       setOtpCode('')
       setShowAllOptions(false)
 
@@ -568,14 +564,6 @@ export function AuthScreen({
     }
     if (password.length > 128) {
       setError('Password must be 128 characters or fewer.')
-      return
-    }
-    if (!confirmPassword) {
-      setError('Confirm your password.')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
       return
     }
     resetMessages()
@@ -1384,10 +1372,7 @@ export function AuthScreen({
                         disabled={loading}
                         onKeyDown={checkCapsLock}
                         onKeyUp={checkCapsLock}
-                        onChange={(e) => {
-                          setPassword(e.target.value)
-                          setError((current) => current === 'Passwords do not match.' ? '' : current)
-                        }}
+                        onChange={(e) => setPassword(e.target.value)}
                       />
                       <button
                         type="button"
@@ -1419,34 +1404,6 @@ export function AuthScreen({
                         </div>
                         <span className="auth-strength-label">{signupStrength.label}</span>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="auth-field">
-                    <label className="auth-label" htmlFor="auth-signup-confirm">
-                      Confirm password
-                    </label>
-                    <input
-                      id="auth-signup-confirm"
-                      type={showPassword ? 'text' : 'password'}
-                      className="auth-input"
-                      placeholder="Re-enter password"
-                      value={confirmPassword}
-                      autoComplete="new-password"
-                      maxLength={128}
-                      required
-                      aria-invalid={Boolean(confirmPassword && confirmPassword !== password)}
-                      aria-describedby={confirmPassword && confirmPassword !== password ? 'auth-signup-confirm-error' : undefined}
-                      disabled={loading}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value)
-                        setError((current) => current === 'Passwords do not match.' ? '' : current)
-                      }}
-                    />
-                    {confirmPassword && confirmPassword !== password && (
-                      <span id="auth-signup-confirm-error" className="auth-field-hint" role="alert">
-                        Passwords do not match. Please enter the same password in both fields.
-                      </span>
                     )}
                   </div>
 
