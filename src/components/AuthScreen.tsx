@@ -756,7 +756,7 @@ export function AuthScreen({
           setShowSmtpGuide(false)
         }}
       >
-        <span>All sign-in options</span>
+        <span>Other ways to continue</span>
         <Icon
           name="chevron"
           size={15}
@@ -864,7 +864,7 @@ export function AuthScreen({
               <span className="auth-brand-mark">
                 <Icon name="orbit" size={16} />
               </span>
-              <span>Orbit Agent Studio</span>
+              <span>Orbit</span>
             </div>
 
             {step !== 'backup-codes' && step !== 'logged-out' && step !== 'recovery' && (
@@ -1001,12 +1001,12 @@ export function AuthScreen({
               <>
                 <div className="auth-header">
                   <h1 className="auth-title">
-                    {hasUsers ? 'Sign in to Orbit Studio' : 'Create your workspace'}
+                    {hasUsers ? 'Welcome back' : 'Start with Orbit'}
                   </h1>
                   <p className="auth-subtitle">
                     {hasUsers
-                      ? 'Choose a saved profile or enter your email to sign in or register.'
-                      : 'Set up the first administrator account and claim existing local workspace data.'}
+                      ? 'Your AI workspace for models, agents and tools. Enter your email to continue.'
+                      : 'Create the administrator account for this Orbit workspace.'}
                   </p>
                 </div>
 
@@ -1111,8 +1111,8 @@ export function AuthScreen({
             {step === 'login-password' && (
               <>
                 <div className="auth-header">
-                  <h1 className="auth-title">Enter your password</h1>
-                  <p className="auth-subtitle">Welcome back to Orbit Agent Studio.</p>
+                  <h1 className="auth-title">Welcome back</h1>
+                  <p className="auth-subtitle">Enter your password to continue to your Orbit workspace.</p>
                 </div>
 
                 <div className="auth-email-chip-wrap">
@@ -1319,12 +1319,12 @@ export function AuthScreen({
               <>
                 <div className="auth-header">
                   <h1 className="auth-title">
-                    {isFirstAccount ? 'Create admin workspace' : 'Create your account'}
+                    {isFirstAccount ? 'Set up your Orbit workspace' : 'Create your Orbit account'}
                   </h1>
                   <p className="auth-subtitle">
                     {isFirstAccount
-                      ? 'The first account becomes Administrator and owns existing local threads and settings.'
-                      : 'Set up your isolated profile and personal agent workspace.'}
+                      ? 'Create the administrator account for this Orbit instance.'
+                      : 'One account for your models, agents, skills and connected tools.'}
                   </p>
                 </div>
 
