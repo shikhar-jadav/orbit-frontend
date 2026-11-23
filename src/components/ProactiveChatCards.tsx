@@ -247,7 +247,7 @@ export const RoutineSetupCard: React.FC<RoutineSetupCardProps> = ({
       <div className="routine-setup-header">
         <div className="routine-setup-title-box">
           <span className="routine-setup-icon">
-            {isOneShot ? '⏰' : '⚡'}
+            <Icon name={isOneShot ? 'clock' : 'zap'} size={16} />
           </span>
           <span className="routine-setup-name">{name}</span>
         </div>
@@ -347,7 +347,7 @@ export const ProactiveAlertCard: React.FC<ProactiveAlertCardProps> = ({
   const [feedback, setFeedback] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const isReminder = card.one_shot ?? (card.trigger_type === 'timer' || true)
+  const isReminder = card.one_shot ?? (card.trigger_type === 'timer')
 
   const handleSnooze = async (minutes: number = 10) => {
     if (!card.routine_id) return
@@ -396,7 +396,7 @@ export const ProactiveAlertCard: React.FC<ProactiveAlertCardProps> = ({
       <div className="proactive-alert-header">
         <div className="proactive-alert-title-box">
           <span className="proactive-alert-icon" aria-hidden="true">
-            {isReminder ? '⏰' : '⚡'}
+            <Icon name={isReminder ? 'clock' : 'zap'} size={16} />
           </span>
           <span className="proactive-alert-name">{card.routine_name}</span>
           <span className="proactive-alert-pill">
