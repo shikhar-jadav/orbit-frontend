@@ -52,6 +52,7 @@ async function fetchMarketplaceJson<T>(
 export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all' }: MarketplaceViewProps) {
   const popupRef = useRef<Window | null>(null)
   const popupProviderRef = useRef<string | null>(null)
+  const pendingConnectorIdRef = useRef<string | null>(null)
   const [catalog, setCatalog] = useState<MarketplaceCatalog | null>(null)
   const [loading, setLoading] = useState(true)
   const [reloadNonce, setReloadNonce] = useState(0)
@@ -63,6 +64,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
 
   // Modals state
   const [configuringConnector, setConfiguringConnector] = useState<MarketplaceConnector | null>(null)
+  const [selectedConnectorDetails, setSelectedConnectorDetails] = useState<MarketplaceConnector | null>(null)
   const [configFormValues, setConfigFormValues] = useState<Record<string, ConnectorConfigValue>>({})
   const [configEnabled, setConfigEnabled] = useState(true)
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({})
@@ -91,7 +93,24 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         popupRef.current = null
         popupProviderRef.current = null
         showToast(`${provider === 'gmail' ? 'Gmail' : provider} connected successfully!`)
-        triggerReload()
+        const connectorId = pendingConnectorIdRef.current
+        pendingConnectorIdRef.current = null
+        const refreshAfterConnect = async () => {
+          if (connectorId) {
+            try {
+              await fetch(`/api/marketplace/connectors/${encodeURIComponent(connectorId)}/toggle`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin', body: JSON.stringify({ enabled: true }),
+              })
+            } catch {
+              // The provider account is saved even if the connector setting needs a retry.
+            }
+          }
+          window.dispatchEvent(new Event('orbit:integrations-updated'))
+          window.dispatchEvent(new Event('orbit:marketplace-updated'))
+          triggerReload()
+        }
+        void refreshAfterConnect()
       } else if (event.data?.type === 'orbit_integration_error') {
         popupRef.current = null
         popupProviderRef.current = null
@@ -102,7 +121,16 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
-  const startOAuth = async (provider: string) => {
+  const startOAuth = async (provider: string, connectorId?: string) => {
+    // Open synchronously from the click event before waiting for the API.
+    const popup = window.open('about:blank', 'orbit-oauth-popup', 'popup,width=620,height=760')
+    if (!popup) {
+      showToast('Please allow popups in your browser to connect this account.')
+      return
+    }
+    popupRef.current = popup
+    popupProviderRef.current = provider
+    pendingConnectorIdRef.current = connectorId || null
     try {
       const response = await fetch(`/api/integrations/${provider}/oauth/start`, {
         method: 'POST',
@@ -115,31 +143,15 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
       if (typeof data.auth_url !== 'string') {
         throw new Error('No authorization URL returned from server.')
       }
-      popupProviderRef.current = provider
-      const popup = window.open(
-        data.auth_url,
-        'orbit-oauth-popup',
-        'popup,width=620,height=760',
-      )
-      popupRef.current = popup
-      if (!popup) {
-        throw new Error('Please allow popups in your browser to sign in with Google.')
-      }
+      popup.location.href = data.auth_url
+      popup.focus()
     } catch (err) {
+      popupRef.current?.close()
+      popupRef.current = null
+      popupProviderRef.current = null
+      pendingConnectorIdRef.current = null
       showToast(err instanceof Error ? err.message : 'Failed to launch sign-in window.')
     }
-  }
-
-  const switchAccount = async (provider: string, accountId?: string) => {
-    try {
-      const url = accountId
-        ? `/api/integrations/${provider}?account_id=${encodeURIComponent(accountId)}`
-        : `/api/integrations/${provider}`
-      await fetch(url, { method: 'DELETE', credentials: 'same-origin' })
-    } catch {
-      // Proceed to prompt for new account
-    }
-    await startOAuth(provider)
   }
 
   useEffect(() => {
@@ -148,7 +160,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
       try {
         const data = await fetchMarketplaceJson<MarketplaceCatalog>(
           '/api/marketplace',
-          '/marketplace',
         )
         if (!active) return
         setCatalog(data)
@@ -199,56 +210,40 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
           },
         }
       })
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
       showToast(nextState ? `Installed ${skill.name}` : `Uninstalled ${skill.name}`)
     } catch (err) {
       showToast(`Error: ${err instanceof Error ? err.message : 'Action failed'}`)
     }
   }
 
-  // Toggle connector enabled
-  const toggleConnector = async (connector: MarketplaceConnector) => {
-    const nextState = !connector.is_enabled
-    if (nextState && connector.oauthProvider && !connector.is_authenticated) {
-      void startOAuth(connector.oauthProvider)
-    }
+  const setConnectorEnabled = async (connector: MarketplaceConnector, enabled: boolean) => {
     try {
       await fetchMarketplaceJson(
         `/api/marketplace/connectors/${encodeURIComponent(connector.id)}/toggle`,
-        `/marketplace/connectors/${encodeURIComponent(connector.id)}/toggle`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled: nextState }),
-        },
+        undefined,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ enabled }) },
       )
       setCatalog((current) => {
         if (!current) return current
-        const updatedConnectors = current.connectors.map((c) => {
-          if (c.id === connector.id) {
-            const nextStatus: MarketplaceConnector['status'] =
-              nextState && c.is_configured
-                ? 'active'
-                : nextState
-                ? 'needs_config'
-                : 'available'
-            return { ...c, is_enabled: nextState, status: nextStatus }
-          }
-          return c
-        })
-        const activeCount = updatedConnectors.filter((c) => c.is_enabled && c.is_configured).length
-        return {
-          ...current,
-          connectors: updatedConnectors,
-          stats: {
-            ...current.stats,
-            active_connectors: activeCount,
-          },
-        }
+        const updatedConnectors = current.connectors.map((item) => item.id === connector.id
+          ? { ...item, is_enabled: enabled, status: enabled ? (item.is_authenticated ? 'active' : 'needs_auth') : 'available' }
+          : item)
+        return { ...current, connectors: updatedConnectors, stats: {
+          ...current.stats,
+          active_connectors: updatedConnectors.filter((item) => item.is_enabled && item.is_configured && item.is_authenticated !== false).length,
+        } }
       })
-      showToast(nextState ? `Enabled ${connector.name}` : `Disabled ${connector.name}`)
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
+      showToast(enabled ? `Connected ${connector.name}` : `Disconnected ${connector.name}`)
     } catch (err) {
       showToast(`Error: ${err instanceof Error ? err.message : 'Action failed'}`)
     }
+  }
+
+  const connectFromDetails = (connector: MarketplaceConnector) => {
+    if (connector.oauthProvider) void startOAuth(connector.oauthProvider, connector.id)
+    else if (!connector.is_enabled) void setConnectorEnabled(connector, true)
   }
 
   // Open Configure Modal
@@ -278,6 +273,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         },
       )
       triggerReload()
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
       setConfiguringConnector(null)
       showToast(`Saved configuration for ${configuringConnector.name}`)
     } catch (err) {
