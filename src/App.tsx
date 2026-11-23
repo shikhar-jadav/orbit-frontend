@@ -1575,7 +1575,7 @@ function App() {
                         pending: false,
                       }
                     }
-                    if (msg.id === userMessage.id) {
+                    if (msg.id === optimisticMessageId) {
                       return {
                         ...msg,
                         id: turnId ?? msg.id,
