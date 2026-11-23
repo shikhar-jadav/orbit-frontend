@@ -400,6 +400,15 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     }
   }
 
+  const handleCopyValue = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setRoutineActionStatus(label + ' copied.')
+    } catch {
+      setRoutineActionStatus('Could not copy ' + label.toLowerCase() + '.')
+    }
+  }
+
   const handleOpenRoutine = async (routineId: string) => {
     setRoutineActionStatus('')
     try {
