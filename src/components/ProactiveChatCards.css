@@ -482,3 +482,195 @@
   color: #98d8dd;
   font-size: 9px;
 }
+
+
+/* Consistent, low-noise routine cards inside chat */
+#root .routine-setup-card,
+#root .proactive-alert-card {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 15px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 13px;
+  background: #252a2b;
+  box-shadow: none;
+  color: #e8eeee;
+}
+
+#root .routine-setup-card.is-routine,
+#root .proactive-alert-card.is-routine {
+  border-left: 2px solid rgba(85, 199, 215, 0.58);
+}
+
+#root .routine-setup-card.is-reminder,
+#root .proactive-alert-card.is-reminder {
+  border-left: 2px solid rgba(191, 167, 117, 0.7);
+}
+
+#root .routine-setup-header,
+#root .proactive-alert-header {
+  align-items: center;
+  gap: 12px;
+}
+
+#root .routine-setup-title-box,
+#root .proactive-alert-title-box {
+  min-width: 0;
+  gap: 9px;
+}
+
+#root .routine-setup-icon,
+#root .proactive-alert-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(85, 199, 215, 0.17);
+  border-radius: 10px;
+  color: #a4dfe4;
+  background: rgba(85, 199, 215, 0.09);
+  font-size: 14px;
+}
+
+#root .routine-setup-name,
+#root .proactive-alert-name {
+  color: #edf2f2;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+
+#root .routine-setup-badges {
+  gap: 6px;
+}
+
+#root .routine-setup-badge,
+#root .proactive-alert-pill {
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: #abb6b7;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 620;
+}
+
+#root .routine-setup-badge.status-active {
+  color: #9bd9b3;
+  border-color: rgba(105, 201, 155, 0.2);
+  background: rgba(105, 201, 155, 0.08);
+}
+
+#root .routine-setup-badge.status-paused {
+  color: #aeb7b8;
+}
+
+#root .routine-setup-body,
+#root .proactive-alert-body {
+  gap: 9px;
+  color: #c0caca;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+#root .routine-setup-prompt {
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 9px;
+  color: #cbd6d6;
+  background: #1e2425;
+  font-size: 11px;
+  line-height: 1.6;
+  font-style: normal;
+}
+
+#root .routine-setup-meta-grid {
+  gap: 8px 18px;
+}
+
+#root .routine-setup-meta-item {
+  color: #9ca8a9;
+  font-size: 10px;
+}
+
+#root .meta-label {
+  color: #839091;
+}
+
+#root .meta-val {
+  color: #d3dddd;
+  font-weight: 550;
+}
+
+#root .routine-setup-footer,
+#root .proactive-alert-footer {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+#root .routine-setup-actions,
+#root .proactive-alert-actions {
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+#root .routine-card-btn,
+#root .proactive-alert-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  color: #c6d0d0;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 10px;
+  font-weight: 570;
+}
+
+#root .routine-card-btn:hover:not(:disabled),
+#root .proactive-alert-btn:hover:not(:disabled) {
+  border-color: rgba(85, 199, 215, 0.28);
+  color: #e5f7f8;
+  background: rgba(85, 199, 215, 0.09);
+}
+
+#root .routine-card-btn.secondary,
+#root .proactive-alert-btn.secondary,
+#root .proactive-alert-btn.subtle {
+  color: #a7b2b3;
+  background: transparent;
+}
+
+#root .routine-card-btn.danger {
+  border-color: rgba(230, 115, 115, 0.17);
+  color: #e4a5a5;
+  background: rgba(170, 65, 65, 0.06);
+}
+
+#root .routine-card-feedback,
+#root .proactive-alert-feedback {
+  color: #a3dce0;
+  font-size: 10px;
+}
+
+#root .proactive-alert-time {
+  color: #8f9b9c;
+  font-size: 10px;
+}
+
+@media (max-width: 600px) {
+  #root .routine-setup-header,
+  #root .proactive-alert-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #root .routine-setup-badges {
+    flex-wrap: wrap;
+  }
+}
