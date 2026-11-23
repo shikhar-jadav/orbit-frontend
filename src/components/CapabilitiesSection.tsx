@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from './Icon'
 import { AddCustomConnectorModal, ConnectorDetailView } from './ConnectorModals'
 import { SkillEditorModal, UploadSkillView } from './SkillModals'
@@ -78,43 +78,72 @@ export function CapabilitiesSection({
     onModalOpenChange?.(anyModal)
   }, [createSkillModalOpen, editingSkill, connectorModalOpen, onModalOpenChange])
 
+  const loadedData = useRef({
+    skills: false,
+    connectors: false,
+    marketplace: false,
+  })
+  const lastReloadNonce = useRef(reloadNonce)
+
   useEffect(() => {
     let active = true
+    const sectionKey =
+      view === 'discover' ? 'marketplace' : tab === 'skills' ? 'skills' : 'connectors'
+    const forceReload = lastReloadNonce.current !== reloadNonce
+    lastReloadNonce.current = reloadNonce
+
+    if (loadedData.current[sectionKey] && !forceReload) {
+      setLoading(false)
+      return () => {
+        active = false
+      }
+    }
+
+    setLoading(true)
     ;(async () => {
       try {
-        const [psRes, pcRes, mktRes] = await Promise.all([
-          fetch('/settings/personal-skills'),
-          fetch('/settings/personal-connectors'),
-          fetch('/marketplace'),
-        ])
-        if (!active) return
-        if (psRes.ok) {
-          setPersonalSkills((await psRes.json()) as PersonalSkill[])
+        if (sectionKey === 'marketplace') {
+          const response = await fetch('/marketplace')
+          if (!response.ok) return
+          const catalog = (await response.json()) as MarketplaceCatalog
+          if (!active) return
+          setMarketplaceSkills(catalog.skills ?? [])
+          setMarketplaceConnectors(catalog.connectors ?? [])
+        } else if (sectionKey === 'skills') {
+          const response = await fetch('/settings/personal-skills')
+          if (!response.ok) return
+          const skills = (await response.json()) as PersonalSkill[]
+          if (!active) return
+          setPersonalSkills(skills)
+        } else {
+          const response = await fetch('/settings/personal-connectors')
+          if (!response.ok) return
+          const connectors = (await response.json()) as PersonalConnector[]
+          if (!active) return
+          setPersonalConnectors(connectors)
         }
-        if (pcRes.ok) {
-          setPersonalConnectors((await pcRes.json()) as PersonalConnector[])
-        }
-        if (mktRes.ok) {
-          const cat = (await mktRes.json()) as MarketplaceCatalog
-          setMarketplaceSkills(cat.skills ?? [])
-          setMarketplaceConnectors(cat.connectors ?? [])
-        }
+
+        loadedData.current[sectionKey] = true
       } catch {
-        // leave current state gracefully
+        // Keep the current data available and allow a later retry.
       } finally {
         if (active) setLoading(false)
       }
     })()
+
     return () => {
       active = false
     }
-  }, [reloadNonce])
+  }, [reloadNonce, tab, view])
 
   useEffect(() => {
-    const refreshMarketplace = () => setReloadNonce((value) => value + 1)
+    const refreshMarketplace = () => {
+      loadedData.current.marketplace = false
+      if (view === 'discover') setReloadNonce((value) => value + 1)
+    }
     window.addEventListener('orbit:marketplace-updated', refreshMarketplace)
     return () => window.removeEventListener('orbit:marketplace-updated', refreshMarketplace)
-  }, [])
+  }, [view])
 
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
