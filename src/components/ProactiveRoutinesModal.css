@@ -4396,3 +4396,344 @@ dialog.routines-modal-dialog::backdrop {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* ROUTINES — CONSOLIDATED PRODUCT UI */
+
+/* Routine detail: one clear overview, one unified activity area. */
+#root .routine-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+  padding: 4px 2px 18px;
+  color: #e9eeee;
+}
+
+#root .routine-detail-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+#root .routine-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 2px 0 18px;
+  border-bottom: 1px solid rgba(220, 235, 236, 0.1);
+}
+
+#root .routine-overview-title-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+
+#root .routine-overview-avatar {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(85, 199, 215, 0.22);
+  border-radius: 14px;
+  color: #a9e6eb;
+  background: rgba(85, 199, 215, 0.1);
+  font-size: 19px;
+  font-weight: 650;
+}
+
+#root .routine-overview-title-copy { min-width: 0; }
+#root .routine-overview-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+#root .routine-overview-title-copy h3 {
+  margin: 0;
+  color: #f1f5f5;
+  font-size: 21px;
+  line-height: 1.25;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+#root .routine-overview-title-copy > p {
+  margin: 5px 0 0;
+  color: #91a0a1;
+  font-size: 12px;
+}
+
+#root .routine-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 0;
+  min-width: 0;
+}
+#root .routine-overview-block {
+  min-width: 0;
+  padding: 0 22px 0 0;
+}
+#root .routine-overview-trigger {
+  padding: 0 0 0 22px;
+  border-left: 1px solid rgba(220, 235, 236, 0.1);
+}
+#root .routine-overview-block-heading { margin-bottom: 13px; }
+#root .routine-overview-block-heading h4,
+#root .routine-activity-heading h4 {
+  margin: 4px 0 0;
+  color: #e8eeee;
+  font-size: 15px;
+  font-weight: 620;
+  line-height: 1.35;
+}
+#root .routine-overview-instruction {
+  margin: 0;
+  color: #c3cecf;
+  font-size: 13px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#root .routine-trigger-summary-modern {
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+#root .routine-trigger-summary-modern .routine-trigger-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 9px;
+}
+#root .routine-trigger-summary-modern strong {
+  display: block;
+  color: #e0e9e9;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+#root .routine-trigger-summary-modern p {
+  margin: 4px 0 0;
+  color: #8f9d9e;
+  font-size: 11px;
+}
+
+#root .routine-connection-inline {
+  margin: 14px 0 0 41px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(220, 235, 236, 0.08);
+}
+#root .routine-connection-provider {
+  color: #a6dfe3;
+  font-size: 11px;
+  font-weight: 650;
+}
+#root .routine-connection-inline p {
+  margin: 5px 0 0;
+  color: #9eacad;
+  font-size: 11px;
+  line-height: 1.55;
+}
+#root .routine-connection-inline b { color: #d4dfdf; font-weight: 600; }
+#root .routine-connection-inline .routine-copy-row { margin-top: 9px; }
+
+#root .routine-webhook-details {
+  margin: 14px 0 0 41px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(220, 235, 236, 0.08);
+}
+#root .routine-webhook-details > summary {
+  color: #a6dfe3;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  list-style-position: inside;
+}
+#root .routine-webhook-details > *:not(summary) { margin-top: 10px; }
+
+#root .routine-activity-overview {
+  min-width: 0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(220, 235, 236, 0.12);
+}
+#root .routine-activity-heading,
+#root .routine-activity-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#root .routine-activity-heading { margin-bottom: 15px; }
+#root .routine-activity-heading-actions { flex-wrap: wrap; justify-content: flex-end; }
+#root .routine-activity-heading .routine-live-refresh {
+  color: #8e9d9e;
+  font-size: 10px;
+}
+#root .routine-latest-event {
+  min-width: 0;
+  padding: 14px 0 16px;
+  border-top: 1px solid rgba(220, 235, 236, 0.07);
+  border-bottom: 1px solid rgba(220, 235, 236, 0.07);
+}
+#root .routine-latest-event-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+#root .routine-latest-event-heading strong {
+  color: #e4eded;
+  font-size: 12px;
+  font-weight: 650;
+}
+#root .routine-latest-event-heading p {
+  margin: 4px 0 0;
+  color: #879697;
+  font-size: 10px;
+}
+#root .routine-event-pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 15px 0 10px;
+}
+#root .routine-event-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: #819091;
+  font-size: 10px;
+}
+#root .routine-event-step-marker {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 50%;
+  color: #8b999a;
+  font-size: 9px;
+}
+#root .routine-event-step.complete .routine-event-step-marker {
+  border-color: rgba(104, 194, 151, .28);
+  color: #8fd1ab;
+  background: rgba(104, 194, 151, .09);
+}
+#root .routine-event-step.current .routine-event-step-marker {
+  border-color: rgba(85,199,215,.45);
+  color: #a5e3e8;
+  background: rgba(85,199,215,.1);
+}
+#root .routine-event-step.failed .routine-event-step-marker {
+  border-color: rgba(226,117,117,.35);
+  color: #e5a0a0;
+}
+#root .routine-event-progress-copy {
+  margin: 8px 0 0;
+  color: #9daaaa;
+  font-size: 11px;
+  line-height: 1.55;
+}
+#root .routine-event-payload { margin-top: 11px; }
+#root .routine-event-payload summary {
+  color: #9dced2;
+  cursor: pointer;
+  font-size: 10px;
+}
+#root .routine-event-payload pre {
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px;
+  color: #b8c5c6;
+  background: #1d2425;
+  font-size: 10px;
+}
+
+#root .routine-run-history { padding-top: 15px; }
+#root .routine-run-history-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 5px;
+}
+#root .routine-run-history-heading h5 {
+  margin: 0;
+  color: #dce5e5;
+  font-size: 12px;
+  font-weight: 630;
+}
+#root .routine-run-history-heading > span {
+  color: #849394;
+  font-size: 10px;
+}
+#root .routine-run-list-compact { display: flex; flex-direction: column; gap: 0; }
+#root .routine-run-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 12px 0;
+  border-top: 1px solid rgba(220, 235, 236, 0.07);
+}
+#root .routine-run-row-main { min-width: 0; }
+#root .routine-run-row .routine-run-item-header { justify-content: flex-start; gap: 9px; }
+#root .routine-run-row .routine-run-item-header strong {
+  color: #cbd6d6;
+  font-size: 11px;
+  font-weight: 600;
+}
+#root .routine-run-row time {
+  display: block;
+  margin-top: 4px;
+  color: #829091;
+  font-size: 10px;
+}
+#root .routine-run-row p {
+  margin: 6px 0 0;
+  color: #aebbbb;
+  font-size: 11px;
+  line-height: 1.5;
+}
+#root .routine-run-row small { display: block; margin-top: 5px; color: #829091; font-size: 9px; }
+#root .routine-run-row .routine-open-run-button { flex: 0 0 auto; }
+
+#root .routine-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(220, 235, 236, 0.1);
+}
+
+@media (max-width: 760px) {
+  #root .routine-overview-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  #root .routine-overview-block { padding: 0; }
+  #root .routine-overview-trigger {
+    padding: 18px 0 0;
+    border-top: 1px solid rgba(220, 235, 236, 0.1);
+    border-left: 0;
+  }
+  #root .routine-event-pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  #root .routine-overview-header { align-items: flex-start; }
+  #root .routine-overview-avatar { width: 40px; height: 40px; flex-basis: 40px; }
+  #root .routine-overview-title-copy h3 { font-size: 18px; }
+  #root .routine-activity-heading,
+  #root .routine-activity-heading-actions { align-items: flex-start; flex-direction: column; }
+  #root .routine-run-row { align-items: flex-start; flex-direction: column; }
+  #root .routine-run-row .routine-open-run-button { align-self: flex-start; }
+}
