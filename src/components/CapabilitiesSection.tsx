@@ -16,7 +16,7 @@ type SkillFilter = 'all' | 'active' | 'drafts'
 type SortOrder = 'newest' | 'name'
 
 type CapabilitiesSectionProps = {
-  onNavigateMarketplace?: () => void
+  onNavigateMarketplace?: (connectorId?: string) => void
   onCloseSettings: () => void
   onModalOpenChange?: (open: boolean) => void
   initialTab?: CapabilitiesTab
@@ -109,6 +109,12 @@ export function CapabilitiesSection({
       active = false
     }
   }, [reloadNonce])
+
+  useEffect(() => {
+    const refreshMarketplace = () => setReloadNonce((value) => value + 1)
+    window.addEventListener('orbit:marketplace-updated', refreshMarketplace)
+    return () => window.removeEventListener('orbit:marketplace-updated', refreshMarketplace)
+  }, [])
 
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
@@ -296,10 +302,10 @@ export function CapabilitiesSection({
     ? personalConnectors.find((c) => c.id === selectedConnectorId) ?? null
     : null
 
-  function handleOpenMarketplace() {
+  function handleOpenMarketplace(connectorId?: string) {
     if (onNavigateMarketplace) {
       onCloseSettings()
-      onNavigateMarketplace()
+      onNavigateMarketplace(connectorId)
     }
   }
 
@@ -657,10 +663,10 @@ export function CapabilitiesSection({
                     </div>
                     <button
                       type="button"
-                      className={conn.is_enabled ? 'sp-btn-subtle' : 'sp-btn-white'}
-                      onClick={() => void toggleMarketplaceConnector(conn)}
+                      className={conn.is_enabled && conn.is_authenticated !== false ? 'sp-btn-subtle' : 'sp-btn-white'}
+                      onClick={() => handleOpenMarketplace(conn.id)}
                     >
-                      {conn.is_enabled ? 'Enabled' : 'Enable'}
+                      {conn.is_enabled && conn.is_authenticated !== false ? 'Connected' : 'Connect'}
                     </button>
                   </div>
                 ))}
@@ -1042,9 +1048,9 @@ export function CapabilitiesSection({
                     <button
                       type="button"
                       className="sp-btn-subtle"
-                      onClick={() => void toggleMarketplaceConnector(conn)}
+                      onClick={() => handleOpenMarketplace(conn.id)}
                     >
-                      Disable
+                      Connected
                     </button>
                   </div>
                 </div>
