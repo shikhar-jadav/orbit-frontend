@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, type FormEvent } from 'react'
+import React, { useCallback, useState, useEffect, useRef, type FormEvent } from 'react'
 import { Icon } from './Icon'
 import { ModernDialog } from './ModernDialog'
 import { formatHumanSchedule } from './ProactiveChatCards'
@@ -128,6 +128,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [routines, setRoutines] = useState<Routine[]>([])
   const [notifications, setNotifications] = useState<ProactiveNotification[]>([])
   const [loading, setLoading] = useState(false)
+  const [routineLoadError, setRoutineLoadError] = useState('')
+  const [deletingRoutineId, setDeletingRoutineId] = useState<string | null>(null)
   const [notificationPermission, setNotificationPermission] = useState<string>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   )
@@ -178,18 +180,22 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [testingRoutine, setTestingRoutine] = useState(false)
   const [routineRuns, setRoutineRuns] = useState<RoutineRun[]>([])
   const [openingRunId, setOpeningRunId] = useState<string | null>(null)
-  const integrationPopupRef = React.useRef<Window | null>(null)
+  const integrationPopupRef = useRef<Window | null>(null)
+  const routineActivityRequestRef = useRef(0)
 
   const loadRoutines = useCallback(async () => {
     setLoading(true)
+    setRoutineLoadError('')
     try {
-      const res = await fetch('/api/routines')
-      if (res.ok) {
-        const data = await res.json()
-        setRoutines(data.routines || [])
+      const res = await fetch('/api/routines', { credentials: 'same-origin' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.detail || 'Could not load routines.')
       }
-    } catch {
-      // ignore
+      const data = await res.json()
+      setRoutines(Array.isArray(data.routines) ? data.routines : [])
+    } catch (err) {
+      setRoutineLoadError(err instanceof Error ? err.message : 'Could not load routines.')
     } finally {
       setLoading(false)
     }
@@ -227,13 +233,29 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (isOpen) {
-      // Fetch persisted server state when the modal opens.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // Routine list is the only data needed to open this view. Notifications and
+      // account status are fetched lazily when their tabs are visited.
       void loadRoutines()
-      void loadNotifications()
+    }
+  }, [isOpen, loadRoutines])
+
+  useEffect(() => {
+    if (isOpen && tab === 'history') void loadNotifications()
+  }, [isOpen, tab, loadNotifications])
+
+  useEffect(() => {
+    if (isOpen && tab === 'create' && createMode === 'event' && !integrationStatus) {
       void loadIntegrationStatus()
     }
-  }, [isOpen, loadRoutines, loadNotifications, loadIntegrationStatus])
+  }, [isOpen, tab, createMode, integrationStatus, loadIntegrationStatus])
+
+  useEffect(() => {
+    const refreshIntegrationStatus = () => {
+      if (isOpen && tab === 'create' && createMode === 'event') void loadIntegrationStatus()
+    }
+    window.addEventListener('orbit:integrations-updated', refreshIntegrationStatus)
+    return () => window.removeEventListener('orbit:integrations-updated', refreshIntegrationStatus)
+  }, [isOpen, tab, createMode, loadIntegrationStatus])
 
   useEffect(() => {
     const handleIntegrationMessage = (event: MessageEvent) => {
@@ -259,6 +281,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
           setFormError(String(event.data.message || 'The integration could not be connected.'))
         } else {
           setFormError('')
+          window.dispatchEvent(new Event('orbit:integrations-updated'))
           void loadIntegrationStatus()
         }
       }
@@ -338,13 +361,17 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   }, [isOpen, tab, createMode, eventProvider, eventAccountId])
 
   const loadRoutineActivity = useCallback(async (routineId: string) => {
+    const requestId = ++routineActivityRequestRef.current
     try {
       const runsResponse = await fetch(
         `/api/routines/${encodeURIComponent(routineId)}/runs?limit=20`,
+        { credentials: 'same-origin' },
       )
-      if (!runsResponse.ok) return
+      if (!runsResponse.ok || requestId !== routineActivityRequestRef.current) return
       const runsData = await runsResponse.json()
-      setRoutineRuns((runsData.runs || []) as RoutineRun[])
+      if (requestId === routineActivityRequestRef.current) {
+        setRoutineRuns((runsData.runs || []) as RoutineRun[])
+      }
     } catch {
       // Keep the last known activity visible if a background refresh fails.
     }
@@ -386,16 +413,15 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   }
 
   const activeRoutineId = selectedRoutine?.id
+  const hasActiveRoutineRun = routineRuns.some((run) =>
+    ['queued', 'pending', 'running', 'in_progress'].includes(run.status.toLowerCase()),
+  )
   useEffect(() => {
-    if (!isOpen || tab !== 'detail' || !activeRoutineId) return
+    if (!isOpen || tab !== 'detail' || !activeRoutineId || !hasActiveRoutineRun) return
     let stopped = false
     let requestInFlight = false
     const refreshActivity = async () => {
-      if (
-        stopped ||
-        requestInFlight ||
-        (typeof document !== 'undefined' && document.visibilityState !== 'visible')
-      ) return
+      if (stopped || requestInFlight || document.visibilityState !== 'visible') return
       requestInFlight = true
       try {
         await loadRoutineActivity(activeRoutineId)
@@ -403,12 +429,12 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         requestInFlight = false
       }
     }
-    const timer = window.setInterval(() => void refreshActivity(), 4000)
+    const timer = window.setInterval(() => void refreshActivity(), 15000)
     return () => {
       stopped = true
       window.clearInterval(timer)
     }
-  }, [isOpen, tab, activeRoutineId, loadRoutineActivity])
+  }, [isOpen, tab, activeRoutineId, hasActiveRoutineRun, loadRoutineActivity])
 
   const handleTogglePause = async (routine: Routine) => {
     try {
@@ -451,22 +477,30 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   }
 
   const handleDelete = async (routineId: string) => {
+    if (deletingRoutineId) return
+    setDeletingRoutineId(routineId)
+    setRoutineActionStatus('')
     try {
-      const res = await fetch(`/api/routines/${routineId}`, {
+      const res = await fetch(`/api/routines/${encodeURIComponent(routineId)}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
       })
       if (res.ok) {
         setRoutines((prev) => prev.filter((r) => r.id !== routineId))
+        setRoutineRuns([])
         if (selectedRoutine?.id === routineId) {
           setSelectedRoutine(null)
           setTab('routines')
         }
+        setRoutineActionStatus('Routine deleted.')
       } else {
         const data = (await res.json().catch(() => ({}))) as { detail?: string }
         setRoutineActionStatus(data.detail || (res.status >= 502 && res.status <= 504 ? 'Service waking up. Please retry.' : 'Could not delete routine.'))
       }
     } catch (err: unknown) {
       setRoutineActionStatus(err instanceof Error ? err.message : 'Could not delete routine.')
+    } finally {
+      setDeletingRoutineId(null)
     }
   }
 
@@ -491,42 +525,53 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     }
   }
 
+  const applySelectedRoutine = (routine: Routine) => {
+    setSelectedRoutine(routine)
+    setEditName(routine.name)
+    setEditInstruction(routine.action_prompt)
+    const trigger = routine.trigger_definition || {}
+    setEditWhen(trigger.when || '')
+    setEditEventType(trigger.event_type || routine.event_type || '')
+    const filters = trigger.filters || {}
+    const filterConditions = Array.isArray(filters.conditions)
+      ? (filters.conditions as Record<string, unknown>[])
+      : [filters as Record<string, unknown>]
+    const firstFilter = filterConditions.find(
+      (condition) => condition.field !== 'payload.repository' && condition.field !== 'payload.channel_id',
+    ) || {}
+    setEditFilterField(typeof firstFilter.field === 'string' ? firstFilter.field : '')
+    setEditFilterOperator(firstFilter.operator === 'contains' ? 'contains' : 'equals')
+    setEditFilterValue(
+      typeof firstFilter.value === 'string' || typeof firstFilter.value === 'number'
+        ? String(firstFilter.value)
+        : '',
+    )
+    setEditingRoutine(false)
+  }
+
   const handleOpenRoutine = async (routineId: string) => {
     setRoutineActionStatus('')
+    setFormError('')
+    routineActivityRequestRef.current += 1
+    const cachedRoutine = routines.find((routine) => routine.id === routineId)
+    if (cachedRoutine) {
+      // The list already contains the full routine definition. Open it immediately
+      // and load execution history separately; do not wait for another detail API call.
+      applySelectedRoutine(cachedRoutine)
+      setRoutineRuns([])
+      setTab('detail')
+      void loadRoutineActivity(routineId)
+      return
+    }
     try {
-      const res = await fetch(`/api/routines/${encodeURIComponent(routineId)}`)
+      const res = await fetch(`/api/routines/${encodeURIComponent(routineId)}`, { credentials: 'same-origin' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Could not open routine.')
-
-      // Render the routine as soon as its own details arrive. Run history is
-      // secondary and can be loaded in the background without blocking the view.
-      setSelectedRoutine(data.routine as Routine)
+      const routine = data.routine as Routine
+      applySelectedRoutine(routine)
       setRoutineRuns([])
-      void loadRoutineActivity(routineId)
-      setEditName(data.routine.name)
-      setEditInstruction(data.routine.action_prompt)
-      const trigger = data.routine.trigger_definition || {}
-      setEditWhen(trigger.when || '')
-      setEditEventType(trigger.event_type || data.routine.event_type || '')
-      const filters = trigger.filters || {}
-      const filterConditions = Array.isArray(filters.conditions)
-        ? (filters.conditions as Record<string, unknown>[])
-        : [filters as Record<string, unknown>]
-      const firstFilter =
-        filterConditions.find(
-          (condition) =>
-            condition.field !== 'payload.repository' &&
-            condition.field !== 'payload.channel_id',
-        ) || {}
-      setEditFilterField(typeof firstFilter.field === 'string' ? firstFilter.field : '')
-      setEditFilterOperator(firstFilter.operator === 'contains' ? 'contains' : 'equals')
-      setEditFilterValue(
-        typeof firstFilter.value === 'string' || typeof firstFilter.value === 'number'
-          ? String(firstFilter.value)
-          : '',
-      )
-      setEditingRoutine(false)
       setTab('detail')
+      void loadRoutineActivity(routineId)
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not open routine.')
     }
@@ -1369,7 +1414,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                 </div>
               </div>
               <div className="routine-sidebar-list">
-                {loading && <div className="routine-sidebar-message">Loading routines…</div>}
+                {loading && routines.length === 0 && <div className="routine-sidebar-message">Loading routines…</div>}
+                {routineLoadError && <div className="routine-sidebar-message" role="alert">{routineLoadError}</div>}
                 {!loading && routines.length === 0 && (
                   <div className="routine-sidebar-message">No routines yet. Ask Orbit in chat to create a routine or reminder!</div>
                 )}
@@ -1564,9 +1610,9 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                             Snooze 10m
                           </button>
                         )}
-                        <button type="button" className="routine-danger-button" onClick={() => void handleDelete(selectedRoutine.id)}>
+                        <button type="button" className="routine-danger-button" disabled={deletingRoutineId === selectedRoutine.id} onClick={() => void handleDelete(selectedRoutine.id)}>
                           <Icon name="trash" size={13} />
-                          Delete
+                          {deletingRoutineId === selectedRoutine.id ? 'Deleting…' : 'Delete'}
                         </button>
                       </>
                     )}
