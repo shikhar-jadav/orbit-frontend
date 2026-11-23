@@ -59,18 +59,6 @@ export type ProactiveNotification = {
   data?: Record<string, unknown>
 }
 
-type RoutineEvent = {
-  id: string
-  source: string
-  event_type: string
-  received_at: string
-  processing_status: string
-  payload: Record<string, unknown>
-  match_reason?: Record<string, unknown> | string | null
-  routine_status: string
-  routine_error?: string | null
-}
-
 type RoutineRun = {
   id: string
   status: string
@@ -81,16 +69,6 @@ type RoutineRun = {
   duration_ms?: number | null
   result_summary?: string | null
   error?: string | null
-}
-
-type ContinuedRunThread = {
-  thread_id: string
-  title: string
-  created_at: string
-  updated_at: string
-  preview: string
-  message_count: number
-  user_id?: string | null
 }
 
 type RoutineRunMessage = {
@@ -104,6 +82,12 @@ type RoutineRunMessage = {
   created_at: string
 }
 
+export type RoutineExecutionPreview = {
+  routine: Routine
+  run: RoutineRun
+  messages: RoutineRunMessage[]
+}
+
 type Props = {
   isOpen: boolean
   onClose: () => void
@@ -111,7 +95,7 @@ type Props = {
   onClearUnread: () => void
   soundEnabled: boolean
   onToggleSound: () => void
-  onContinueRun?: (thread: ContinuedRunThread) => void
+  onOpenExecution?: (execution: RoutineExecutionPreview) => void
 }
 
 export const ProactiveRoutinesModal: React.FC<Props> = ({
@@ -121,9 +105,9 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   onClearUnread,
   soundEnabled,
   onToggleSound,
-  onContinueRun,
+  onOpenExecution,
 }) => {
-  const [tab, setTab] = useState<'routines' | 'create' | 'history' | 'detail' | 'run'>('routines')
+  const [tab, setTab] = useState<'routines' | 'create' | 'history' | 'detail'>('routines')
   const [routines, setRoutines] = useState<Routine[]>([])
   const [notifications, setNotifications] = useState<ProactiveNotification[]>([])
   const [loading, setLoading] = useState(false)
@@ -172,14 +156,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [editFilterValue, setEditFilterValue] = useState('')
   const [routineActionStatus, setRoutineActionStatus] = useState('')
   const [testingRoutine, setTestingRoutine] = useState(false)
-  const [routineEvents, setRoutineEvents] = useState<RoutineEvent[]>([])
   const [routineRuns, setRoutineRuns] = useState<RoutineRun[]>([])
-  const [activityUpdatedAt, setActivityUpdatedAt] = useState<string | null>(null)
-  const [selectedRun, setSelectedRun] = useState<RoutineRun | null>(null)
-  const [runConversation, setRunConversation] = useState<RoutineRunMessage[]>([])
-  const [runConversationLoading, setRunConversationLoading] = useState(false)
-  const [runConversationError, setRunConversationError] = useState('')
-  const [continuingRun, setContinuingRun] = useState(false)
+  const [openingRunId, setOpeningRunId] = useState<string | null>(null)
   const integrationPopupRef = React.useRef<Window | null>(null)
 
   const loadRoutines = useCallback(async () => {
@@ -271,18 +249,12 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
 
   const loadRoutineActivity = useCallback(async (routineId: string) => {
     try {
-      const [eventResponse, runsResponse] = await Promise.all([
-        fetch(`/api/routines/${encodeURIComponent(routineId)}/events`),
-        fetch(`/api/routines/${encodeURIComponent(routineId)}/runs?limit=20`),
-      ])
-      if (!eventResponse.ok || !runsResponse.ok) return
-      const [eventData, runsData] = await Promise.all([
-        eventResponse.json(),
-        runsResponse.json(),
-      ])
-      setRoutineEvents((eventData.events || []) as RoutineEvent[])
+      const runsResponse = await fetch(
+        `/api/routines/${encodeURIComponent(routineId)}/runs?limit=20`,
+      )
+      if (!runsResponse.ok) return
+      const runsData = await runsResponse.json()
       setRoutineRuns((runsData.runs || []) as RoutineRun[])
-      setActivityUpdatedAt(new Date().toISOString())
     } catch {
       // Keep the last known activity visible if a background refresh fails.
     }
@@ -296,44 +268,30 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     if (!response.ok) {
       throw new Error(data.detail || 'Could not load this run conversation.')
     }
-    setSelectedRun(data.run as RoutineRun)
-    setRunConversation((data.messages || []) as RoutineRunMessage[])
-    setRunConversationError('')
+    return {
+      run: data.run as RoutineRun,
+      messages: (data.messages || []) as RoutineRunMessage[],
+    }
   }, [])
 
   const handleOpenRun = async (run: RoutineRun) => {
-    if (!selectedRoutine) return
-    setSelectedRun(run)
-    setRunConversation([])
-    setRunConversationError('')
-    setRunConversationLoading(true)
-    setTab('run')
+    if (!selectedRoutine || openingRunId) return
+    setOpeningRunId(run.id)
+    setRoutineActionStatus('')
     try {
-      await loadRunConversation(selectedRoutine.id, run.id)
+      const execution = await loadRunConversation(selectedRoutine.id, run.id)
+      onOpenExecution?.({
+        routine: selectedRoutine,
+        run: execution.run,
+        messages: execution.messages,
+      })
+      onClose()
     } catch (err: unknown) {
-      setRunConversationError(err instanceof Error ? err.message : 'Could not load this run conversation.')
-    } finally {
-      setRunConversationLoading(false)
-    }
-  }
-
-  const handleContinueRun = async () => {
-    if (!selectedRoutine || !selectedRun || !onContinueRun) return
-    setContinuingRun(true)
-    setRunConversationError('')
-    try {
-      const response = await fetch(
-        `/api/routines/${encodeURIComponent(selectedRoutine.id)}/runs/${encodeURIComponent(selectedRun.id)}/continue`,
-        { method: 'POST' },
+      setRoutineActionStatus(
+        err instanceof Error ? err.message : 'Could not load this execution.',
       )
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.detail || 'Could not continue this run in chat.')
-      if (!data.thread?.thread_id) throw new Error('Orbit did not return the new chat thread.')
-      onContinueRun(data.thread as ContinuedRunThread)
-    } catch (err: unknown) {
-      setRunConversationError(err instanceof Error ? err.message : 'Could not continue this run in chat.')
     } finally {
-      setContinuingRun(false)
+      setOpeningRunId(null)
     }
   }
 
@@ -361,28 +319,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       window.clearInterval(timer)
     }
   }, [isOpen, tab, activeRoutineId, loadRoutineActivity])
-
-  useEffect(() => {
-    if (!isOpen || tab !== 'run' || !activeRoutineId || !selectedRun?.id) return
-    let stopped = false
-    let requestInFlight = false
-    const refreshRun = async () => {
-      if (stopped || requestInFlight || document.visibilityState !== 'visible') return
-      requestInFlight = true
-      try {
-        await loadRunConversation(activeRoutineId, selectedRun.id)
-      } catch {
-        // Keep the last successfully loaded transcript visible.
-      } finally {
-        requestInFlight = false
-      }
-    }
-    const timer = window.setInterval(() => void refreshRun(), 2000)
-    return () => {
-      stopped = true
-      window.clearInterval(timer)
-    }
-  }, [isOpen, tab, activeRoutineId, selectedRun?.id, loadRunConversation])
 
   const handleTogglePause = async (routine: Routine) => {
     try {
@@ -477,21 +413,16 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const handleOpenRoutine = async (routineId: string) => {
     setRoutineActionStatus('')
     try {
-      const [res, eventResponse, runsResponse] = await Promise.all([
+      const [res, runsResponse] = await Promise.all([
         fetch(`/api/routines/${encodeURIComponent(routineId)}`),
-        fetch(`/api/routines/${encodeURIComponent(routineId)}/events`),
         fetch(`/api/routines/${encodeURIComponent(routineId)}/runs?limit=20`),
       ])
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Could not open routine.')
-      const eventData = await eventResponse.json()
-      if (!eventResponse.ok) throw new Error(eventData.detail || 'Could not load event history.')
       const runsData = await runsResponse.json()
       if (!runsResponse.ok) throw new Error(runsData.detail || 'Could not load run history.')
       setSelectedRoutine(data.routine as Routine)
-      setRoutineEvents((eventData.events || []) as RoutineEvent[])
       setRoutineRuns((runsData.runs || []) as RoutineRun[])
-      setActivityUpdatedAt(new Date().toISOString())
       setWebhookUrl(data.webhook_url || '')
       setEditName(data.routine.name)
       setEditInstruction(data.routine.action_prompt)
@@ -837,51 +768,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         (integrationStatus.gmail.pubsub_configured && integrationStatus.gmail.pubsub_limits_configured)),
     )
 
-  const latestEvent = routineEvents[0]
-  const eventStatusRank: Record<string, number> = {
-    received: 0,
-    pending: 1,
-    queued: 1,
-    retrying: 2,
-    processing: 2,
-    running: 2,
-    completed: 3,
-    failed: 3,
-    skipped: 3,
-  }
-  const eventStatuses = [latestEvent?.processing_status, latestEvent?.routine_status]
-    .filter((status): status is string => Boolean(status))
-    .map((status) => status.toLowerCase())
-  const latestEventStatus = eventStatuses.sort(
-    (a, b) => (eventStatusRank[b] ?? 0) - (eventStatusRank[a] ?? 0),
-  )[0] || 'received'
-  const latestEventStatusLabel: Record<string, string> = {
-    received: 'Received',
-    pending: 'Queued',
-    queued: 'Queued',
-    retrying: 'Retrying',
-    processing: 'Running',
-    running: 'Running',
-    completed: 'Completed',
-    failed: 'Failed',
-    skipped: 'Skipped',
-  }
-  const latestEventIsTerminal = ['completed', 'failed', 'skipped'].includes(latestEventStatus)
-  const latestEventIsFailed = latestEventStatus === 'failed'
-  const latestEventStageIndex =
-    latestEventStatus === 'pending' || latestEventStatus === 'queued'
-      ? 1
-      : ['retrying', 'processing', 'running'].includes(latestEventStatus)
-        ? 2
-        : latestEventIsTerminal
-          ? 3
-          : 0
-  const latestEventStages = [
-    'Event received',
-    'Matched and queued',
-    'Orbit is running',
-    latestEventIsFailed ? 'Failed' : latestEventStatus === 'skipped' ? 'Skipped' : 'Result saved',
-  ]
+
 
   return (
     <ModernDialog
@@ -901,8 +788,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
             <nav className="routine-manager-tabs" aria-label="Routine views">
               <button
                 type="button"
-                className={tab === 'routines' || tab === 'detail' || tab === 'run' ? 'active' : ''}
-                aria-current={tab === 'routines' || tab === 'detail' || tab === 'run' ? 'page' : undefined}
+                className={tab === 'routines' || tab === 'detail' ? 'active' : ''}
+                aria-current={tab === 'routines' || tab === 'detail' ? 'page' : undefined}
                 onClick={() => setTab('routines')}
               >
                 Routines
@@ -927,105 +814,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
           </div>
         </header>
 
-        {tab === 'run' ? (
-          <main className="routine-run-conversation-page">
-            <div className="routine-page-heading">
-              <button type="button" className="routine-back-link" onClick={() => setTab('detail')}>
-                <Icon name="chevronLeft" size={15} />
-                Back to {selectedRoutine?.name || 'routine'}
-              </button>
-              <span className="routine-manager-eyebrow">AUTOMATION EXECUTION</span>
-              <div className="routine-run-page-title-row">
-                <div>
-                  <h3>Run conversation</h3>
-                  <p>
-                    {selectedRoutine?.name || 'Routine'} · {selectedRun?.trigger_source?.replaceAll('_', ' ') || 'Execution'}
-                    {selectedRun?.created_at ? ` · ${new Date(selectedRun.created_at).toLocaleString()}` : ''}
-                  </p>
-                </div>
-                {selectedRun && (
-                  <span className={'routine-run-status ' + selectedRun.status.toLowerCase()}>
-                    {selectedRun.status}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="routine-run-conversation-toolbar">
-              <span><i /> Updating while this run is open</span>
-              {selectedRun && typeof selectedRun.duration_ms === 'number' && selectedRun.duration_ms > 0 && (
-                <small>{selectedRun.duration_ms.toLocaleString()} ms</small>
-              )}
-            </div>
-
-            {runConversationError && (
-              <p className="routine-action-status" role="alert">{runConversationError}</p>
-            )}
-
-            <section className="routine-run-transcript" aria-live="polite">
-              {runConversationLoading && runConversation.length === 0 && (
-                <p className="routine-empty-inline">Loading execution conversation…</p>
-              )}
-              {!runConversationLoading && runConversation.length === 0 && (
-                <article className="routine-run-legacy-result">
-                  <span className="routine-manager-eyebrow">SAVED RESULT</span>
-                  <h4>This run predates detailed conversations</h4>
-                  <p>{selectedRun?.result_summary || selectedRun?.error || 'No transcript was saved for this older run.'}</p>
-                </article>
-              )}
-              {runConversation.map((entry) => (
-                <article
-                  className={'routine-run-message ' + entry.entry_type}
-                  key={entry.id}
-                >
-                  <div className="routine-run-message-heading">
-                    <div>
-                      <span className="routine-run-message-kind">
-                        {entry.entry_type === 'prompt' ? 'INSTRUCTION' :
-                          entry.entry_type === 'trigger' ? 'TRIGGER EVENT' :
-                            entry.entry_type === 'tool' ? 'TOOL ACTIVITY' :
-                              entry.entry_type === 'assistant' ? 'ORBIT' :
-                                entry.entry_type === 'error' ? 'ERROR' : 'ACTIVITY'}
-                      </span>
-                      <strong>{entry.title}</strong>
-                    </div>
-                    <div className="routine-run-message-meta">
-                      {entry.status && <span className={'routine-run-status ' + entry.status.toLowerCase()}>{entry.status}</span>}
-                      <time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
-                    </div>
-                  </div>
-                  {entry.content && <p className="routine-run-message-content">{entry.content}</p>}
-                  {entry.details && Object.keys(entry.details).length > 0 && (
-                    <details className="routine-run-message-details">
-                      <summary>{entry.entry_type === 'trigger' ? 'Inspect event data' : entry.entry_type === 'tool' ? 'Inspect tool details' : 'Inspect details'}</summary>
-                      <pre>{JSON.stringify(entry.details, null, 2)}</pre>
-                    </details>
-                  )}
-                </article>
-              ))}
-              {selectedRun?.status === 'running' && (
-                <div className="routine-run-live-state"><i /> Orbit is still working on this run…</div>
-              )}
-            </section>
-
-            <div className="routine-run-conversation-footer">
-              <p>This execution is isolated from your normal chat history. Continue in chat to ask follow-up questions with this run's context.</p>
-              <div>
-                <button type="button" className="routine-secondary-button" onClick={() => setTab('detail')}>
-                  Back to routine
-                </button>
-                <button
-                  type="button"
-                  className="routine-primary-button"
-                  disabled={!selectedRun || !onContinueRun || continuingRun}
-                  onClick={() => void handleContinueRun()}
-                >
-                  {continuingRun ? 'Creating chat…' : 'Continue in chat'}
-                </button>
-              </div>
-            </div>
-          </main>
-        ) : tab === 'create' ? (
+        {tab === 'create' ? (
           <main className="routine-create-page">
             <div className="routine-page-heading">
               <button type="button" className="routine-back-link" onClick={() => setTab('routines')}>
@@ -1518,281 +1307,55 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
               ) : (
                 <section className="routine-detail">
                   <div className="routine-detail-overview">
-                    <header className="routine-overview-header">
-                      <div className="routine-overview-title-group">
-                        <div className="routine-overview-avatar" aria-hidden="true">
-                          {selectedRoutine.name.trim().charAt(0).toUpperCase() || 'R'}
-                        </div>
-                        <div className="routine-overview-title-copy">
-                          <div className="routine-overview-badges">
-                            <span className={'routine-status-pill' + (selectedRoutine.enabled ? ' active' : ' paused')}>
-                              <i />
-                              {selectedRoutine.enabled ? 'Active' : 'Paused'}
-                            </span>
-                            <span className="routine-detail-kind">
-                              {selectedRoutine.trigger_type === 'event' ? 'Event-triggered routine' : selectedRoutine.one_shot ? 'One-time routine' : 'Scheduled routine'}
-                            </span>
-                          </div>
-                          {editingRoutine ? (
-                            <input
-                              className="routine-title-input"
-                              aria-label="Routine name"
-                              value={editName}
-                              onChange={(event) => setEditName(event.target.value)}
-                            />
-                          ) : (
-                            <h3>{selectedRoutine.name}</h3>
-                          )}
-                          <p>
-                            {selectedRoutine.trigger_type === 'event'
-                              ? (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'Event') + ' · ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'Event')
-                              : 'Runs ' + (selectedRoutine.one_shot ? 'once' : 'on a schedule')}
-                          </p>
-                        </div>
+                    <header className="routine-overview-header routine-name-only-header">
+                      <div className="routine-overview-title-copy">
+                        {editingRoutine ? (
+                          <input
+                            className="routine-title-input"
+                            aria-label="Routine name"
+                            value={editName}
+                            onChange={(event) => setEditName(event.target.value)}
+                          />
+                        ) : (
+                          <h3>{selectedRoutine.name}</h3>
+                        )}
+                      </div>
+                    </header>
+
+                    <section className="routine-overview-block routine-instruction-only">
+                      <div className="routine-overview-block-heading">
+                        <span className="routine-manager-eyebrow">INSTRUCTION</span>
+                        <h4>What Orbit should do</h4>
+                      </div>
+                      {editingRoutine ? (
+                        <textarea
+                          className="routine-instruction-input"
+                          rows={5}
+                          value={editInstruction}
+                          onChange={(event) => setEditInstruction(event.target.value)}
+                          aria-label="Routine instruction"
+                        />
+                      ) : (
+                        <p className="routine-overview-instruction">{selectedRoutine.action_prompt}</p>
+                      )}
+                    </section>
+                  </div>
+
+                  <section className="routine-activity-overview routine-history-only">
+                    <div className="routine-activity-heading">
+                      <div>
+                        <span className="routine-manager-eyebrow">HISTORY</span>
+                        <h4>Execution history</h4>
                       </div>
                       <button
                         type="button"
-                        role="switch"
-                        aria-checked={selectedRoutine.enabled}
-                        className={'routine-switch' + (selectedRoutine.enabled ? ' on' : '')}
-                        onClick={() => void handleTogglePause(selectedRoutine)}
-                        aria-label={selectedRoutine.enabled ? 'Pause routine' : 'Resume routine'}
+                        className="routine-text-button"
+                        onClick={() => void loadRoutineActivity(selectedRoutine.id)}
                       >
-                        <span />
+                        <Icon name="refresh" size={13} />
+                        Refresh
                       </button>
-                    </header>
-
-                    <div className="routine-overview-grid">
-                      <section className="routine-overview-block">
-                        <div className="routine-overview-block-heading">
-                          <span className="routine-manager-eyebrow">INSTRUCTION</span>
-                          <h4>What Orbit should do</h4>
-                        </div>
-                        {editingRoutine ? (
-                          <textarea
-                            className="routine-instruction-input"
-                            rows={5}
-                            value={editInstruction}
-                            onChange={(event) => setEditInstruction(event.target.value)}
-                            aria-label="Routine instruction"
-                          />
-                        ) : (
-                          <p className="routine-overview-instruction">{selectedRoutine.action_prompt}</p>
-                        )}
-                      </section>
-
-                      <section className="routine-overview-block routine-overview-trigger">
-                        <div className="routine-overview-block-heading">
-                          <span className="routine-manager-eyebrow">TRIGGER</span>
-                          <h4>When Orbit should run</h4>
-                        </div>
-                        {editingRoutine && selectedRoutine.trigger_type === 'event' ? (
-                          <div className="routine-edit-trigger">
-                            <input
-                              aria-label="Event type"
-                              value={editEventType}
-                              onChange={(event) => setEditEventType(event.target.value)}
-                              placeholder="issues.opened"
-                            />
-                            <textarea
-                              aria-label="When to run"
-                              rows={2}
-                              value={editWhen}
-                              onChange={(event) => setEditWhen(event.target.value)}
-                              placeholder="When a new issue is opened"
-                            />
-                            <div className="routine-edit-filter">
-                              <input
-                                aria-label="Condition field"
-                                value={editFilterField}
-                                onChange={(event) => setEditFilterField(event.target.value)}
-                                placeholder="payload.labels"
-                              />
-                              <select
-                                aria-label="Condition operator"
-                                value={editFilterOperator}
-                                onChange={(event) => setEditFilterOperator(event.target.value as 'equals' | 'contains')}
-                              >
-                                <option value="equals">equals</option>
-                                <option value="contains">contains</option>
-                              </select>
-                              <input
-                                aria-label="Condition value"
-                                value={editFilterValue}
-                                onChange={(event) => setEditFilterValue(event.target.value)}
-                                placeholder="bug"
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="routine-trigger-summary routine-trigger-summary-modern">
-                            <span className="routine-trigger-icon"><Icon name={selectedRoutine.trigger_type === 'event' ? 'zap' : 'clock'} size={16} /></span>
-                            <div>
-                              <strong>
-                                {selectedRoutine.trigger_type === 'event'
-                                  ? selectedRoutine.trigger_definition?.when || ('When ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'an event') + ' arrives')
-                                  : selectedRoutine.schedule_display || selectedRoutine.schedule_expression || 'Manual run'}
-                              </strong>
-                              <p>
-                                {selectedRoutine.trigger_type === 'event'
-                                  ? (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') + ' · ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'Event')
-                                  : selectedRoutine.next_run_at
-                                    ? 'Next run ' + new Date(selectedRoutine.next_run_at).toLocaleString()
-                                    : selectedRoutine.one_shot ? 'One-time schedule' : 'Recurring schedule'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') === 'github' && (
-                          <div className="routine-connection-inline">
-                            <span className="routine-connection-provider">GitHub connected</span>
-                            <p>Webhook registered for <b>{selectedRoutine.trigger_definition?.repository || 'the selected repository'}</b>. Orbit only processes new matching events.</p>
-                          </div>
-                        )}
-                        {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'slack' && (
-                          <div className="routine-connection-inline">
-                            <span className="routine-connection-provider">Slack connection</span>
-                            <p>Listening for {selectedRoutine.trigger_definition?.when || 'matching Slack activity'}.</p>
-                            {integrationStatus?.slack.events_url && (
-                              <div className="routine-copy-row">
-                                <code>{integrationStatus.slack.events_url}</code>
-                                <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')}>Copy URL</button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'gmail' && (
-                          <div className="routine-connection-inline">
-                            <span className="routine-connection-provider">Gmail connection</span>
-                            <p>Watching {selectedRoutine.trigger_definition?.email_address || integrationStatus?.gmail.accounts[0]?.account_name || 'the connected inbox'} for new incoming email. Existing messages are not replayed.</p>
-                          </div>
-                        )}
-                        {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') === 'webhook' && (
-                          <details className="routine-webhook-details">
-                            <summary>Webhook endpoint and setup</summary>
-                            <p className="routine-detail-help">Send an HTTP POST to this URL when your event occurs. Include the authorization key as a Bearer token.</p>
-                            <div className="routine-copy-row">
-                              <code>{webhookUrl}</code>
-                              <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(webhookUrl, 'Webhook URL')}>Copy URL</button>
-                            </div>
-                            {selectedRoutine.webhook_secret && (
-                              <div className="routine-copy-row">
-                                <code>Authorization: Bearer {selectedRoutine.webhook_secret}</code>
-                                <button
-                                  type="button"
-                                  className="routine-secondary-button"
-                                  onClick={() => void handleCopyValue('Authorization: Bearer ' + (selectedRoutine.webhook_secret || ''), 'Authorization header')}
-                                >
-                                  Copy key
-                                </button>
-                              </div>
-                            )}
-                            <div className="event-webhook-example">
-                              <span>Example event payload</span>
-                              <pre>{JSON.stringify({ event_type: selectedRoutine.event_type || 'webhook.received', event_id: 'your-event-id', data: { status: 'paid' } }, null, 2)}</pre>
-                              <button
-                                type="button"
-                                className="routine-secondary-button"
-                                onClick={() => void handleCopyValue(JSON.stringify({ event_type: selectedRoutine.event_type || 'webhook.received', event_id: 'your-event-id', data: { status: 'paid' } }, null, 2), 'Example JSON body')}
-                              >
-                                Copy example
-                              </button>
-                            </div>
-                            <small className="routine-security-note">Keep the authorization key private. Store it on the server sending the event, never in browser code.</small>
-                          </details>
-                        )}
-                      </section>
                     </div>
-                  </div>
-
-                  <section className="routine-activity-overview" aria-live="polite">
-                    <div className="routine-activity-heading">
-                      <div>
-                        <span className="routine-manager-eyebrow">ACTIVITY</span>
-                        <h4>{selectedRoutine.trigger_type === 'event' ? 'Event activity' : 'Execution activity'}</h4>
-                      </div>
-                      <div className="routine-activity-heading-actions">
-                        <span className="routine-live-refresh">
-                          <i />
-                          {activityUpdatedAt
-                            ? 'Updated ' + new Date(activityUpdatedAt).toLocaleTimeString()
-                            : 'Syncing activity'}
-                        </span>
-                        <button type="button" className="routine-text-button" onClick={() => void loadRoutineActivity(selectedRoutine.id)}>
-                          <Icon name="refresh" size={13} />
-                          Refresh
-                        </button>
-                      </div>
-                    </div>
-
-                    {selectedRoutine.trigger_type === 'event' && (
-                      latestEvent ? (
-                        <div className="routine-latest-event">
-                          <div className="routine-latest-event-heading">
-                            <div>
-                              <strong>{latestEvent.event_type}</strong>
-                              <p>{latestEvent.source} · received {new Date(latestEvent.received_at).toLocaleString()}</p>
-                            </div>
-                            <span className={'routine-run-status ' + latestEventStatus}>
-                              {latestEventStatusLabel[latestEventStatus] || latestEventStatus.replaceAll('_', ' ')}
-                            </span>
-                          </div>
-                          <div className="routine-event-pipeline" aria-label={`Event status: ${latestEventStatusLabel[latestEventStatus] || latestEventStatus}`}>
-                            {latestEventStages.map((stage, index) => {
-                              const isPast = index < latestEventStageIndex
-                              const isCurrent = index === latestEventStageIndex && !latestEventIsTerminal
-                              const isFailed = index === 3 && latestEventIsFailed
-                              const isDone = index === 3 && latestEventIsTerminal && !latestEventIsFailed
-                              return (
-                                <div
-                                  className={
-                                    'routine-event-step' +
-                                    (isPast || isDone ? ' complete' : '') +
-                                    (isCurrent ? ' current' : '') +
-                                    (isFailed ? ' failed' : '')
-                                  }
-                                  key={stage}
-                                >
-                                  <span className="routine-event-step-marker">{isPast || isDone ? '✓' : index + 1}</span>
-                                  <span>{stage}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                          <p className="routine-event-progress-copy">
-                            {latestEventStatus === 'completed'
-                              ? 'Orbit finished this event and saved its result below.'
-                              : latestEventStatus === 'failed'
-                                ? 'Orbit could not complete this event. Open the execution below to inspect the failure.'
-                                : latestEventStatus === 'retrying'
-                                  ? 'Orbit hit an execution issue and is retrying this event.'
-                                  : latestEventStatus === 'processing' || latestEventStatus === 'running'
-                                    ? 'The event matched your trigger. Orbit is executing the instruction now.'
-                                    : latestEventStatus === 'skipped'
-                                      ? 'This event was received but the routine was skipped.'
-                                      : 'The event matched your trigger and is waiting in Orbit’s queue.'}
-                          </p>
-                          {latestEvent.routine_error && <p className="routine-run-error" role="alert">{latestEvent.routine_error}</p>}
-                          <details className="routine-event-payload">
-                            <summary>View event payload</summary>
-                            <pre>{JSON.stringify(latestEvent.payload, null, 2)}</pre>
-                          </details>
-                        </div>
-                      ) : (
-                        <div className="routine-event-waiting">
-                          <span className="routine-event-waiting-dot" />
-                          <div>
-                            <strong>{selectedRoutine.enabled ? 'Waiting for a matching event' : 'Routine is paused'}</strong>
-                            <p>
-                              {selectedRoutine.enabled
-                                ? 'When a new event matches this trigger, Orbit will queue it and show its progress here.'
-                                : 'Resume this routine to start receiving new matching events.'}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    )}
 
                     <div className="routine-run-history">
                       <div className="routine-run-history-heading">
@@ -1800,7 +1363,9 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                         <span>{routineRuns.length} {routineRuns.length === 1 ? 'run' : 'runs'}</span>
                       </div>
                       {routineRuns.length === 0 ? (
-                        <p className="routine-empty-inline">No executions yet. Test this routine or wait for its next trigger.</p>
+                        <p className="routine-empty-inline">
+                          No executions yet. Test this routine or wait for its next trigger.
+                        </p>
                       ) : (
                         <div className="routine-run-list routine-run-list-compact">
                           {routineRuns.map((run) => (
@@ -1813,14 +1378,18 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                                 <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
                                 {run.result_summary && <p>{run.result_summary}</p>}
                                 {run.error && <p className="routine-run-error" role="alert">{run.error}</p>}
-                                {typeof run.duration_ms === 'number' && <small>{run.duration_ms.toLocaleString()} ms</small>}
+                                {typeof run.duration_ms === 'number' && (
+                                  <small>{run.duration_ms.toLocaleString()} ms</small>
+                                )}
                               </div>
                               <button
                                 type="button"
                                 className="routine-open-run-button"
                                 onClick={() => void handleOpenRun(run)}
+                                disabled={openingRunId === run.id}
                               >
-                                Open execution <Icon name="chevronRight" size={12} />
+                                {openingRunId === run.id ? 'Opening…' : 'Open execution'}
+                                <Icon name="chevronRight" size={12} />
                               </button>
                             </article>
                           ))}
@@ -1873,7 +1442,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                       </>
                     )}
                   </div>
-                  <p className="routine-test-note">A test performs real work using this instruction. Tool actions that need approval are declined during background runs.</p>
                 </section>
               )}
             </main>
