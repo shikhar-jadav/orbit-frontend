@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Icon } from './Icon'
-import { AccountPanel } from './AccountPanel'
-import { CapabilitiesSection } from './CapabilitiesSection'
-import { ConnectedAccountsSection } from './ConnectedAccountsSection'
 import type { AuthUser, SettingsSection, UserPreferences } from './types'
 import './SettingsPanel.css'
+
+const AccountPanel = lazy(() =>
+  import('./AccountPanel').then((module) => ({ default: module.AccountPanel })),
+)
+const CapabilitiesSection = lazy(() =>
+  import('./CapabilitiesSection').then((module) => ({ default: module.CapabilitiesSection })),
+)
+const ConnectedAccountsSection = lazy(() =>
+  import('./ConnectedAccountsSection').then((module) => ({ default: module.ConnectedAccountsSection })),
+)
 
 type SettingsPanelProps = {
   user: AuthUser
@@ -281,35 +288,41 @@ export function SettingsPanel({
         {activeSection === 'account' && (
           <div className="sp-section-content">
             <h2 className="sp-section-title">Account &amp; Security</h2>
-            <AccountPanel
-              key={user.user_id}
-              user={user}
-              unusedRecoveryCodes={unusedRecoveryCodes}
-              onUserUpdated={onUserUpdated}
-              onRecoveryCodesCountUpdated={onRecoveryCodesCountUpdated}
-              onLoggedOut={onLoggedOut}
-              onUnauthorized={onUnauthorized}
-              embedded
-            />
+            <Suspense fallback={<div className="sp-loading">Loading account settings…</div>}>
+              <AccountPanel
+                key={user.user_id}
+                user={user}
+                unusedRecoveryCodes={unusedRecoveryCodes}
+                onUserUpdated={onUserUpdated}
+                onRecoveryCodesCountUpdated={onRecoveryCodesCountUpdated}
+                onLoggedOut={onLoggedOut}
+                onUnauthorized={onUnauthorized}
+                embedded
+              />
+            </Suspense>
           </div>
         )}
 
         {activeSection === 'capabilities' && (
           <div className="sp-section-content sp-section-wide">
             <h2 className="sp-section-title">Capabilities</h2>
-            <CapabilitiesSection
-              onNavigateMarketplace={onNavigateMarketplace}
-              onCloseSettings={onClose}
-              onModalOpenChange={setChildModalOpen}
-              initialTab={initialCapabilitiesTab}
-            />
+            <Suspense fallback={<div className="sp-loading">Loading capabilities…</div>}>
+              <CapabilitiesSection
+                onNavigateMarketplace={onNavigateMarketplace}
+                onCloseSettings={onClose}
+                onModalOpenChange={setChildModalOpen}
+                initialTab={initialCapabilitiesTab}
+              />
+            </Suspense>
           </div>
         )}
 
         {activeSection === 'integrations' && (
           <div className="sp-section-content sp-section-wide">
             <h2 className="sp-section-title">Connected Accounts</h2>
-            <ConnectedAccountsSection onUnauthorized={onUnauthorized} />
+            <Suspense fallback={<div className="sp-loading">Loading connected accounts…</div>}>
+              <ConnectedAccountsSection onUnauthorized={onUnauthorized} />
+            </Suspense>
           </div>
         )}
       </main>
