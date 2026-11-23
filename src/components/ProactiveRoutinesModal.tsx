@@ -494,16 +494,15 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const handleOpenRoutine = async (routineId: string) => {
     setRoutineActionStatus('')
     try {
-      const [res, runsResponse] = await Promise.all([
-        fetch(`/api/routines/${encodeURIComponent(routineId)}`),
-        fetch(`/api/routines/${encodeURIComponent(routineId)}/runs?limit=20`),
-      ])
+      const res = await fetch(`/api/routines/${encodeURIComponent(routineId)}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Could not open routine.')
-      const runsData = await runsResponse.json()
-      if (!runsResponse.ok) throw new Error(runsData.detail || 'Could not load run history.')
+
+      // Render the routine as soon as its own details arrive. Run history is
+      // secondary and can be loaded in the background without blocking the view.
       setSelectedRoutine(data.routine as Routine)
-      setRoutineRuns((runsData.runs || []) as RoutineRun[])
+      setRoutineRuns([])
+      void loadRoutineActivity(routineId)
       setEditName(data.routine.name)
       setEditInstruction(data.routine.action_prompt)
       const trigger = data.routine.trigger_definition || {}
