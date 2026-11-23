@@ -615,7 +615,7 @@ export function CapabilitiesSection({
                     Create personal skill
                   </button>
                   {onNavigateMarketplace && (
-                    <button type="button" className="sp-btn-ghost" onClick={handleOpenMarketplace}>
+                    <button type="button" className="sp-btn-ghost" onClick={() => handleOpenMarketplace()}>
                       Open Marketplace
                     </button>
                   )}
