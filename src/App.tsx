@@ -1682,7 +1682,7 @@ function App() {
         if (!receivedTerminalEvent && !controller.signal.aborted) {
           throw new Error('The connection ended before Orbit finished the response. Your message was not automatically resent.')
         }
-        await refreshThreads()
+        void refreshThreads()
       } catch (sendError) {
         if (controller.signal.aborted) {
           if (!messageAdded) setInput(content)
@@ -1709,7 +1709,7 @@ function App() {
         }
         if (threadId) {
           try {
-            await refreshThreads()
+            void refreshThreads()
           } catch {
             // ignore
           }
