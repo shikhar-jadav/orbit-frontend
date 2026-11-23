@@ -348,6 +348,8 @@ function App() {
   const [pendingRoutineExecution, setPendingRoutineExecution] = useState<RoutineExecutionPreview | null>(null)
   const [settingsPage, setSettingsPage] = useState(initialRoute.settings)
   const [settingsSection, setSettingsSection] = useState<SettingsSection>(initialRoute.settingsSection)
+  const [capabilitiesInitialTab, setCapabilitiesInitialTab] = useState<'skills' | 'connectors'>('skills')
+  const [marketplaceInitialTab, setMarketplaceInitialTab] = useState<'all' | 'connectors' | 'skills'>('all')
   const [marketplacePage, setMarketplacePage] = useState(initialRoute.marketplace)
   const [threadMenuId, setThreadMenuId] = useState<string | null>(null)
   const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null)
@@ -2419,6 +2421,7 @@ function App() {
             <MarketplaceView
               onClose={navigateMarketplace}
               onOpenCapabilities={() => navigateSettings('capabilities')}
+              initialTab={marketplaceInitialTab}
             />
           </Suspense>
         ) : settingsPage ? (
@@ -2430,6 +2433,7 @@ function App() {
               preferences={userPreferences}
               onPreferencesUpdated={setUserPreferences}
               initialSection={settingsSection}
+              initialCapabilitiesTab={capabilitiesInitialTab}
               onClose={() => navigateSettings()}
               onUserUpdated={(updatedUser) => {
                 rememberRecentAccount(updatedUser)
@@ -2489,6 +2493,22 @@ function App() {
                 onHITLSkip={handleHITLSkip}
                 onHITLDismiss={handleHITLDismiss}
                 onOpenRoutinesModal={() => setRoutinesModalOpen(true)}
+                onOpenConnectors={() => {
+                  setCapabilitiesInitialTab('connectors')
+                  navigateSettings('capabilities')
+                }}
+                onBrowseConnectors={() => {
+                  setMarketplaceInitialTab('connectors')
+                  navigateMarketplace()
+                }}
+                onOpenSkills={() => {
+                  setCapabilitiesInitialTab('skills')
+                  navigateSettings('capabilities')
+                }}
+                onBrowseSkills={() => {
+                  setMarketplaceInitialTab('skills')
+                  navigateMarketplace()
+                }}
               />
             </div>
 
