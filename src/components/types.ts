@@ -339,7 +339,13 @@ export type MarketplaceConnector = {
   type: 'connector'
   is_enabled: boolean
   is_configured: boolean
-  status: 'active' | 'needs_config' | 'available'
+  is_authenticated?: boolean
+  connected_account?: {
+    account_name?: string
+    email?: string
+  } | null
+  oauthProvider?: string
+  status: 'active' | 'needs_config' | 'needs_auth' | 'available'
   config: Record<string, ConnectorConfigValue>
 }
 

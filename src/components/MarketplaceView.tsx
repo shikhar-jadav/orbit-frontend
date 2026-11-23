@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Icon } from './Icon'
@@ -50,6 +50,8 @@ async function fetchMarketplaceJson<T>(
 }
 
 export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all' }: MarketplaceViewProps) {
+  const popupRef = useRef<Window | null>(null)
+  const popupProviderRef = useRef<string | null>(null)
   const [catalog, setCatalog] = useState<MarketplaceCatalog | null>(null)
   const [loading, setLoading] = useState(true)
   const [reloadNonce, setReloadNonce] = useState(0)
@@ -76,7 +78,56 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     setActionFeedback(message)
     window.setTimeout(() => {
       setActionFeedback((curr) => (curr === message ? null : curr))
-    }, 3000)
+    }, 4000)
+  }
+
+  // OAuth popup listener
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const popup = popupRef.current
+      const provider = popupProviderRef.current
+      if (!popup || !provider || event.source !== popup) return
+      if (event.data?.type === 'orbit_integration_connected') {
+        popupRef.current = null
+        popupProviderRef.current = null
+        showToast(`${provider === 'gmail' ? 'Gmail' : provider} connected successfully!`)
+        triggerReload()
+      } else if (event.data?.type === 'orbit_integration_error') {
+        popupRef.current = null
+        popupProviderRef.current = null
+        showToast(String(event.data.message || 'The account could not be connected.'))
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
+  const startOAuth = async (provider: string) => {
+    try {
+      const response = await fetch(`/api/integrations/${provider}/oauth/start`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.detail || `Could not start ${provider} authorization. Check backend configuration.`)
+      }
+      if (typeof data.auth_url !== 'string') {
+        throw new Error('No authorization URL returned from server.')
+      }
+      popupProviderRef.current = provider
+      const popup = window.open(
+        data.auth_url,
+        'orbit-oauth-popup',
+        'popup,width=620,height=760',
+      )
+      popupRef.current = popup
+      if (!popup) {
+        throw new Error('Please allow popups in your browser to sign in with Google.')
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to launch sign-in window.')
+    }
   }
 
   useEffect(() => {
@@ -145,6 +196,9 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   // Toggle connector enabled
   const toggleConnector = async (connector: MarketplaceConnector) => {
     const nextState = !connector.is_enabled
+    if (nextState && connector.oauthProvider && !connector.is_authenticated) {
+      void startOAuth(connector.oauthProvider)
+    }
     try {
       await fetchMarketplaceJson(
         `/api/marketplace/connectors/${encodeURIComponent(connector.id)}/toggle`,
@@ -500,18 +554,26 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                       <span
                         className={`status-dot ${
                           connector.is_enabled
-                            ? connector.is_configured
-                              ? 'active'
-                              : 'needs-config'
+                            ? !connector.is_authenticated && connector.oauthProvider
+                              ? 'needs-config'
+                              : connector.is_configured
+                                ? 'active'
+                                : 'needs-config'
                             : 'available'
                         }`}
                       />
                       <span>
                         {connector.is_enabled
-                          ? connector.is_configured
-                            ? 'Active'
-                            : 'Config required'
-                          : 'Available'}
+                          ? !connector.is_authenticated && connector.oauthProvider
+                            ? 'Sign-in required'
+                            : connector.connected_account?.email
+                              ? `Active (${connector.connected_account.email})`
+                              : connector.is_configured
+                                ? 'Active'
+                                : 'Config required'
+                          : connector.connected_account?.email
+                            ? `Ready (${connector.connected_account.email})`
+                            : 'Available'}
                       </span>
                     </div>
 
@@ -526,20 +588,30 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                           <span>Configure</span>
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className={`card-action-btn ${connector.is_enabled ? 'btn-installed' : 'btn-primary'}`}
-                        onClick={() => void toggleConnector(connector)}
-                      >
-                        {connector.is_enabled ? (
-                          <>
-                            <Icon name="check" size={13} />
-                            <span>Enabled</span>
-                          </>
-                        ) : (
-                          <span>Enable</span>
-                        )}
-                      </button>
+                      {connector.is_enabled && !connector.is_authenticated && connector.oauthProvider ? (
+                        <button
+                          type="button"
+                          className="card-action-btn btn-primary"
+                          onClick={() => void startOAuth(connector.oauthProvider!)}
+                        >
+                          <span>Sign in with Google</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={`card-action-btn ${connector.is_enabled ? 'btn-installed' : 'btn-primary'}`}
+                          onClick={() => void toggleConnector(connector)}
+                        >
+                          {connector.is_enabled ? (
+                            <>
+                              <Icon name="check" size={13} />
+                              <span>Enabled</span>
+                            </>
+                          ) : (
+                            <span>Enable</span>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
