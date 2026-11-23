@@ -38,6 +38,7 @@ export type MessagePart =
   | { type: 'text'; text: string }
   | { type: 'tool'; tool: ToolEvent }
   | { type: 'proactive_card'; card: ProactiveCardData }
+  | { type: 'context'; text: string }
 
 export type Message = {
   id: string | number
