@@ -1308,6 +1308,25 @@ function App() {
       let currentMessages = messages
       let threadId = activeThreadId
       let messageAdded = false
+      const optimisticMessageId = `user-${Date.now()}`
+      const assistantId = `assistant-${Date.now()}`
+
+      // Show the user's message immediately while a new thread is being created.
+      // On a cold backend, POST /threads can take several seconds; that network
+      // round-trip must not block the composer from giving instant feedback.
+      if (!threadId && !pendingRoutineExecution) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: optimisticMessageId,
+            role: 'user',
+            content: messageContent,
+            attachments: [],
+          },
+          { id: assistantId, role: 'assistant', content: '', pending: true, tools: [], parts: [] },
+        ])
+        messageAdded = true
+      }
 
       const controller = new AbortController()
       abortControllerRef.current = controller
@@ -1385,19 +1404,28 @@ function App() {
           uploadedAttachments.push(uploaded)
         }
 
-        const userMessage: Message = {
-          id: `user-${Date.now()}`,
-          role: 'user',
-          content: messageContent,
-          attachments: uploadedAttachments,
+        if (messageAdded) {
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === optimisticMessageId
+                ? { ...message, attachments: uploadedAttachments }
+                : message,
+            ),
+          )
+        } else {
+          const userMessage: Message = {
+            id: optimisticMessageId,
+            role: 'user',
+            content: messageContent,
+            attachments: uploadedAttachments,
+          }
+          setMessages([
+            ...currentMessages,
+            userMessage,
+            { id: assistantId, role: 'assistant', content: '', pending: true, tools: [], parts: [] },
+          ])
+          messageAdded = true
         }
-        const assistantId = `assistant-${Date.now()}`
-        setMessages([
-          ...currentMessages,
-          userMessage,
-          { id: assistantId, role: 'assistant', content: '', pending: true, tools: [], parts: [] },
-        ])
-        messageAdded = true
 
         const response = await fetch('/chat/stream', {
           method: 'POST',
