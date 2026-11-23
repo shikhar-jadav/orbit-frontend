@@ -95,7 +95,7 @@ type Props = {
   onClearUnread: () => void
   soundEnabled: boolean
   onToggleSound: () => void
-  onOpenExecution?: (execution: RoutineExecutionPreview) => void
+  onOpenExecution: (execution: RoutineExecutionPreview) => void
 }
 
 export const ProactiveRoutinesModal: React.FC<Props> = ({
@@ -145,7 +145,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     gmail: IntegrationStatus
   } | null>(null)
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null)
-  const [webhookUrl, setWebhookUrl] = useState('')
   const [editingRoutine, setEditingRoutine] = useState(false)
   const [editName, setEditName] = useState('')
   const [editInstruction, setEditInstruction] = useState('')
@@ -280,7 +279,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     setRoutineActionStatus('')
     try {
       const execution = await loadRunConversation(selectedRoutine.id, run.id)
-      onOpenExecution?.({
+      onOpenExecution({
         routine: selectedRoutine,
         run: execution.run,
         messages: execution.messages,
@@ -401,15 +400,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     }
   }
 
-  const handleCopyValue = async (value: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(value)
-      setRoutineActionStatus(`${label} copied.`)
-    } catch {
-      setRoutineActionStatus(`Could not copy ${label.toLowerCase()}.`)
-    }
-  }
-
   const handleOpenRoutine = async (routineId: string) => {
     setRoutineActionStatus('')
     try {
@@ -423,7 +413,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       if (!runsResponse.ok) throw new Error(runsData.detail || 'Could not load run history.')
       setSelectedRoutine(data.routine as Routine)
       setRoutineRuns((runsData.runs || []) as RoutineRun[])
-      setWebhookUrl(data.webhook_url || '')
       setEditName(data.routine.name)
       setEditInstruction(data.routine.action_prompt)
       const trigger = data.routine.trigger_definition || {}
