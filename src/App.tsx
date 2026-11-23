@@ -350,6 +350,7 @@ function App() {
   const [settingsSection, setSettingsSection] = useState<SettingsSection>(initialRoute.settingsSection)
   const [capabilitiesInitialTab, setCapabilitiesInitialTab] = useState<'skills' | 'connectors'>('skills')
   const [marketplaceInitialTab, setMarketplaceInitialTab] = useState<'all' | 'connectors' | 'skills'>('all')
+  const [marketplaceInitialConnectorId, setMarketplaceInitialConnectorId] = useState<string | null>(null)
   const [marketplacePage, setMarketplacePage] = useState(initialRoute.marketplace)
   const [threadMenuId, setThreadMenuId] = useState<string | null>(null)
   const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null)
@@ -1158,7 +1159,16 @@ function App() {
     setError('')
   }
 
-  function navigateMarketplace() {
+  function navigateMarketplace(connectorId?: string) {
+    if (connectorId) {
+      setMarketplaceInitialConnectorId(connectorId)
+      setMarketplaceInitialTab('connectors')
+      setMarketplacePage(true)
+      setSettingsPage(false)
+      setError('')
+      window.history.pushState({}, '', `${window.location.pathname}#marketplace`)
+      return
+    }
     if (marketplacePage) {
       const path = window.location.pathname
       window.history.pushState({}, '', path === '/' ? '/' : path)
@@ -2469,6 +2479,7 @@ function App() {
               onClose={navigateMarketplace}
               onOpenCapabilities={() => navigateSettings('capabilities')}
               initialTab={marketplaceInitialTab}
+              initialConnectorId={marketplaceInitialConnectorId}
             />
           </Suspense>
         ) : settingsPage ? (
