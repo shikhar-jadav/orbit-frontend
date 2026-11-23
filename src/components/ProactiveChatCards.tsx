@@ -247,7 +247,7 @@ export const RoutineSetupCard: React.FC<RoutineSetupCardProps> = ({
       <div className="routine-setup-header">
         <div className="routine-setup-title-box">
           <span className="routine-setup-icon">
-            {isOneShot ? '⏰' : '⚡'}
+            <Icon name={isOneShot ? 'clock' : 'zap'} size={16} />
           </span>
           <span className="routine-setup-name">{name}</span>
         </div>
@@ -347,7 +347,7 @@ export const ProactiveAlertCard: React.FC<ProactiveAlertCardProps> = ({
   const [feedback, setFeedback] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const isReminder = card.one_shot ?? (card.trigger_type === 'timer' || true)
+  const isReminder = card.one_shot ?? (card.trigger_type === 'timer')
 
   const handleSnooze = async (minutes: number = 10) => {
     if (!card.routine_id) return
@@ -362,6 +362,9 @@ export const ProactiveAlertCard: React.FC<ProactiveAlertCardProps> = ({
         setSnoozed(true)
         setFeedback(`Snoozed for ${minutes}m`)
         setTimeout(() => setFeedback(null), 3000)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setFeedback(typeof data.detail === 'string' ? data.detail : 'Snooze failed')
       }
     } catch {
       setFeedback('Snooze failed')
@@ -383,6 +386,9 @@ export const ProactiveAlertCard: React.FC<ProactiveAlertCardProps> = ({
         setPaused(true)
         setFeedback('Routine paused')
         setTimeout(() => setFeedback(null), 3000)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setFeedback(typeof data.detail === 'string' ? data.detail : 'Pause failed')
       }
     } catch {
       setFeedback('Pause failed')
@@ -396,11 +402,11 @@ export const ProactiveAlertCard: React.FC<ProactiveAlertCardProps> = ({
       <div className="proactive-alert-header">
         <div className="proactive-alert-title-box">
           <span className="proactive-alert-icon" aria-hidden="true">
-            {isReminder ? '⏰' : '⚡'}
+            <Icon name={isReminder ? 'clock' : 'zap'} size={16} />
           </span>
           <span className="proactive-alert-name">{card.routine_name}</span>
-          <span className="proactive-alert-pill">
-            {isReminder ? 'Reminder' : 'Routine'}
+          <span className={'proactive-alert-pill' + (paused ? ' paused' : '')}>
+            {paused ? 'Paused' : isReminder ? 'Reminder' : 'Routine'}
           </span>
         </div>
         {card.timestamp && (
@@ -414,7 +420,7 @@ export const ProactiveAlertCard: React.FC<ProactiveAlertCardProps> = ({
 
       <div className="proactive-alert-footer">
         <div className="proactive-alert-actions">
-          {card.routine_id && !snoozed && (
+          {card.routine_id && isReminder && !snoozed && (
             <button
               className="proactive-alert-btn"
               onClick={() => handleSnooze(10)}
@@ -425,7 +431,7 @@ export const ProactiveAlertCard: React.FC<ProactiveAlertCardProps> = ({
               <span>Snooze 10m</span>
             </button>
           )}
-          {card.routine_id && !paused && (
+          {card.routine_id && !isReminder && !paused && (
             <button
               className="proactive-alert-btn secondary"
               onClick={handlePause}
