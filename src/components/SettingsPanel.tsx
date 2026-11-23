@@ -16,7 +16,7 @@ type SettingsPanelProps = {
   onRecoveryCodesCountUpdated: (count: number) => void
   onLoggedOut: (notice?: string, opts?: { revokeAll?: boolean; forgetUser?: boolean }) => void
   onUnauthorized: () => void
-  onNavigateMarketplace?: () => void
+  onNavigateMarketplace?: (connectorId?: string) => void
   initialSection?: SettingsSection
   initialCapabilitiesTab?: 'skills' | 'connectors'
 }
