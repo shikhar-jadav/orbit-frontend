@@ -137,10 +137,13 @@ export function CapabilitiesSection({
   }, [reloadNonce, tab, view])
 
   useEffect(() => {
-    const refreshMarketplace = () => setReloadNonce((value) => value + 1)
+    const refreshMarketplace = () => {
+      loadedData.current.marketplace = false
+      if (view === 'discover') setReloadNonce((value) => value + 1)
+    }
     window.addEventListener('orbit:marketplace-updated', refreshMarketplace)
     return () => window.removeEventListener('orbit:marketplace-updated', refreshMarketplace)
-  }, [])
+  }, [view])
 
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
