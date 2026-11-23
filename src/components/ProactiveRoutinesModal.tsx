@@ -637,7 +637,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       const created = data.routine as Routine
       setRoutines((items) => [created, ...items.filter((item) => item.id !== created.id)])
       setSelectedRoutine(created)
-      setWebhookUrl(data.webhook_url || '')
       setEditingRoutine(false)
       setRoutineActionStatus(
         eventProvider === 'github'
