@@ -258,7 +258,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
       setSavingConfig(true)
       await fetchMarketplaceJson(
         `/api/marketplace/connectors/${encodeURIComponent(configuringConnector.id)}/config`,
-        `/marketplace/connectors/${encodeURIComponent(configuringConnector.id)}/config`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
