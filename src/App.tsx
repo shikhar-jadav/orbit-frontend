@@ -1136,7 +1136,7 @@ function App() {
       }
     }
 
-    const timer = window.setInterval(() => void refreshExecution(), 2000)
+    const timer = window.setInterval(() => void refreshExecution(), 5000)
     return () => {
       active = false
       window.clearInterval(timer)
@@ -1160,6 +1160,7 @@ function App() {
   }
 
   function navigateMarketplace(connectorId?: string) {
+    if (!connectorId) setMarketplaceInitialConnectorId(null)
     if (connectorId) {
       setMarketplaceInitialConnectorId(connectorId)
       setMarketplaceInitialTab('connectors')
