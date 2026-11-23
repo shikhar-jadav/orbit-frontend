@@ -65,6 +65,7 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
   const [notice, setNotice] = useState('')
   const popupRef = useRef<Window | null>(null)
   const popupProviderRef = useRef<Provider | null>(null)
+  const popupPollRef = useRef<number | null>(null)
 
   const loadStatus = useCallback(async () => {
     setLoading(true)
@@ -101,6 +102,8 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
       }
       if (event.origin !== expectedOrigin || event.data?.provider !== provider) return
       if (event.data?.type === 'orbit_integration_connected') {
+        if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
+        popupPollRef.current = null
         popupRef.current = null
         popupProviderRef.current = null
         setConnecting(null)
@@ -108,6 +111,8 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
         setNotice(`${PROVIDERS.find((item) => item.id === provider)?.name || provider} connected successfully.`)
         void loadStatus()
       } else if (event.data?.type === 'orbit_integration_error') {
+        if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
+        popupPollRef.current = null
         popupRef.current = null
         popupProviderRef.current = null
         setConnecting(null)
@@ -118,19 +123,9 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
     return () => window.removeEventListener('message', handleMessage)
   }, [loadStatus, status?.public_url])
 
-  useEffect(() => {
-    const popup = popupRef.current
-    if (!popup) return
-    const interval = window.setInterval(() => {
-      if (!popup.closed) return
-      window.clearInterval(interval)
-      popupRef.current = null
-      popupProviderRef.current = null
-      setConnecting(null)
-      void loadStatus()
-    }, 700)
-    return () => window.clearInterval(interval)
-  }, [connecting, loadStatus])
+  useEffect(() => () => {
+    if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
+  }, [])
 
   const connect = async (provider: Provider) => {
     setError('')
@@ -157,6 +152,16 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
       popupRef.current = popup
       popupProviderRef.current = provider
       popup.focus()
+      popupPollRef.current = window.setInterval(() => {
+        if (!popup.closed) return
+        if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
+        popupPollRef.current = null
+        if (popupRef.current !== popup) return
+        popupRef.current = null
+        popupProviderRef.current = null
+        setConnecting(null)
+        void loadStatus()
+      }, 700)
     } catch (connectError) {
       setConnecting(null)
       setError(connectError instanceof Error ? connectError.message : `Could not connect ${provider}.`)
