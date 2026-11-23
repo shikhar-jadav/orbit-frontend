@@ -383,6 +383,22 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
             </span>
             <Icon name="externalLink" size={13} className="composer-plus-menu-arrow" />
           </button>
+
+          <div className="composer-plus-menu-divider" />
+          <div className="composer-plus-menu-label">Automation</div>
+          <button
+            type="button"
+            className="composer-plus-menu-item"
+            role="menuitem"
+            onClick={() => runPlusAction(props.onOpenRoutinesModal)}
+          >
+            <span className="composer-plus-menu-icon"><Icon name="clock" size={17} /></span>
+            <span className="composer-plus-menu-copy">
+              <strong>Routines</strong>
+              <small>Manage scheduled and event-triggered work</small>
+            </span>
+            <Icon name="chevronRight" size={14} className="composer-plus-menu-arrow" />
+          </button>
         </div>
       )}
     </div>
