@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { Dispatch, FormEvent, RefObject, SetStateAction } from 'react'
 import { AttachmentChips } from './AttachmentChips'
 import { Icon } from './Icon'
@@ -55,6 +55,10 @@ type ChatWorkspaceProps = {
   onHITLSkip?: () => void
   onHITLDismiss?: () => void
   onOpenRoutinesModal?: () => void
+  onOpenConnectors?: () => void
+  onBrowseConnectors?: () => void
+  onOpenSkills?: () => void
+  onBrowseSkills?: () => void
 }
 
 function formatToolName(name: string) {
@@ -264,6 +268,125 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
     onHITLSkip,
     onHITLDismiss,
   } = props
+
+  const [plusMenuOpen, setPlusMenuOpen] = useState(false)
+
+  useEffect(() => {
+    if (!plusMenuOpen) return
+    const closeOnPointerDown = (event: PointerEvent) => {
+      if (
+        event.target instanceof Element &&
+        !event.target.closest('.composer-plus-wrap')
+      ) {
+        setPlusMenuOpen(false)
+      }
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPlusMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnPointerDown)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnPointerDown)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [plusMenuOpen])
+
+  const runPlusAction = (action?: () => void) => {
+    setPlusMenuOpen(false)
+    action?.()
+  }
+
+  const renderPlusMenu = () => (
+    <div className="composer-plus-wrap">
+      <button
+        type="button"
+        className={'circle-action-btn attach-circle composer-plus-trigger' + (plusMenuOpen ? ' is-open' : '')}
+        onClick={() => setPlusMenuOpen((open) => !open)}
+        disabled={sending}
+        aria-label="Open tools and attachments"
+        aria-haspopup="menu"
+        aria-expanded={plusMenuOpen}
+      >
+        <Icon name="plus" size={18} />
+      </button>
+
+      {plusMenuOpen && (
+        <div className="composer-plus-menu" role="menu" aria-label="Add to chat">
+          <button
+            type="button"
+            className="composer-plus-menu-item"
+            role="menuitem"
+            onClick={() => runPlusAction(() => attachmentInputRef.current?.click())}
+          >
+            <span className="composer-plus-menu-icon"><Icon name="upload" size={17} /></span>
+            <span className="composer-plus-menu-copy">
+              <strong>Photos & files</strong>
+              <small>Upload documents and images</small>
+            </span>
+          </button>
+
+          <div className="composer-plus-menu-divider" />
+          <div className="composer-plus-menu-label">Connectors</div>
+          <button
+            type="button"
+            className="composer-plus-menu-item"
+            role="menuitem"
+            onClick={() => runPlusAction(props.onOpenConnectors)}
+          >
+            <span className="composer-plus-menu-icon"><Icon name="puzzle" size={17} /></span>
+            <span className="composer-plus-menu-copy">
+              <strong>Manage connected apps</strong>
+              <small>Connect or configure your apps</small>
+            </span>
+            <Icon name="chevronRight" size={14} className="composer-plus-menu-arrow" />
+          </button>
+          <button
+            type="button"
+            className="composer-plus-menu-item"
+            role="menuitem"
+            onClick={() => runPlusAction(props.onBrowseConnectors)}
+          >
+            <span className="composer-plus-menu-icon"><Icon name="store" size={17} /></span>
+            <span className="composer-plus-menu-copy">
+              <strong>Explore connectors</strong>
+              <small>Discover available integrations</small>
+            </span>
+            <Icon name="externalLink" size={13} className="composer-plus-menu-arrow" />
+          </button>
+
+          <div className="composer-plus-menu-divider" />
+          <div className="composer-plus-menu-label">Skills</div>
+          <button
+            type="button"
+            className="composer-plus-menu-item"
+            role="menuitem"
+            onClick={() => runPlusAction(props.onOpenSkills)}
+          >
+            <span className="composer-plus-menu-icon"><Icon name="sparkles" size={17} /></span>
+            <span className="composer-plus-menu-copy">
+              <strong>Manage skills</strong>
+              <small>Customize what Orbit can do</small>
+            </span>
+            <Icon name="chevronRight" size={14} className="composer-plus-menu-arrow" />
+          </button>
+          <button
+            type="button"
+            className="composer-plus-menu-item"
+            role="menuitem"
+            onClick={() => runPlusAction(props.onBrowseSkills)}
+          >
+            <span className="composer-plus-menu-icon"><Icon name="layers" size={17} /></span>
+            <span className="composer-plus-menu-copy">
+              <strong>Explore skills</strong>
+              <small>Find abilities to install</small>
+            </span>
+            <Icon name="externalLink" size={13} className="composer-plus-menu-arrow" />
+          </button>
+        </div>
+      )}
+    </div>
+  )
 
   // Keep the composer compact after send/clear and grow it with the current draft.
   useEffect(() => {
@@ -975,17 +1098,7 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                         aria-label="Ask anything"
                       />
                       <div className="composer-toolbar">
-                        <Tooltip content="Attach files">
-                          <button
-                            type="button"
-                            className="circle-action-btn attach-circle"
-                            onClick={() => attachmentInputRef.current?.click()}
-                            disabled={sending}
-                            aria-label="Attach files"
-                          >
-                            <Icon name="plus" size={17} />
-                          </button>
-                        </Tooltip>
+                        {renderPlusMenu()}
                         <div className="composer-right-actions">
                           {sending && !hitlRequest ? (
                             <Tooltip content="Stop generation">
@@ -1062,17 +1175,7 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                   disabled={loadingThread || (sending && !hitlRequest)}
                 />
                 <div className="composer-toolbar">
-                  <Tooltip content="Attach files">
-                    <button
-                      type="button"
-                      className="circle-action-btn attach-circle"
-                      onClick={() => attachmentInputRef.current?.click()}
-                      disabled={sending}
-                      aria-label="Attach files"
-                    >
-                      <Icon name="plus" size={17} />
-                    </button>
-                  </Tooltip>
+                  {renderPlusMenu()}
                   <div className="composer-right-actions">
                     {sending && !hitlRequest ? (
                       <Tooltip content="Stop generation">
