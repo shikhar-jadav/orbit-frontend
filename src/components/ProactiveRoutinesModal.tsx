@@ -1339,10 +1339,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
 
                   <section className="routine-activity-overview routine-history-only">
                     <div className="routine-activity-heading">
-                      <div>
-                        <span className="routine-manager-eyebrow">HISTORY</span>
-                        <h4>Execution history</h4>
-                      </div>
+                      <span className="routine-manager-eyebrow">RUN HISTORY</span>
                       <button
                         type="button"
                         className="routine-text-button"
@@ -1354,10 +1351,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                     </div>
 
                     <div className="routine-run-history">
-                      <div className="routine-run-history-heading">
-                        <h5>Recent executions</h5>
-                        <span>{routineRuns.length} {routineRuns.length === 1 ? 'run' : 'runs'}</span>
-                      </div>
                       {routineRuns.length === 0 ? (
                         <p className="routine-empty-inline">
                           No executions yet. Test this routine or wait for its next trigger.
@@ -1365,29 +1358,28 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                       ) : (
                         <div className="routine-run-list routine-run-list-compact">
                           {routineRuns.map((run) => (
-                            <article className="routine-run-row" key={run.id}>
-                              <div className="routine-run-row-main">
-                                <div className="routine-run-item-header">
-                                  <strong>{run.trigger_source.replaceAll('_', ' ')}</strong>
-                                  <span className={'routine-run-status ' + run.status.toLowerCase()}>{run.status}</span>
-                                </div>
-                                <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
-                                {run.result_summary && <p>{run.result_summary}</p>}
-                                {run.error && <p className="routine-run-error" role="alert">{run.error}</p>}
-                                {typeof run.duration_ms === 'number' && (
-                                  <small>{run.duration_ms.toLocaleString()} ms</small>
-                                )}
-                              </div>
-                              <button
-                                type="button"
-                                className="routine-open-run-button"
-                                onClick={() => void handleOpenRun(run)}
-                                disabled={openingRunId === run.id}
-                              >
-                                {openingRunId === run.id ? 'Opening…' : 'Open execution'}
-                                <Icon name="chevronRight" size={12} />
-                              </button>
-                            </article>
+                            <button
+                              type="button"
+                              key={run.id}
+                              className={'routine-run-row-btn' + (openingRunId === run.id ? ' opening' : '')}
+                              onClick={() => void handleOpenRun(run)}
+                              disabled={openingRunId === run.id}
+                            >
+                              <span className="routine-run-row-left">
+                                <time dateTime={run.created_at}>
+                                  {new Date(run.created_at).toLocaleString([], {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </time>
+                              </span>
+                              <span className={'routine-run-status ' + run.status.toLowerCase()}>
+                                {run.status}
+                              </span>
+                              <Icon name="chevronRight" size={12} />
+                            </button>
                           ))}
                         </div>
                       )}

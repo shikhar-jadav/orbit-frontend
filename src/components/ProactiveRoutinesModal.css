@@ -4796,3 +4796,54 @@ dialog.routines-modal-dialog::backdrop {
     font-size: 19px;
   }
 }
+
+
+/* ── Minimal run-row button (replaces article card) ─────────────────────── */
+#root .routine-run-row-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 0;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(220, 235, 236, 0.07);
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+  transition: background 0.15s;
+}
+#root .routine-run-row-btn:hover {
+  background: rgba(220, 235, 236, 0.03);
+}
+#root .routine-run-row-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+#root .routine-run-row-btn.opening {
+  opacity: 0.65;
+}
+#root .routine-run-row-left {
+  flex: 1;
+  min-width: 0;
+}
+#root .routine-run-row-left time {
+  display: block;
+  color: #829091;
+  font-size: 11px;
+}
+#root .routine-run-row-btn .routine-run-status {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: rgba(220, 235, 236, 0.07);
+  color: #829091;
+}
+#root .routine-run-row-btn .routine-run-status.completed { color: #5ccfb0; background: rgba(92, 207, 176, 0.1); }
+#root .routine-run-row-btn .routine-run-status.failed    { color: #e06c75; background: rgba(224, 108, 117, 0.1); }
+#root .routine-run-row-btn .routine-run-status.running   { color: #61afef; background: rgba(97, 175, 239, 0.1); }
+#root .routine-run-row-btn svg { flex: 0 0 auto; color: #516a6b; margin-left: 2px; }
