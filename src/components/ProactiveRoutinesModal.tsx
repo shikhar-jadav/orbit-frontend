@@ -151,6 +151,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [testingRoutine, setTestingRoutine] = useState(false)
   const [routineEvents, setRoutineEvents] = useState<RoutineEvent[]>([])
   const [routineRuns, setRoutineRuns] = useState<RoutineRun[]>([])
+  const [activityUpdatedAt, setActivityUpdatedAt] = useState<string | null>(null)
   const integrationPopupRef = React.useRef<Window | null>(null)
 
   const loadRoutines = useCallback(async () => {
@@ -240,6 +241,50 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     return () => window.removeEventListener('message', handleIntegrationMessage)
   }, [loadIntegrationStatus, integrationStatus?.public_url])
 
+  const loadRoutineActivity = useCallback(async (routineId: string) => {
+    try {
+      const [eventResponse, runsResponse] = await Promise.all([
+        fetch(`/api/routines/${encodeURIComponent(routineId)}/events`),
+        fetch(`/api/routines/${encodeURIComponent(routineId)}/runs?limit=20`),
+      ])
+      if (!eventResponse.ok || !runsResponse.ok) return
+      const [eventData, runsData] = await Promise.all([
+        eventResponse.json(),
+        runsResponse.json(),
+      ])
+      setRoutineEvents((eventData.events || []) as RoutineEvent[])
+      setRoutineRuns((runsData.runs || []) as RoutineRun[])
+      setActivityUpdatedAt(new Date().toISOString())
+    } catch {
+      // Keep the last known activity visible if a background refresh fails.
+    }
+  }, [])
+
+  const activeRoutineId = selectedRoutine?.id
+  useEffect(() => {
+    if (!isOpen || tab !== 'detail' || !activeRoutineId) return
+    let stopped = false
+    let requestInFlight = false
+    const refreshActivity = async () => {
+      if (
+        stopped ||
+        requestInFlight ||
+        (typeof document !== 'undefined' && document.visibilityState !== 'visible')
+      ) return
+      requestInFlight = true
+      try {
+        await loadRoutineActivity(activeRoutineId)
+      } finally {
+        requestInFlight = false
+      }
+    }
+    const timer = window.setInterval(() => void refreshActivity(), 4000)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+    }
+  }, [isOpen, tab, activeRoutineId, loadRoutineActivity])
+
   const handleTogglePause = async (routine: Routine) => {
     try {
       const res = await fetch(`/api/routines/${routine.id}`, {
@@ -312,11 +357,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
           ? 'Test completed. The latest run is shown below.'
           : data.error || 'The routine test did not complete.',
       )
-      const runsResponse = await fetch('/api/routines/' + encodeURIComponent(routineId) + '/runs?limit=20')
-      if (runsResponse.ok) {
-        const runsData = await runsResponse.json()
-        setRoutineRuns((runsData.runs || []) as RoutineRun[])
-      }
+      await loadRoutineActivity(routineId)
       void loadNotifications()
     } catch (err: unknown) {
       setRoutineActionStatus(err instanceof Error ? err.message : 'The routine test failed.')
@@ -351,6 +392,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       setSelectedRoutine(data.routine as Routine)
       setRoutineEvents((eventData.events || []) as RoutineEvent[])
       setRoutineRuns((runsData.runs || []) as RoutineRun[])
+      setActivityUpdatedAt(new Date().toISOString())
       setWebhookUrl(data.webhook_url || '')
       setEditName(data.routine.name)
       setEditInstruction(data.routine.action_prompt)
@@ -695,6 +737,52 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       (eventProvider !== 'gmail' ||
         (integrationStatus.gmail.pubsub_configured && integrationStatus.gmail.pubsub_limits_configured)),
     )
+
+  const latestEvent = routineEvents[0]
+  const eventStatusRank: Record<string, number> = {
+    received: 0,
+    pending: 1,
+    queued: 1,
+    retrying: 2,
+    processing: 2,
+    running: 2,
+    completed: 3,
+    failed: 3,
+    skipped: 3,
+  }
+  const eventStatuses = [latestEvent?.processing_status, latestEvent?.routine_status]
+    .filter((status): status is string => Boolean(status))
+    .map((status) => status.toLowerCase())
+  const latestEventStatus = eventStatuses.sort(
+    (a, b) => (eventStatusRank[b] ?? 0) - (eventStatusRank[a] ?? 0),
+  )[0] || 'received'
+  const latestEventStatusLabel: Record<string, string> = {
+    received: 'Received',
+    pending: 'Queued',
+    queued: 'Queued',
+    retrying: 'Retrying',
+    processing: 'Running',
+    running: 'Running',
+    completed: 'Completed',
+    failed: 'Failed',
+    skipped: 'Skipped',
+  }
+  const latestEventIsTerminal = ['completed', 'failed', 'skipped'].includes(latestEventStatus)
+  const latestEventIsFailed = latestEventStatus === 'failed'
+  const latestEventStageIndex =
+    latestEventStatus === 'pending' || latestEventStatus === 'queued'
+      ? 1
+      : ['retrying', 'processing', 'running'].includes(latestEventStatus)
+        ? 2
+        : latestEventIsTerminal
+          ? 3
+          : 0
+  const latestEventStages = [
+    'Event received',
+    'Matched and queued',
+    'Orbit is running',
+    latestEventIsFailed ? 'Failed' : latestEventStatus === 'skipped' ? 'Skipped' : 'Result saved',
+  ]
 
   return (
     <ModernDialog
@@ -1419,13 +1507,101 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                     </div>
                   )}
 
+                  {selectedRoutine.trigger_type === 'event' && (
+                    <div className="routine-detail-section routine-event-progress-section" aria-live="polite">
+                      <div className="routine-section-heading">
+                        <div>
+                          <span className="routine-manager-eyebrow">TRIGGER ACTIVITY</span>
+                          <h4>Latest matching event</h4>
+                        </div>
+                        <span className="routine-live-refresh">
+                          <i />
+                          Live · {activityUpdatedAt
+                            ? `updated ${new Date(activityUpdatedAt).toLocaleTimeString()}`
+                            : 'syncing'}
+                        </span>
+                      </div>
+                      {latestEvent ? (
+                        <>
+                          <div className="routine-event-current">
+                            <div>
+                              <strong>{latestEvent.event_type}</strong>
+                              <p>
+                                {latestEvent.source} · received {new Date(latestEvent.received_at).toLocaleString()}
+                              </p>
+                            </div>
+                            <span className={'routine-run-status ' + latestEventStatus}>
+                              {latestEventStatusLabel[latestEventStatus] || latestEventStatus.replaceAll('_', ' ')}
+                            </span>
+                          </div>
+                          <div className="routine-event-pipeline" aria-label={`Event status: ${latestEventStatusLabel[latestEventStatus] || latestEventStatus}`}>
+                            {latestEventStages.map((stage, index) => {
+                              const isPast = index < latestEventStageIndex
+                              const isCurrent = index === latestEventStageIndex && !latestEventIsTerminal
+                              const isFailed = index === 3 && latestEventIsFailed
+                              const isDone = index === 3 && latestEventIsTerminal && !latestEventIsFailed
+                              return (
+                                <div
+                                  className={
+                                    'routine-event-step' +
+                                    (isPast || isDone ? ' complete' : '') +
+                                    (isCurrent ? ' current' : '') +
+                                    (isFailed ? ' failed' : '')
+                                  }
+                                  key={stage}
+                                >
+                                  <span className="routine-event-step-marker">
+                                    {isPast || isDone ? '✓' : index + 1}
+                                  </span>
+                                  <span>{stage}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          <p className="routine-event-progress-copy">
+                            {latestEventStatus === 'completed'
+                              ? 'Orbit finished this event run. The result is saved in Recent runs and Activity.'
+                              : latestEventStatus === 'failed'
+                                ? 'Orbit could not complete this event. Check the failure reason in Recent runs.'
+                                : latestEventStatus === 'retrying'
+                                  ? 'Orbit hit an execution issue and is retrying this event.'
+                                  : latestEventStatus === 'processing' || latestEventStatus === 'running'
+                                    ? 'The event matched your trigger. Orbit is executing the instruction now.'
+                                    : latestEventStatus === 'skipped'
+                                      ? 'This event was received but the routine was skipped.'
+                                      : 'The event matched your trigger and is waiting in Orbit’s queue.'}
+                          </p>
+                          {latestEvent.routine_error && (
+                            <p className="routine-run-error" role="alert">{latestEvent.routine_error}</p>
+                          )}
+                          <details className="routine-event-payload">
+                            <summary>View event payload</summary>
+                            <pre>{JSON.stringify(latestEvent.payload, null, 2)}</pre>
+                          </details>
+                        </>
+                      ) : (
+                        <div className="routine-event-waiting">
+                          <span className="routine-event-waiting-dot" />
+                          <div>
+                            <strong>{selectedRoutine.enabled ? 'Waiting for a matching event' : 'Routine is paused'}</strong>
+                            <p>
+                              {selectedRoutine.enabled
+                                ? 'When GitHub, Slack, Gmail, or your webhook sends a new event that matches this trigger, Orbit will queue it and update this panel as the run progresses.'
+                                : 'Resume this routine to start receiving new matching events.'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="routine-detail-section routine-history-section">
                     <div className="routine-section-heading">
                       <div>
                         <span className="routine-manager-eyebrow">EXECUTION LOG</span>
                         <h4>Recent runs</h4>
                       </div>
-                      <button type="button" className="routine-text-button" onClick={() => void handleOpenRoutine(selectedRoutine.id)}>
+                      <button type="button" className="routine-text-button" onClick={() => void loadRoutineActivity(selectedRoutine.id)}>
                         <Icon name="refresh" size={13} />
                         Refresh
                       </button>
@@ -1464,8 +1640,9 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                         <div className="routine-event-list">
                           {routineEvents.map((event) => (
                             <details key={event.id}>
-                              <summary>{event.event_type} <span>· {event.routine_status}</span></summary>
+                              <summary>{event.event_type} <span>· {event.routine_status || event.processing_status}</span></summary>
                               <p>Received {new Date(event.received_at).toLocaleString()} from {event.source}</p>
+                              <p>Delivery: {event.processing_status.replaceAll('_', ' ')}</p>
                               {event.routine_error && <p role="alert">{event.routine_error}</p>}
                               <pre>{JSON.stringify(event.payload, null, 2)}</pre>
                             </details>
