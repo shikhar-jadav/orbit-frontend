@@ -40,3 +40,38 @@ export function extractRemainingMessageText(
 
   return remaining.trim()
 }
+
+/**
+ * Deduplicate text parts in a message where pre-tool text was repeated or
+ * superseded by post-tool text, preventing doubled assistant bubbles.
+ */
+export function deduplicateMessageParts(parts: MessagePart[] | undefined): MessagePart[] {
+  if (!parts || parts.length <= 1) return parts || []
+
+  const result: MessagePart[] = []
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]
+    if (part.type === 'text') {
+      const text = normalizeWhitespace(part.text || '')
+      if (!text) continue
+
+      let isDuplicate = false
+      for (let j = i + 1; j < parts.length; j++) {
+        const nextPart = parts[j]
+        if (nextPart.type === 'text') {
+          const nextText = normalizeWhitespace(nextPart.text || '')
+          if (nextText && (nextText === text || nextText.startsWith(text))) {
+            isDuplicate = true
+            break
+          }
+        }
+      }
+      if (isDuplicate) {
+        continue
+      }
+    }
+    result.push(part)
+  }
+
+  return result
+}

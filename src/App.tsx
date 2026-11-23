@@ -27,7 +27,7 @@ import {
   rememberRecentAccount,
   type RecentAuthAccount,
 } from './components/userUtils'
-import { extractRemainingMessageText } from './components/messagePartUtils'
+import { deduplicateMessageParts, extractRemainingMessageText } from './components/messagePartUtils'
 
 import type {
   AuthSessionResponse,
@@ -1531,7 +1531,7 @@ function App() {
                 setMessages((current) =>
                   current.map((msg) => {
                     if (msg.id === assistantId) {
-                      const currentParts = msg.parts ? [...msg.parts] : []
+                      const currentParts = deduplicateMessageParts(msg.parts ? [...msg.parts] : [])
                       const remaining = extractRemainingMessageText(finalContent, currentParts)
                       if (remaining) {
                         currentParts.push({ type: 'text', text: remaining })
@@ -2101,7 +2101,7 @@ function App() {
             setMessages((current) =>
               current.map((message) => {
                 if (message.id === assistantMessage.id) {
-                  const currentParts = message.parts ? [...message.parts] : []
+                  const currentParts = deduplicateMessageParts(message.parts ? [...message.parts] : [])
                   const remaining = extractRemainingMessageText(finalContent, currentParts)
                   if (remaining) {
                     currentParts.push({ type: 'text', text: remaining })

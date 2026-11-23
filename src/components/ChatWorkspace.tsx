@@ -10,7 +10,7 @@ import { ArtifactWidget } from './ArtifactWidget'
 import { ExecutionWidget } from './ExecutionWidget'
 import { WorkspaceFileWidget } from './WorkspaceFileWidget'
 import { HumanInTheLoopCard } from './HumanInTheLoopCard'
-import { extractRemainingMessageText } from './messagePartUtils'
+import { deduplicateMessageParts, extractRemainingMessageText } from './messagePartUtils'
 import { RoutineSetupCard, ProactiveAlertCard } from './ProactiveChatCards'
 import type { Message, Thread, ToolEvent, HITLCardRequest, HITLSubmission } from './types'
 import type { CanvasItem } from './UniversalCanvas'
@@ -831,14 +831,15 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                               )
 
                               if (message.parts && message.parts.length > 0) {
+                                const visibleParts = deduplicateMessageParts(message.parts)
                                 const remainingText = extractRemainingMessageText(
                                   message.content,
-                                  message.parts,
+                                  visibleParts,
                                 )
 
                                 return (
                                   <>
-                                    {message.parts.map((part, index) => {
+                                    {visibleParts.map((part, index) => {
                                       if (part.type === 'text') {
                                         if (!part.text) return null
                                         return (
