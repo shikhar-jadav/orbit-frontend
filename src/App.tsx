@@ -467,6 +467,9 @@ function App() {
   const attachmentInputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  // A ref is an immediate mutex: React state alone cannot stop two Enter/click events
+  // arriving before the next render.
+  const sendInFlightRef = useRef(false)
   const skipLoadThreadRef = useRef<string | null>(null)
   const preserveHistoryScrollRef = useRef<{ height: number; top: number } | null>(null)
   const latestMessageIdRef = useRef(0)
@@ -1024,7 +1027,7 @@ function App() {
           })
         })
         .catch(() => {})
-    }, 15000)
+    }, 30000)
 
     return () => window.clearInterval(pollInterval)
   }, [activeThreadId, currentUser])
@@ -1299,7 +1302,8 @@ function App() {
         return
       }
 
-      if (sending) return
+      if (sending || sendInFlightRef.current) return
+      sendInFlightRef.current = true
       const messageContent = content || 'Please review the attached files.'
 
       setError('')
@@ -1453,11 +1457,18 @@ function App() {
         const decoder = new TextDecoder()
         let buffer = ''
 
+        let receivedTerminalEvent = false
         while (true) {
           const { done, value } = await reader.read()
-          if (done) break
-
-          buffer += decoder.decode(value, { stream: true })
+          if (done) {
+            // SSE streams may end without a trailing newline. Flush the decoder and
+            // process the final data line instead of silently dropping the final event.
+            buffer += decoder.decode()
+            if (buffer.trim()) buffer += '\n'
+            else break
+          } else {
+            buffer += decoder.decode(value, { stream: true })
+          }
           const lines = buffer.split('\n')
           buffer = lines.pop() || ''
 
@@ -1546,6 +1557,7 @@ function App() {
                   }),
                 )
               } else if (eventType === 'done') {
+                receivedTerminalEvent = true
                 const finalContent = String(data.content || '')
                 const turnId =
                   typeof data.turn_id === 'number' || typeof data.turn_id === 'string'
@@ -1633,6 +1645,7 @@ function App() {
                   language: String(aData.language || 'markdown'),
                 })
               } else if (eventType === 'error') {
+                receivedTerminalEvent = true
                 const errorMsg = String(data.error || 'The agent could not complete this request.')
                 setError(errorMsg)
                 setMessages((current) =>
@@ -1652,8 +1665,12 @@ function App() {
               // Ignore partial JSON chunks
             }
           }
+          if (done) break
         }
 
+        if (!receivedTerminalEvent && !controller.signal.aborted) {
+          throw new Error('The connection ended before Orbit finished the response. Your message was not automatically resent.')
+        }
         await refreshThreads()
       } catch (sendError) {
         if (controller.signal.aborted) {
@@ -1690,6 +1707,7 @@ function App() {
         if (abortControllerRef.current === controller) {
           abortControllerRef.current = null
         }
+        sendInFlightRef.current = false
         setSending(false)
       }
     },
