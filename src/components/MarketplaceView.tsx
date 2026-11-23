@@ -246,7 +246,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   const openConfigureModal = (connector: MarketplaceConnector) => {
     setConfiguringConnector(connector)
     setConfigFormValues(connector.config || {})
-    setConfigEnabled(connector.is_enabled)
+    setConfigEnabled(true)
     setShowPasswordMap({})
   }
 
@@ -464,14 +464,16 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         )}
 
         {/* Loading / Error */}
-        {loading && (
+        {loading && catalog && <p className="config-help-text" role="status">Refreshing Marketplace…</p>}
+        {error && catalog && <p className="config-help-text" role="status">Could not refresh Marketplace: {error}</p>}
+        {loading && !catalog && (
           <div className="marketplace-state-box">
             <span className="spinner" />
             <p>Loading catalog…</p>
           </div>
         )}
 
-        {!loading && error && (
+        {!catalog && !loading && error && (
           <div className="marketplace-state-box marketplace-error-box">
             <Icon name="alertTriangle" size={26} />
             <p>{error}</p>
@@ -482,7 +484,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         )}
 
         {/* Catalog Grid / Empty State */}
-        {!loading && !error && (
+        {catalog && (
           totalCatalogItems === 0 ? (
             <div className="marketplace-empty-card">
               <div className="marketplace-empty-icon">
@@ -689,8 +691,8 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
               <p className="config-help-text">{selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'Connected and available to Orbit.' : 'Connect this account to make the connector available in Orbit.'}</p>
             </div>
             <div className="modal-footer">
-              {selectedConnectorDetails.configFields.length > 0 && <button type="button" className="card-action-btn btn-secondary" onClick={() => { setConfiguringConnector(selectedConnectorDetails); setConfigFormValues(selectedConnectorDetails.config || {}); setConfigEnabled(selectedConnectorDetails.is_enabled); setSelectedConnectorDetails(null) }}>Configure</button>}
-              <button type="button" className={`card-action-btn ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`} onClick={() => connectFromDetails(selectedConnectorDetails)} title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}>
+              {selectedConnectorDetails.configFields.length > 0 && <button type="button" className="card-action-btn btn-secondary" onClick={() => { setConfiguringConnector(selectedConnectorDetails); setConfigFormValues(selectedConnectorDetails.config || {}); setConfigEnabled(true); setSelectedConnectorDetails(null) }}>Configure</button>}
+              <button type="button" disabled={!selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured} className={`card-action-btn ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`} onClick={() => connectFromDetails(selectedConnectorDetails)} title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}>
                 {selectedConnectorDetails.is_authenticated && selectedConnectorDetails.is_enabled ? 'Connected' : 'Connect'}
               </button>
               <button type="button" className="card-action-btn btn-secondary" onClick={() => setSelectedConnectorDetails(null)}>Close</button>
@@ -735,18 +737,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
             >
               <div className="modal-body">
                 <p className="modal-description">{configuringConnector.description}</p>
-
-                <label className="config-toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={configEnabled}
-                    onChange={(e) => setConfigEnabled(e.target.checked)}
-                  />
-                  <div>
-                    <strong>Enable Connector</strong>
-                    <span>Allow the agent to access this service in chats and execution.</span>
-                  </div>
-                </label>
 
                 {(!configuringConnector.configFields || configuringConnector.configFields.length === 0) && (
                   <p className="config-help-text" style={{ margin: '1rem 0', fontSize: '0.875rem' }}>
