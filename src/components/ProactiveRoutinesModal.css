@@ -4737,3 +4737,62 @@ dialog.routines-modal-dialog::backdrop {
   #root .routine-run-row { align-items: flex-start; flex-direction: column; }
   #root .routine-run-row .routine-open-run-button { align-self: flex-start; }
 }
+
+
+/* Minimal routine detail: title, instruction, then execution history. */
+#root .routine-detail {
+  gap: 24px;
+}
+#root .routine-name-only-header {
+  justify-content: flex-start;
+  padding: 4px 0 18px;
+  border-bottom: 1px solid rgba(220, 235, 236, 0.1);
+}
+#root .routine-name-only-header .routine-overview-title-copy h3 {
+  margin: 0;
+  color: #f0f5f5;
+  font-size: 22px;
+  line-height: 1.3;
+  font-weight: 650;
+}
+#root .routine-instruction-only {
+  padding: 0;
+}
+#root .routine-instruction-only .routine-overview-block-heading {
+  margin-bottom: 10px;
+}
+#root .routine-instruction-only .routine-overview-block-heading h4 {
+  color: #e5eeee;
+  font-size: 15px;
+}
+#root .routine-instruction-only .routine-overview-instruction {
+  max-width: 920px;
+  color: #c2cecf;
+  font-size: 13px;
+  line-height: 1.75;
+}
+#root .routine-history-only {
+  margin-top: 2px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(220, 235, 236, 0.12);
+}
+#root .routine-history-only .routine-activity-heading {
+  margin-bottom: 12px;
+}
+#root .routine-history-only .routine-activity-heading h4 {
+  font-size: 16px;
+}
+#root .routine-history-only .routine-run-history {
+  padding-top: 0;
+}
+#root .routine-history-only .routine-run-row {
+  padding: 15px 0;
+}
+#root .routine-history-only .routine-run-row-main {
+  flex: 1;
+}
+@media (max-width: 520px) {
+  #root .routine-name-only-header .routine-overview-title-copy h3 {
+    font-size: 19px;
+  }
+}
