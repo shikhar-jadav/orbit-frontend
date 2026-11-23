@@ -447,8 +447,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
             : {}),
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Could not save routine.')
+      const data = (await res.json().catch(() => ({}))) as { detail?: string } & Partial<Routine>
+      if (!res.ok) throw new Error(data.detail || (res.status >= 502 && res.status <= 504 ? 'Service waking up. Please retry.' : 'Could not save routine.'))
       setSelectedRoutine(data as Routine)
       setEditingRoutine(false)
       setRoutineActionStatus('Routine saved.')
@@ -570,8 +570,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Could not create event routine.')
+      const data = (await res.json().catch(() => ({}))) as { detail?: string; routine?: Routine; webhook_url?: string }
+      if (!res.ok) throw new Error(data.detail || (res.status >= 502 && res.status <= 504 ? 'Service waking up. Please retry.' : 'Could not create event routine.'))
 
       const created = data.routine as Routine
       setRoutines((items) => [created, ...items.filter((item) => item.id !== created.id)])
@@ -651,8 +651,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       })
 
       if (!res.ok) {
-        const errData = await res.json()
-        setFormError(errData.detail || 'Could not schedule routine.')
+        const errData = (await res.json().catch(() => ({}))) as { detail?: string }
+        setFormError(errData.detail || (res.status >= 502 && res.status <= 504 ? 'Service waking up. Please retry.' : 'Could not schedule routine.'))
         return
       }
 
