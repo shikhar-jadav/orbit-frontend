@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Icon } from './Icon'
@@ -15,41 +15,23 @@ type MarketplaceViewProps = {
   onClose: () => void
   onOpenCapabilities?: () => void
   initialTab?: 'all' | 'connectors' | 'skills'
+  initialConnectorId?: string | null
 }
 
-async function fetchMarketplaceJson<T>(
-  primaryUrl: string,
-  fallbackUrl?: string,
-  options?: RequestInit,
-): Promise<T> {
-  const tryFetch = async (url: string) => {
-    const res = await fetch(url, options)
-    const ct = res.headers.get('content-type') || ''
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '')
-      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 100) || res.statusText}`)
-    }
-    if (!ct.includes('application/json')) {
-      throw new Error('Received non-JSON HTML response (check API proxy)')
-    }
-    return (await res.json()) as T
+async function fetchMarketplaceJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, options)
+  const ct = res.headers.get('content-type') || ''
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    throw new Error(`HTTP ${res.status}: ${errText.slice(0, 100) || res.statusText}`)
   }
-
-  try {
-    return await tryFetch(primaryUrl)
-  } catch (primaryErr) {
-    if (fallbackUrl) {
-      try {
-        return await tryFetch(fallbackUrl)
-      } catch {
-        throw primaryErr
-      }
-    }
-    throw primaryErr
+  if (!ct.includes('application/json')) {
+    throw new Error('Received non-JSON HTML response (check API proxy)')
   }
+  return (await res.json()) as T
 }
 
-export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all' }: MarketplaceViewProps) {
+export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all', initialConnectorId }: MarketplaceViewProps) {
   const popupRef = useRef<Window | null>(null)
   const popupProviderRef = useRef<string | null>(null)
   const pendingConnectorIdRef = useRef<string | null>(null)
@@ -108,12 +90,12 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
           }
           window.dispatchEvent(new Event('orbit:integrations-updated'))
           window.dispatchEvent(new Event('orbit:marketplace-updated'))
-          triggerReload()
         }
         void refreshAfterConnect()
       } else if (event.data?.type === 'orbit_integration_error') {
         popupRef.current = null
         popupProviderRef.current = null
+        pendingConnectorIdRef.current = null
         showToast(String(event.data.message || 'The account could not be connected.'))
       }
     }
@@ -177,10 +159,26 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     }
   }, [reloadNonce])
 
-  const triggerReload = () => {
+  const triggerReload = useCallback(() => {
     setLoading(true)
     setReloadNonce((n) => n + 1)
-  }
+  }, [])
+
+  useEffect(() => {
+    const refreshCatalog = () => triggerReload()
+    window.addEventListener('orbit:marketplace-updated', refreshCatalog)
+    window.addEventListener('orbit:integrations-updated', refreshCatalog)
+    return () => {
+      window.removeEventListener('orbit:marketplace-updated', refreshCatalog)
+      window.removeEventListener('orbit:integrations-updated', refreshCatalog)
+    }
+  }, [triggerReload])
+
+  useEffect(() => {
+    if (!initialConnectorId || !catalog) return
+    const connector = catalog.connectors.find((item) => item.id === initialConnectorId)
+    if (connector) setSelectedConnectorDetails(connector)
+  }, [initialConnectorId, catalog])
 
   // Toggle skill install
   const toggleSkill = async (skill: MarketplaceSkill) => {
@@ -188,7 +186,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     try {
       await fetchMarketplaceJson(
         `/api/marketplace/skills/${encodeURIComponent(skill.id)}/toggle`,
-        `/marketplace/skills/${encodeURIComponent(skill.id)}/toggle`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -221,7 +218,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     try {
       await fetchMarketplaceJson(
         `/api/marketplace/connectors/${encodeURIComponent(connector.id)}/toggle`,
-        undefined,
         { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ enabled }) },
       )
       setCatalog((current) => {
@@ -291,7 +287,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     try {
       const data = await fetchMarketplaceJson<{ readme?: string }>(
         `/api/marketplace/skills/${encodeURIComponent(skill.id)}/readme`,
-        `/marketplace/skills/${encodeURIComponent(skill.id)}/readme`,
       )
       setReadmeContent(data.readme || '# No documentation provided.')
     } catch {
