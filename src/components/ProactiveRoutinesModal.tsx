@@ -1517,221 +1517,222 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                 </div>
               ) : (
                 <section className="routine-detail">
-                  <div className="routine-detail-topline">
-                    <div>
-                      <span className={'routine-status-pill' + (selectedRoutine.enabled ? ' active' : ' paused')}>
-                        <i />
-                        {selectedRoutine.enabled ? 'Active' : 'Paused'}
-                      </span>
-                      <span className="routine-detail-kind">
-                        {selectedRoutine.trigger_type === 'event' ? 'Event-triggered routine' : selectedRoutine.one_shot ? 'One-time routine' : 'Scheduled routine'}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={selectedRoutine.enabled}
-                      className={'routine-switch' + (selectedRoutine.enabled ? ' on' : '')}
-                      onClick={() => void handleTogglePause(selectedRoutine)}
-                      aria-label={selectedRoutine.enabled ? 'Pause routine' : 'Resume routine'}
-                    >
-                      <span />
-                    </button>
-                  </div>
-
-                  <div className="routine-detail-title-row">
-                    <div className="routine-detail-avatar" aria-hidden="true">
-                      {selectedRoutine.name.trim().charAt(0).toUpperCase() || 'R'}
-                    </div>
-                    <div className="routine-detail-title-copy">
-                      {editingRoutine ? (
-                        <input
-                          className="routine-title-input"
-                          aria-label="Routine name"
-                          value={editName}
-                          onChange={(event) => setEditName(event.target.value)}
-                        />
-                      ) : (
-                        <h3>{selectedRoutine.name}</h3>
-                      )}
-                      <p>{selectedRoutine.trigger_type === 'event' ? (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'Event') + ' trigger' : 'Runs ' + (selectedRoutine.one_shot ? 'once' : 'on a schedule')}</p>
-                    </div>
-                  </div>
-
-                  <div className="routine-detail-section">
-                    <div className="routine-section-heading">
-                      <div>
-                        <span className="routine-manager-eyebrow">THE WORK</span>
-                        <h4>Instruction</h4>
-                      </div>
-                    </div>
-                    {editingRoutine ? (
-                      <textarea
-                        className="routine-instruction-input"
-                        rows={5}
-                        value={editInstruction}
-                        onChange={(event) => setEditInstruction(event.target.value)}
-                        aria-label="Routine instruction"
-                      />
-                    ) : (
-                      <div className="routine-instruction-box">{selectedRoutine.action_prompt}</div>
-                    )}
-                  </div>
-
-                  <div className="routine-detail-section">
-                    <div className="routine-section-heading">
-                      <div>
-                        <span className="routine-manager-eyebrow">THE TRIGGER</span>
-                        <h4>When to run</h4>
-                      </div>
-                      <span className="routine-trigger-type">{selectedRoutine.trigger_type === 'event' ? 'Event' : 'Schedule'}</span>
-                    </div>
-                    {editingRoutine && selectedRoutine.trigger_type === 'event' ? (
-                      <div className="routine-edit-trigger">
-                        <input
-                          aria-label="Event type"
-                          value={editEventType}
-                          onChange={(event) => setEditEventType(event.target.value)}
-                          placeholder="issues.opened"
-                        />
-                        <textarea
-                          aria-label="When to run"
-                          rows={2}
-                          value={editWhen}
-                          onChange={(event) => setEditWhen(event.target.value)}
-                          placeholder="When a new issue is opened"
-                        />
-                        <div className="routine-edit-filter">
-                          <input
-                            aria-label="Condition field"
-                            value={editFilterField}
-                            onChange={(event) => setEditFilterField(event.target.value)}
-                            placeholder="payload.labels"
-                          />
-                          <select
-                            aria-label="Condition operator"
-                            value={editFilterOperator}
-                            onChange={(event) => setEditFilterOperator(event.target.value as 'equals' | 'contains')}
-                          >
-                            <option value="equals">equals</option>
-                            <option value="contains">contains</option>
-                          </select>
-                          <input
-                            aria-label="Condition value"
-                            value={editFilterValue}
-                            onChange={(event) => setEditFilterValue(event.target.value)}
-                            placeholder="bug"
-                          />
+                  <div className="routine-detail-overview">
+                    <header className="routine-overview-header">
+                      <div className="routine-overview-title-group">
+                        <div className="routine-overview-avatar" aria-hidden="true">
+                          {selectedRoutine.name.trim().charAt(0).toUpperCase() || 'R'}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="routine-trigger-summary">
-                        <span className="routine-trigger-icon"><Icon name={selectedRoutine.trigger_type === 'event' ? 'zap' : 'clock'} size={16} /></span>
-                        <div>
-                          <strong>
-                            {selectedRoutine.trigger_type === 'event'
-                              ? selectedRoutine.trigger_definition?.when || ('When ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'an event') + ' arrives')
-                              : selectedRoutine.schedule_display || selectedRoutine.schedule_expression || 'Manual run'}
-                          </strong>
+                        <div className="routine-overview-title-copy">
+                          <div className="routine-overview-badges">
+                            <span className={'routine-status-pill' + (selectedRoutine.enabled ? ' active' : ' paused')}>
+                              <i />
+                              {selectedRoutine.enabled ? 'Active' : 'Paused'}
+                            </span>
+                            <span className="routine-detail-kind">
+                              {selectedRoutine.trigger_type === 'event' ? 'Event-triggered routine' : selectedRoutine.one_shot ? 'One-time routine' : 'Scheduled routine'}
+                            </span>
+                          </div>
+                          {editingRoutine ? (
+                            <input
+                              className="routine-title-input"
+                              aria-label="Routine name"
+                              value={editName}
+                              onChange={(event) => setEditName(event.target.value)}
+                            />
+                          ) : (
+                            <h3>{selectedRoutine.name}</h3>
+                          )}
                           <p>
                             {selectedRoutine.trigger_type === 'event'
-                              ? (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') + ' · ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'Event')
-                              : selectedRoutine.next_run_at
-                                ? 'Next run ' + new Date(selectedRoutine.next_run_at).toLocaleString()
-                                : selectedRoutine.one_shot ? 'One-time schedule' : 'Recurring schedule'}
+                              ? (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'Event') + ' · ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'Event')
+                              : 'Runs ' + (selectedRoutine.one_shot ? 'once' : 'on a schedule')}
                           </p>
                         </div>
                       </div>
-                    )}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={selectedRoutine.enabled}
+                        className={'routine-switch' + (selectedRoutine.enabled ? ' on' : '')}
+                        onClick={() => void handleTogglePause(selectedRoutine)}
+                        aria-label={selectedRoutine.enabled ? 'Pause routine' : 'Resume routine'}
+                      >
+                        <span />
+                      </button>
+                    </header>
+
+                    <div className="routine-overview-grid">
+                      <section className="routine-overview-block">
+                        <div className="routine-overview-block-heading">
+                          <span className="routine-manager-eyebrow">INSTRUCTION</span>
+                          <h4>What Orbit should do</h4>
+                        </div>
+                        {editingRoutine ? (
+                          <textarea
+                            className="routine-instruction-input"
+                            rows={5}
+                            value={editInstruction}
+                            onChange={(event) => setEditInstruction(event.target.value)}
+                            aria-label="Routine instruction"
+                          />
+                        ) : (
+                          <p className="routine-overview-instruction">{selectedRoutine.action_prompt}</p>
+                        )}
+                      </section>
+
+                      <section className="routine-overview-block routine-overview-trigger">
+                        <div className="routine-overview-block-heading">
+                          <span className="routine-manager-eyebrow">TRIGGER</span>
+                          <h4>When Orbit should run</h4>
+                        </div>
+                        {editingRoutine && selectedRoutine.trigger_type === 'event' ? (
+                          <div className="routine-edit-trigger">
+                            <input
+                              aria-label="Event type"
+                              value={editEventType}
+                              onChange={(event) => setEditEventType(event.target.value)}
+                              placeholder="issues.opened"
+                            />
+                            <textarea
+                              aria-label="When to run"
+                              rows={2}
+                              value={editWhen}
+                              onChange={(event) => setEditWhen(event.target.value)}
+                              placeholder="When a new issue is opened"
+                            />
+                            <div className="routine-edit-filter">
+                              <input
+                                aria-label="Condition field"
+                                value={editFilterField}
+                                onChange={(event) => setEditFilterField(event.target.value)}
+                                placeholder="payload.labels"
+                              />
+                              <select
+                                aria-label="Condition operator"
+                                value={editFilterOperator}
+                                onChange={(event) => setEditFilterOperator(event.target.value as 'equals' | 'contains')}
+                              >
+                                <option value="equals">equals</option>
+                                <option value="contains">contains</option>
+                              </select>
+                              <input
+                                aria-label="Condition value"
+                                value={editFilterValue}
+                                onChange={(event) => setEditFilterValue(event.target.value)}
+                                placeholder="bug"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="routine-trigger-summary routine-trigger-summary-modern">
+                            <span className="routine-trigger-icon"><Icon name={selectedRoutine.trigger_type === 'event' ? 'zap' : 'clock'} size={16} /></span>
+                            <div>
+                              <strong>
+                                {selectedRoutine.trigger_type === 'event'
+                                  ? selectedRoutine.trigger_definition?.when || ('When ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'an event') + ' arrives')
+                                  : selectedRoutine.schedule_display || selectedRoutine.schedule_expression || 'Manual run'}
+                              </strong>
+                              <p>
+                                {selectedRoutine.trigger_type === 'event'
+                                  ? (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') + ' · ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'Event')
+                                  : selectedRoutine.next_run_at
+                                    ? 'Next run ' + new Date(selectedRoutine.next_run_at).toLocaleString()
+                                    : selectedRoutine.one_shot ? 'One-time schedule' : 'Recurring schedule'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') === 'github' && (
+                          <div className="routine-connection-inline">
+                            <span className="routine-connection-provider">GitHub connected</span>
+                            <p>Webhook registered for <b>{selectedRoutine.trigger_definition?.repository || 'the selected repository'}</b>. Orbit only processes new matching events.</p>
+                          </div>
+                        )}
+                        {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'slack' && (
+                          <div className="routine-connection-inline">
+                            <span className="routine-connection-provider">Slack connection</span>
+                            <p>Listening for {selectedRoutine.trigger_definition?.when || 'matching Slack activity'}.</p>
+                            {integrationStatus?.slack.events_url && (
+                              <div className="routine-copy-row">
+                                <code>{integrationStatus.slack.events_url}</code>
+                                <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')}>Copy URL</button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'gmail' && (
+                          <div className="routine-connection-inline">
+                            <span className="routine-connection-provider">Gmail connection</span>
+                            <p>Watching {selectedRoutine.trigger_definition?.email_address || integrationStatus?.gmail.accounts[0]?.account_name || 'the connected inbox'} for new incoming email. Existing messages are not replayed.</p>
+                          </div>
+                        )}
+                        {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') === 'webhook' && (
+                          <details className="routine-webhook-details">
+                            <summary>Webhook endpoint and setup</summary>
+                            <p className="routine-detail-help">Send an HTTP POST to this URL when your event occurs. Include the authorization key as a Bearer token.</p>
+                            <div className="routine-copy-row">
+                              <code>{webhookUrl}</code>
+                              <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(webhookUrl, 'Webhook URL')}>Copy URL</button>
+                            </div>
+                            {selectedRoutine.webhook_secret && (
+                              <div className="routine-copy-row">
+                                <code>Authorization: Bearer {selectedRoutine.webhook_secret}</code>
+                                <button
+                                  type="button"
+                                  className="routine-secondary-button"
+                                  onClick={() => void handleCopyValue('Authorization: Bearer ' + (selectedRoutine.webhook_secret || ''), 'Authorization header')}
+                                >
+                                  Copy key
+                                </button>
+                              </div>
+                            )}
+                            <div className="event-webhook-example">
+                              <span>Example event payload</span>
+                              <pre>{JSON.stringify({ event_type: selectedRoutine.event_type || 'webhook.received', event_id: 'your-event-id', data: { status: 'paid' } }, null, 2)}</pre>
+                              <button
+                                type="button"
+                                className="routine-secondary-button"
+                                onClick={() => void handleCopyValue(JSON.stringify({ event_type: selectedRoutine.event_type || 'webhook.received', event_id: 'your-event-id', data: { status: 'paid' } }, null, 2), 'Example JSON body')}
+                              >
+                                Copy example
+                              </button>
+                            </div>
+                            <small className="routine-security-note">Keep the authorization key private. Store it on the server sending the event, never in browser code.</small>
+                          </details>
+                        )}
+                      </section>
+                    </div>
                   </div>
 
-                  {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') === 'webhook' && (
-                    <div className="routine-detail-section">
-                      <div className="routine-section-heading">
-                        <div>
-                          <span className="routine-manager-eyebrow">CONNECTION</span>
-                          <h4>Webhook endpoint</h4>
-                        </div>
+                  <section className="routine-activity-overview" aria-live="polite">
+                    <div className="routine-activity-heading">
+                      <div>
+                        <span className="routine-manager-eyebrow">ACTIVITY</span>
+                        <h4>{selectedRoutine.trigger_type === 'event' ? 'Event activity' : 'Execution activity'}</h4>
                       </div>
-                      <p className="routine-detail-help">Send an HTTP POST to this URL when your event occurs. Include the authorization key as a Bearer token.</p>
-                      <div className="routine-copy-row">
-                        <code>{webhookUrl}</code>
-                        <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(webhookUrl, 'Webhook URL')}>Copy URL</button>
-                      </div>
-                      {selectedRoutine.webhook_secret && (
-                        <div className="routine-copy-row">
-                          <code>Authorization: Bearer {selectedRoutine.webhook_secret}</code>
-                          <button
-                            type="button"
-                            className="routine-secondary-button"
-                            onClick={() => void handleCopyValue('Authorization: Bearer ' + (selectedRoutine.webhook_secret || ''), 'Authorization header')}
-                          >
-                            Copy key
-                          </button>
-                        </div>
-                      )}
-                      <div className="event-webhook-example">
-                        <span>Example event payload</span>
-                        <pre>{JSON.stringify({ event_type: selectedRoutine.event_type || 'webhook.received', event_id: 'your-event-id', data: { status: 'paid' } }, null, 2)}</pre>
-                        <button
-                          type="button"
-                          className="routine-secondary-button"
-                          onClick={() => void handleCopyValue(JSON.stringify({ event_type: selectedRoutine.event_type || 'webhook.received', event_id: 'your-event-id', data: { status: 'paid' } }, null, 2), 'Example JSON body')}
-                        >
-                          Copy example
-                        </button>
-                      </div>
-                      <small className="routine-security-note">Keep the authorization key private. Store it on the server sending the event, never in browser code.</small>
-                    </div>
-                  )}
-
-                  {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'github' && (
-                    <div className="routine-provider-note">
-                      <strong>GitHub connection</strong>
-                      <p>Orbit registered a webhook for <b>{selectedRoutine.trigger_definition?.repository || 'the selected repository'}</b>. Only new matching events are queued.</p>
-                    </div>
-                  )}
-                  {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'slack' && (
-                    <div className="routine-provider-note">
-                      <strong>Slack connection</strong>
-                      <p>This routine listens for {selectedRoutine.trigger_definition?.when || 'matching Slack activity'}. Configure the Slack Events API with the shared endpoint below.</p>
-                      {integrationStatus?.slack.events_url && (
-                        <div className="routine-copy-row">
-                          <code>{integrationStatus.slack.events_url}</code>
-                          <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')}>Copy URL</button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'gmail' && (
-                    <div className="routine-provider-note">
-                      <strong>Gmail connection</strong>
-                      <p>This routine watches {selectedRoutine.trigger_definition?.email_address || integrationStatus?.gmail.accounts[0]?.account_name || 'the connected inbox'} for new incoming email. Existing messages are not replayed.</p>
-                    </div>
-                  )}
-
-                  {selectedRoutine.trigger_type === 'event' && (
-                    <div className="routine-detail-section routine-event-progress-section" aria-live="polite">
-                      <div className="routine-section-heading">
-                        <div>
-                          <span className="routine-manager-eyebrow">TRIGGER ACTIVITY</span>
-                          <h4>Latest matching event</h4>
-                        </div>
+                      <div className="routine-activity-heading-actions">
                         <span className="routine-live-refresh">
                           <i />
-                          Live · {activityUpdatedAt
-                            ? `updated ${new Date(activityUpdatedAt).toLocaleTimeString()}`
-                            : 'syncing'}
+                          {activityUpdatedAt
+                            ? 'Updated ' + new Date(activityUpdatedAt).toLocaleTimeString()
+                            : 'Syncing activity'}
                         </span>
+                        <button type="button" className="routine-text-button" onClick={() => void loadRoutineActivity(selectedRoutine.id)}>
+                          <Icon name="refresh" size={13} />
+                          Refresh
+                        </button>
                       </div>
-                      {latestEvent ? (
-                        <>
-                          <div className="routine-event-current">
+                    </div>
+
+                    {selectedRoutine.trigger_type === 'event' && (
+                      latestEvent ? (
+                        <div className="routine-latest-event">
+                          <div className="routine-latest-event-heading">
                             <div>
                               <strong>{latestEvent.event_type}</strong>
-                              <p>
-                                {latestEvent.source} · received {new Date(latestEvent.received_at).toLocaleString()}
-                              </p>
+                              <p>{latestEvent.source} · received {new Date(latestEvent.received_at).toLocaleString()}</p>
                             </div>
                             <span className={'routine-run-status ' + latestEventStatus}>
                               {latestEventStatusLabel[latestEventStatus] || latestEventStatus.replaceAll('_', ' ')}
@@ -1753,9 +1754,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                                   }
                                   key={stage}
                                 >
-                                  <span className="routine-event-step-marker">
-                                    {isPast || isDone ? '✓' : index + 1}
-                                  </span>
+                                  <span className="routine-event-step-marker">{isPast || isDone ? '✓' : index + 1}</span>
                                   <span>{stage}</span>
                                 </div>
                               )
@@ -1763,9 +1762,9 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                           </div>
                           <p className="routine-event-progress-copy">
                             {latestEventStatus === 'completed'
-                              ? 'Orbit finished this event run. The result is saved in Recent runs and Activity.'
+                              ? 'Orbit finished this event and saved its result below.'
                               : latestEventStatus === 'failed'
-                                ? 'Orbit could not complete this event. Check the failure reason in Recent runs.'
+                                ? 'Orbit could not complete this event. Open the execution below to inspect the failure.'
                                 : latestEventStatus === 'retrying'
                                   ? 'Orbit hit an execution issue and is retrying this event.'
                                   : latestEventStatus === 'processing' || latestEventStatus === 'running'
@@ -1774,14 +1773,12 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                                       ? 'This event was received but the routine was skipped.'
                                       : 'The event matched your trigger and is waiting in Orbit’s queue.'}
                           </p>
-                          {latestEvent.routine_error && (
-                            <p className="routine-run-error" role="alert">{latestEvent.routine_error}</p>
-                          )}
+                          {latestEvent.routine_error && <p className="routine-run-error" role="alert">{latestEvent.routine_error}</p>}
                           <details className="routine-event-payload">
                             <summary>View event payload</summary>
                             <pre>{JSON.stringify(latestEvent.payload, null, 2)}</pre>
                           </details>
-                        </>
+                        </div>
                       ) : (
                         <div className="routine-event-waiting">
                           <span className="routine-event-waiting-dot" />
@@ -1789,84 +1786,54 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                             <strong>{selectedRoutine.enabled ? 'Waiting for a matching event' : 'Routine is paused'}</strong>
                             <p>
                               {selectedRoutine.enabled
-                                ? 'When GitHub, Slack, Gmail, or your webhook sends a new event that matches this trigger, Orbit will queue it and update this panel as the run progresses.'
+                                ? 'When a new event matches this trigger, Orbit will queue it and show its progress here.'
                                 : 'Resume this routine to start receiving new matching events.'}
                             </p>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="routine-detail-section routine-history-section">
-                    <div className="routine-section-heading">
-                      <div>
-                        <span className="routine-manager-eyebrow">EXECUTION LOG</span>
-                        <h4>Recent runs</h4>
-                      </div>
-                      <button type="button" className="routine-text-button" onClick={() => void loadRoutineActivity(selectedRoutine.id)}>
-                        <Icon name="refresh" size={13} />
-                        Refresh
-                      </button>
-                    </div>
-                    {routineRuns.length === 0 ? (
-                      <p className="routine-empty-inline">No runs yet. Test this routine or wait for its next matching trigger.</p>
-                    ) : (
-                      <div className="routine-run-list">
-                        {routineRuns.map((run) => (
-                          <article className="routine-run-item" key={run.id}>
-                            <div className="routine-run-item-header">
-                              <strong>{run.trigger_source.replaceAll('_', ' ')}</strong>
-                              <span className={'routine-run-status ' + run.status.toLowerCase()}>{run.status}</span>
-                            </div>
-                            <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
-                            {run.result_summary && <p>{run.result_summary}</p>}
-                            {run.error && <p className="routine-run-error" role="alert">{run.error}</p>}
-                            {typeof run.duration_ms === 'number' && <small>{run.duration_ms.toLocaleString()} ms</small>}
-                            <button
-                              type="button"
-                              className="routine-open-run-button"
-                              onClick={() => void handleOpenRun(run)}
-                            >
-                              Open execution <Icon name="chevronRight" size={12} />
-                            </button>
-                          </article>
-                        ))}
-                      </div>
+                      )
                     )}
-                  </div>
 
-                  {selectedRoutine.trigger_type === 'event' && (
-                    <div className="routine-detail-section">
-                      <div className="routine-section-heading">
-                        <div>
-                          <span className="routine-manager-eyebrow">EVENT DELIVERY</span>
-                          <h4>Recent matching events</h4>
-                        </div>
+                    <div className="routine-run-history">
+                      <div className="routine-run-history-heading">
+                        <h5>Recent executions</h5>
+                        <span>{routineRuns.length} {routineRuns.length === 1 ? 'run' : 'runs'}</span>
                       </div>
-                      {routineEvents.length === 0 ? (
-                        <p className="routine-empty-inline">No matching events received yet. The routine will start when a new event matches its trigger.</p>
+                      {routineRuns.length === 0 ? (
+                        <p className="routine-empty-inline">No executions yet. Test this routine or wait for its next trigger.</p>
                       ) : (
-                        <div className="routine-event-list">
-                          {routineEvents.map((event) => (
-                            <details key={event.id}>
-                              <summary>{event.event_type} <span>· {event.routine_status || event.processing_status}</span></summary>
-                              <p>Received {new Date(event.received_at).toLocaleString()} from {event.source}</p>
-                              <p>Delivery: {event.processing_status.replaceAll('_', ' ')}</p>
-                              {event.routine_error && <p role="alert">{event.routine_error}</p>}
-                              <pre>{JSON.stringify(event.payload, null, 2)}</pre>
-                            </details>
+                        <div className="routine-run-list routine-run-list-compact">
+                          {routineRuns.map((run) => (
+                            <article className="routine-run-row" key={run.id}>
+                              <div className="routine-run-row-main">
+                                <div className="routine-run-item-header">
+                                  <strong>{run.trigger_source.replaceAll('_', ' ')}</strong>
+                                  <span className={'routine-run-status ' + run.status.toLowerCase()}>{run.status}</span>
+                                </div>
+                                <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
+                                {run.result_summary && <p>{run.result_summary}</p>}
+                                {run.error && <p className="routine-run-error" role="alert">{run.error}</p>}
+                                {typeof run.duration_ms === 'number' && <small>{run.duration_ms.toLocaleString()} ms</small>}
+                              </div>
+                              <button
+                                type="button"
+                                className="routine-open-run-button"
+                                onClick={() => void handleOpenRun(run)}
+                              >
+                                Open execution <Icon name="chevronRight" size={12} />
+                              </button>
+                            </article>
                           ))}
                         </div>
                       )}
                     </div>
-                  )}
+                  </section>
 
                   {routineActionStatus && <p className="routine-action-status" role="status">{routineActionStatus}</p>}
                   {editingRoutine && selectedRoutine.trigger_type !== 'event' && (
                     <p className="routine-edit-note">The schedule stays unchanged here. To change its timing, create a new scheduled routine with the updated time.</p>
                   )}
-                  <div className="routine-detail-actions">
+<div className="routine-detail-actions">
                     {editingRoutine ? (
                       <>
                         <button type="button" className="routine-primary-button" onClick={() => void handleSaveRoutine()}>
