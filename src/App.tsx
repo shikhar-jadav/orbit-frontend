@@ -17,13 +17,11 @@ export const preloadSettings = () => import('./components/SettingsPanel')
 export const preloadMarketplace = () => import('./components/MarketplaceView')
 export const preloadCanvas = () => import('./components/UniversalCanvas')
 export const preloadRoutines = () => import('./components/ProactiveRoutinesModal')
-export const preloadArtifacts = () => import('./components/WorkspaceArtifactsPanel')
 
 const SettingsPanel = lazy(() => preloadSettings().then((m) => ({ default: m.SettingsPanel })))
 const MarketplaceView = lazy(() => preloadMarketplace().then((m) => ({ default: m.MarketplaceView })))
 const UniversalCanvas = lazy(() => preloadCanvas().then((m) => ({ default: m.UniversalCanvas })))
 const ProactiveRoutinesModal = lazy(() => preloadRoutines().then((m) => ({ default: m.ProactiveRoutinesModal })))
-const WorkspaceArtifactsPanel = lazy(() => preloadArtifacts().then((m) => ({ default: m.WorkspaceArtifactsPanel })))
 import {
   clearRecentAccounts,
   rememberRecentAccount,
@@ -458,7 +456,6 @@ function App() {
   const [editingMessageId, setEditingMessageId] = useState<string | number | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [activeCanvas, setActiveCanvas] = useState<CanvasItem | null>(null)
-  const [artifactsOpen, setArtifactsOpen] = useState(false)
   const [workspaceChangeVersion, setWorkspaceChangeVersion] = useState(0)
   const [hitlRequest, setHitlRequest] = useState<HITLCardRequest | null>(null)
 
@@ -2307,9 +2304,6 @@ function App() {
         onPreloadSettings={preloadSettings}
         onPreloadMarketplace={preloadMarketplace}
         onPreloadRoutines={preloadRoutines}
-        onToggleArtifacts={() => setArtifactsOpen((open) => !open)}
-        artifactsOpen={artifactsOpen}
-        onPreloadArtifacts={preloadArtifacts}
       />
 
       {/* -------------------- MAIN PANEL -------------------- */}
@@ -2511,20 +2505,6 @@ function App() {
                 }}
               />
             </div>
-
-              {artifactsOpen && (
-                <Suspense fallback={null}>
-                  <WorkspaceArtifactsPanel
-                    key={activeThreadId || ''}
-                    threadId={activeThreadId || ''}
-                    onOpen={(item) => {
-                      setActiveCanvas(item)
-                      setArtifactsOpen(false)
-                    }}
-                    onClose={() => setArtifactsOpen(false)}
-                  />
-                </Suspense>
-              )}
 
             {activeCanvas && (
               <div className="workspace-canvas-pane">

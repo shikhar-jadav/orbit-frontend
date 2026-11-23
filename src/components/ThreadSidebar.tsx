@@ -40,9 +40,6 @@ type ThreadSidebarProps = {
   onPreloadSettings?: () => void
   onPreloadMarketplace?: () => void
   onPreloadRoutines?: () => void
-  onToggleArtifacts?: () => void
-  artifactsOpen?: boolean
-  onPreloadArtifacts?: () => void
 }
 
 export function ThreadSidebar(props: ThreadSidebarProps) {
@@ -80,9 +77,6 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
     onPreloadSettings,
     onPreloadMarketplace,
     onPreloadRoutines,
-    onToggleArtifacts,
-    artifactsOpen,
-    onPreloadArtifacts,
   } = props
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
@@ -191,18 +185,6 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
                 <span className="nav-count-badge">{unreadRoutinesCount}</span>
               )}
             </button>
-            {onToggleArtifacts && (
-              <button
-                className={`nav-item ${artifactsOpen ? 'active' : ''}`}
-                onClick={onToggleArtifacts}
-                onPointerEnter={onPreloadArtifacts}
-                onFocus={onPreloadArtifacts}
-                title="Workspace artifacts"
-              >
-                <Icon name="layers" size={16} />
-                <span>Artifacts</span>
-              </button>
-            )}
           </div>
 
           <div className="sidebar-section-divider">
@@ -464,19 +446,6 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
                 <Icon name="chat" size={17} />
               </button>
             </Tooltip>
-            {onToggleArtifacts && (
-              <Tooltip side="right" content="Workspace artifacts">
-                <button
-                  className={`rail-btn ${artifactsOpen ? 'active' : ''}`}
-                  onClick={onToggleArtifacts}
-                  onPointerEnter={onPreloadArtifacts}
-                  onFocus={onPreloadArtifacts}
-                  aria-label="Workspace artifacts"
-                >
-                  <Icon name="layers" size={17} />
-                </button>
-              </Tooltip>
-            )}
           </div>
           <div className="rail-bottom">
             <Tooltip side="right" content="Settings">
