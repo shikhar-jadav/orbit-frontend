@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Icon } from './Icon'
 import { AccountPanel } from './AccountPanel'
 import { CapabilitiesSection } from './CapabilitiesSection'
+import { ConnectedAccountsSection } from './ConnectedAccountsSection'
 import type { AuthUser, SettingsSection, UserPreferences } from './types'
 import './SettingsPanel.css'
 
@@ -23,7 +24,7 @@ type SettingsPanelProps = {
 type NavEntry = {
   id: SettingsSection
   label: string
-  iconName: 'settings' | 'palette' | 'shield' | 'puzzle' | 'zap'
+  iconName: 'settings' | 'palette' | 'shield' | 'puzzle' | 'zap' | 'link'
   keywords: string
 }
 
@@ -51,6 +52,12 @@ const NAV_ENTRIES: NavEntry[] = [
     label: 'Capabilities',
     iconName: 'puzzle',
     keywords: 'capabilities skills connectors mcp tools plugins upload create custom',
+  },
+  {
+    id: 'integrations',
+    label: 'Connected Accounts',
+    iconName: 'link',
+    keywords: 'connected accounts integrations oauth github slack gmail events triggers disconnect',
   },
 ]
 
@@ -296,6 +303,13 @@ export function SettingsPanel({
               onModalOpenChange={setChildModalOpen}
               initialTab={initialCapabilitiesTab}
             />
+          </div>
+        )}
+
+        {activeSection === 'integrations' && (
+          <div className="sp-section-content sp-section-wide">
+            <h2 className="sp-section-title">Connected Accounts</h2>
+            <ConnectedAccountsSection onUnauthorized={onUnauthorized} />
           </div>
         )}
       </main>

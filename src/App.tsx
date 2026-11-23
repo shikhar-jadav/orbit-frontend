@@ -159,11 +159,13 @@ function readRoute() {
   if (hash === '#account') settingsSection = 'account'
   else if (hash === '#appearance') settingsSection = 'appearance'
   else if (hash === '#capabilities') settingsSection = 'capabilities'
+  else if (hash === '#integrations') settingsSection = 'integrations'
   const settingsOpen =
     hash === '#settings' ||
     hash === '#account' ||
     hash === '#appearance' ||
-    hash === '#capabilities'
+    hash === '#capabilities' ||
+    hash === '#integrations'
   return {
     threadId: match ? decodeURIComponent(match[1]) : null,
     settings: settingsOpen,

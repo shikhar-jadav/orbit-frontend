@@ -98,7 +98,7 @@ export type UserPreferences = {
   appearance: 'dark' | 'midnight'
 }
 
-export type SettingsSection = 'general' | 'appearance' | 'account' | 'capabilities'
+export type SettingsSection = 'general' | 'appearance' | 'account' | 'capabilities' | 'integrations'
 
 export type PersonalSkillFile = {
   filename: string

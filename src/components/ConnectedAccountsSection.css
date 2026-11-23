@@ -1,0 +1,255 @@
+.ca-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ca-intro {
+  margin: -6px 0 2px;
+  max-width: 760px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.ca-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 26px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.ca-provider-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ca-provider-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-surface);
+}
+.ca-provider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.ca-provider-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.ca-provider-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--bg-surface-elevated);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: -.3px;
+}
+.ca-provider-mark.github { color: #f2f2f2; }
+.ca-provider-mark.slack { color: #d8a7ff; }
+.ca-provider-mark.gmail { color: #f8b3a8; }
+.ca-provider-brand h3 {
+  margin: 0 0 3px;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 650;
+}
+.ca-provider-brand p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.ca-connect-button,
+.ca-disconnect-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-height: 33px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--bg-surface-elevated);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ca-connect-button:hover:not(:disabled),
+.ca-disconnect-button:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+}
+.ca-connect-button:disabled,
+.ca-disconnect-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.ca-accounts {
+  display: flex;
+  flex-direction: column;
+}
+.ca-account-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.ca-account-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 650;
+}
+.ca-account-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.ca-account-copy strong {
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ca-account-copy span {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ca-connected-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--success);
+  font-size: 10.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.ca-disconnect-button {
+  min-height: 29px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+.ca-empty-account {
+  padding: 16px 18px;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+.ca-delivery-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px 18px 14px;
+}
+.ca-status-dot {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--warning);
+}
+.ca-delivery-status.ready .ca-status-dot {
+  background: var(--success);
+}
+.ca-delivery-status strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text-main);
+  font-size: 11.5px;
+}
+.ca-delivery-status p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.ca-setup-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 18px 14px;
+  color: var(--warning);
+  font-size: 10.5px;
+}
+.ca-security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,.02);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.ca-security-note svg {
+  flex: 0 0 auto;
+  color: var(--accent-primary);
+}
+.ca-message {
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.ca-message.error {
+  color: #fecaca;
+  border-color: rgba(248,113,113,.35);
+  background: rgba(127,29,29,.16);
+}
+.ca-message.success {
+  color: #bbf7d0;
+  border-color: rgba(74,222,128,.25);
+  background: rgba(20,83,45,.13);
+}
+@media (max-width: 680px) {
+  .ca-provider-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ca-connect-button {
+    width: 100%;
+  }
+  .ca-account-row {
+    flex-wrap: wrap;
+  }
+  .ca-account-copy {
+    flex-basis: calc(100% - 55px);
+  }
+  .ca-connected-pill {
+    margin-left: 43px;
+  }
+  .ca-disconnect-button {
+    margin-left: auto;
+  }
+}
