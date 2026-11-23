@@ -17,6 +17,7 @@ type SettingsPanelProps = {
   onUnauthorized: () => void
   onNavigateMarketplace?: () => void
   initialSection?: SettingsSection
+  initialCapabilitiesTab?: 'skills' | 'connectors'
 }
 
 type NavEntry = {
@@ -65,6 +66,7 @@ export function SettingsPanel({
   onUnauthorized,
   onNavigateMarketplace,
   initialSection = 'general',
+  initialCapabilitiesTab = 'skills',
 }: SettingsPanelProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection)
   const [navSearch, setNavSearch] = useState('')
@@ -292,6 +294,7 @@ export function SettingsPanel({
               onNavigateMarketplace={onNavigateMarketplace}
               onCloseSettings={onClose}
               onModalOpenChange={setChildModalOpen}
+              initialTab={initialCapabilitiesTab}
             />
           </div>
         )}
