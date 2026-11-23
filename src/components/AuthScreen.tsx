@@ -48,9 +48,64 @@ type PendingSignupResult = {
   recoveryCodes: string[]
 }
 
+const BACKEND_WAKE_RETRY_DELAYS_MS = [
+  1500, 3000, 5000, 8000, 10000, 10000, 10000, 10000, 10000,
+]
+
+function isBackendGatewayUnavailable(response: Response): boolean {
+  return response.status >= 502 && response.status <= 504
+}
+
+/**
+ * Render's free backend can sleep while idle. A failed first request wakes it,
+ * but the service can take around a minute to become ready. Poll the cheap
+ * session endpoint rather than repeating the POST (which also avoids consuming
+ * the email-discovery rate limit during a cold start).
+ */
+async function fetchAfterBackendWake(
+  request: () => Promise<Response>,
+  onWake: () => void,
+): Promise<Response> {
+  const initialResponse = await request()
+  if (!isBackendGatewayUnavailable(initialResponse)) return initialResponse
+
+  onWake()
+  let lastUnavailableResponse = initialResponse
+
+  for (const delayMs of BACKEND_WAKE_RETRY_DELAYS_MS) {
+    await new Promise<void>((resolve) => window.setTimeout(resolve, delayMs))
+
+    try {
+      const healthResponse = await fetch('/auth/session', {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+      })
+
+      if (
+        healthResponse.ok &&
+        (healthResponse.headers.get('content-type') || '').includes('application/json')
+      ) {
+        return await request()
+      }
+
+      if (isBackendGatewayUnavailable(healthResponse)) {
+        lastUnavailableResponse = healthResponse
+        continue
+      }
+
+      if (!healthResponse.ok) return healthResponse
+    } catch {
+      // Keep polling through temporary proxy/network errors while the backend starts.
+    }
+  }
+
+  return lastUnavailableResponse
+}
+
 async function readErrorDetail(res: Response, fallback: string): Promise<string> {
-  if (res.status >= 502 && res.status <= 504) {
-    return 'The server is waking up or temporarily unavailable. Please try again in a few moments.'
+  if (isBackendGatewayUnavailable(res)) {
+    return 'Orbit could not reach its backend after waiting for it to start. Please try again in a moment.'
   }
   try {
     const data = await res.json()
@@ -399,25 +454,21 @@ export function AuthScreen({
     resetMessages()
     setLoading(true)
     try {
-      let res = await fetch('/auth/discover', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ email: trimmed }),
-      })
-      if (!res.ok && res.status >= 502 && res.status <= 504) {
-        await new Promise((r) => setTimeout(r, 1500))
-        res = await fetch('/auth/discover', {
+      const discoverRequest = () =>
+        fetch('/auth/discover', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({ email: trimmed }),
         })
-      }
+      const res = await fetchAfterBackendWake(discoverRequest, () => {
+        setNotice('Orbit is waking up after being idle. Keep this page open; the first connection can take about a minute.')
+      })
       if (!res.ok) {
         setError(await readErrorDetail(res, 'Could not look up that email address.'))
         return
       }
+      setNotice(null)
       const data: AuthDiscoverResponse = await res.json()
       setEmail(data.email)
       setIsFirstAccount(Boolean(data.is_first_account))
