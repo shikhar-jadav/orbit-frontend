@@ -541,8 +541,8 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                         <h3 className="card-title">{connector.name}</h3>
                         <span className="card-type-pill connector-pill">Connector</span>
                       </div>
-                      <span className="card-category">
-                        {connector.category} · {connector.authType}
+                      <span className="card-category" title={connector.connected_account?.email ? `${connector.category} · Connected as ${connector.connected_account.email}` : undefined}>
+                        {connector.category} · {connector.connected_account?.email ? connector.connected_account.email : connector.authType}
                       </span>
                     </div>
                   </div>
@@ -562,7 +562,10 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                   </div>
 
                   <div className="card-footer">
-                    <div className="card-status-indicator">
+                    <div
+                      className="card-status-indicator"
+                      title={connector.connected_account?.email ? `Connected as ${connector.connected_account.email}` : undefined}
+                    >
                       <span
                         className={`status-dot ${
                           connector.is_enabled
@@ -578,14 +581,10 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                         {connector.is_enabled
                           ? !connector.is_authenticated && connector.oauthProvider
                             ? 'Sign-in required'
-                            : connector.connected_account?.email
-                              ? `Active (${connector.connected_account.email})`
-                              : connector.is_configured
-                                ? 'Active'
-                                : 'Config required'
-                          : connector.connected_account?.email
-                            ? `Ready (${connector.connected_account.email})`
-                            : 'Available'}
+                            : connector.is_configured
+                              ? 'Active'
+                              : 'Config required'
+                          : 'Available'}
                       </span>
                     </div>
 

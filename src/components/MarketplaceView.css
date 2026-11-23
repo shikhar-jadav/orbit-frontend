@@ -480,6 +480,10 @@
 .card-category {
   font-size: 11.5px;
   color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
 }
 
 .card-description {
@@ -520,6 +524,8 @@
   gap: 6px;
   font-size: 11.5px;
   color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .status-dot {
