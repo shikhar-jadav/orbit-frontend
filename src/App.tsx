@@ -357,7 +357,11 @@ function App() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false)
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false)
   const [activeThreadId, setActiveThreadId] = useState<string | null>(initialRoute.threadId)
-  const [settingsPage, setSettingsPage] = useState(initialRoute.settings)
+  const [pendingRoutineExecution, setPendingRoutineExecution] = useState<{
+    routineId: string
+    runId: string
+  } | null>(null)
+  const [settingsPage, setSettingsPage> = useState(initialRoute.settings)
   const [settingsSection, setSettingsSection] = useState<SettingsSection>(initialRoute.settingsSection)
   const [marketplacePage, setMarketplacePage] = useState(initialRoute.marketplace)
   const [threadMenuId, setThreadMenuId] = useState<string | null>(null)
@@ -595,6 +599,7 @@ function App() {
     setLoadingOlderMessages(false)
     setActiveCanvas(null)
     setAttachments([])
+    setPendingRoutineExecution(null)
     setSettings({ model: null, provider_index: null })
     setUserPreferences({ language: 'auto', send_shortcut: 'enter', appearance: 'dark' })
     setSettingsPage(false)
@@ -829,6 +834,7 @@ function App() {
     const syncRoute = () => {
       const route = readRoute()
       if (route.threadId !== activeThreadId) {
+        setPendingRoutineExecution(null)
         setMessages([])
         setHasOlderMessages(false)
         setLoadingOlderMessages(false)
@@ -861,6 +867,7 @@ function App() {
     }
     window.history.pushState({}, '', '/')
     setActiveThreadId(null)
+    setPendingRoutineExecution(null)
     setSettingsPage(false)
     setMarketplacePage(false)
     setMessages([])
@@ -1070,6 +1077,7 @@ function App() {
       abortControllerRef.current.abort()
     }
     if (threadId !== activeThreadId) {
+      setPendingRoutineExecution(null)
       setMessages([])
       setHasOlderMessages(false)
       setLoadingOlderMessages(false)
@@ -1080,6 +1088,31 @@ function App() {
     setMarketplacePage(false)
     setError('')
   }
+
+
+  const openRoutineExecutionPreview = useCallback((execution: RoutineExecutionPreview) => {
+    if (sending && abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    window.history.pushState({}, '', '/')
+    setActiveThreadId(null)
+    setPendingRoutineExecution({
+      routineId: execution.routine.id,
+      runId: execution.run.id,
+    })
+    setSettingsPage(false)
+    setMarketplacePage(false)
+    setMessages(routineExecutionToChatMessages(execution))
+    setHasOlderMessages(false)
+    setLoadingOlderMessages(false)
+    setLoadingThread(false)
+    setInput('')
+    setAttachments([])
+    setActiveCanvas(null)
+    setHitlRequest(null)
+    setError('')
+    setRoutinesModalOpen(false)
+  }, [sending])
 
   function navigateSettings(section?: SettingsSection) {
     if (settingsPage && (!section || section === settingsSection)) {
@@ -1247,7 +1280,7 @@ function App() {
       setError('')
       setSending(true)
       setInput('')
-      const currentMessages = messages
+      let currentMessages = messages
       let threadId = activeThreadId
       let messageAdded = false
 
@@ -1256,16 +1289,56 @@ function App() {
 
       try {
         if (!threadId) {
-          const thread = await fetch('/threads', { method: 'POST' }).then(async (response) => {
-            if (!response.ok) return apiError('A new conversation could not be created.', response)
-            return (await response.json()) as Thread
-          })
-          threadId = thread.thread_id
-          skipLoadThreadRef.current = threadId
-          setThreads((current) => [thread, ...current])
-          window.history.pushState({}, '', `/c/${encodeURIComponent(threadId)}`)
-          setActiveThreadId(threadId)
-          setSettingsPage(false)
+          if (pendingRoutineExecution) {
+            const promotionResponse = await fetch(
+              `/api/routines/${encodeURIComponent(pendingRoutineExecution.routineId)}/runs/${encodeURIComponent(pendingRoutineExecution.runId)}/continue`,
+              { method: 'POST', credentials: 'same-origin' },
+            )
+            if (!promotionResponse.ok) {
+              await apiError('The routine execution could not be continued in chat.', promotionResponse)
+            }
+            const promotionData = (await promotionResponse.json()) as { thread?: Thread }
+            const promotedThread = promotionData.thread
+            if (!promotedThread?.thread_id) {
+              throw new Error('Orbit did not create the routine conversation.')
+            }
+
+            threadId = promotedThread.thread_id
+            setPendingRoutineExecution(null)
+            setThreads((current) => [
+              promotedThread,
+              ...current.filter((item) => item.thread_id !== promotedThread.thread_id),
+            ])
+            skipLoadThreadRef.current = threadId
+            window.history.pushState({}, '', `/c/${encodeURIComponent(threadId)}`)
+            setActiveThreadId(threadId)
+            setSettingsPage(false)
+            setMarketplacePage(false)
+
+            // Reload the server-seeded instruction, event and tool timeline so
+            // this becomes a durable normal chat before the user's first reply.
+            try {
+              const seedHistory = await getJson<ThreadHistoryResponse>(
+                `/threads/${encodeURIComponent(threadId)}?limit=20&include_extras=false`,
+              )
+              currentMessages = seedHistory.messages
+              setMessages(seedHistory.messages)
+              setHasOlderMessages(seedHistory.has_more_messages)
+            } catch {
+              // Keep the already-visible execution preview if history reload fails.
+            }
+          } else {
+            const thread = await fetch('/threads', { method: 'POST' }).then(async (response) => {
+              if (!response.ok) return apiError('A new conversation could not be created.', response)
+              return (await response.json()) as Thread
+            })
+            threadId = thread.thread_id
+            skipLoadThreadRef.current = threadId
+            setThreads((current) => [thread, ...current])
+            window.history.pushState({}, '', `/c/${encodeURIComponent(threadId)}`)
+            setActiveThreadId(threadId)
+            setSettingsPage(false)
+          }
         }
 
         const uploadedAttachments: MessageAttachment[] = []
@@ -1567,7 +1640,7 @@ function App() {
         setSending(false)
       }
     },
-    [activeThreadId, attachments, input, messages, refreshThreads, sending, settings.model, settings.provider_index, hitlRequest],
+    [activeThreadId, attachments, input, messages, refreshThreads, sending, settings.model, settings.provider_index, hitlRequest, pendingRoutineExecution],
   )
 
   const handleHITLSubmit = useCallback(
@@ -2489,14 +2562,7 @@ function App() {
             onClearUnread={() => setUnreadNotifCount(0)}
             soundEnabled={soundEnabled}
             onToggleSound={toggleSound}
-            onContinueRun={(thread) => {
-              setThreads((current) => [
-                thread as Thread,
-                ...current.filter((item) => item.thread_id !== thread.thread_id),
-              ])
-              setRoutinesModalOpen(false)
-              navigateThread(thread.thread_id)
-            }}
+            onOpenExecution={openRoutineExecutionPreview}
           />
         </Suspense>
       )}
