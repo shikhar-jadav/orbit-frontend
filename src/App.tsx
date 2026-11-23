@@ -2245,7 +2245,12 @@ function App() {
   const sidebarExpanded = sidebarOpen && isLargeScreen
 
   if (authLoading) {
-    return null
+    return (
+      <div className="orbit-auth-loading" role="status" aria-live="polite">
+        <span className="orbit-auth-loading-spinner" aria-hidden="true" />
+        <span>Connecting to Orbit…</span>
+      </div>
+    )
   }
 
   if (!currentUser) {
