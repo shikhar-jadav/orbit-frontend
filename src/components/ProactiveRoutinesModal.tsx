@@ -811,18 +811,25 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
 
   const handleConnectIntegration = async (provider: 'github' | 'slack' | 'gmail') => {
     setFormError('')
+    const popup = window.open('about:blank', 'orbit-event-integration', 'popup,width=600,height=720')
+    if (!popup) {
+      setFormError('Allow pop-ups to connect this account.')
+      return
+    }
+    integrationPopupRef.current = popup
     try {
-      const res = await fetch(`/api/integrations/${provider}/oauth/start`, { method: 'POST' })
-      const data = await res.json()
+      const res = await fetch(`/api/integrations/${provider}/oauth/start`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      })
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.detail || `Could not connect ${provider}.`)
-      const popup = window.open(
-        data.auth_url as string,
-        'orbit-event-integration',
-        'popup,width=600,height=720',
-      )
-      if (!popup) throw new Error('Allow pop-ups to connect this account.')
-      integrationPopupRef.current = popup
+      if (typeof data.auth_url !== 'string') throw new Error('The provider did not return an authorization URL.')
+      popup.location.href = data.auth_url
+      popup.focus()
     } catch (err: unknown) {
+      popup.close()
+      integrationPopupRef.current = null
       setFormError(err instanceof Error ? err.message : `Could not connect ${provider}.`)
     }
   }
