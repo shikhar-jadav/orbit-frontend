@@ -17,6 +17,8 @@ export type Routine = {
     event_source?: string
     when?: string
     repository?: string
+    provider_account_id?: string
+    provider_account_name?: string
     team_id?: string
     email_address?: string
     filters?: Record<string, unknown>
@@ -37,6 +39,7 @@ type IntegrationStatus = {
   signing_configured?: boolean
   pubsub_configured?: boolean
   pubsub_limits_configured?: boolean
+  events_ready?: boolean
   events_url?: string | null
   public_url_configured?: boolean
   accounts: Array<{
@@ -45,6 +48,20 @@ type IntegrationStatus = {
     account_name: string
     scopes: string[]
   }>
+}
+
+type EventRepository = {
+  full_name: string
+  private: boolean
+  default_branch?: string
+  can_manage_webhooks: boolean
+}
+
+type EventChannel = {
+  id: string
+  name: string
+  is_member: boolean
+  is_private: boolean
 }
 
 export type ProactiveNotification = {
@@ -123,6 +140,10 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [eventRoutineName, setEventRoutineName] = useState('')
   const [eventActionInstruction, setEventActionInstruction] = useState('')
   const [eventType, setEventType] = useState('issues.opened')
+  const [eventAccountId, setEventAccountId] = useState('')
+  const [githubRepositories, setGithubRepositories] = useState<EventRepository[]>([])
+  const [slackChannels, setSlackChannels] = useState<EventChannel[]>([])
+  const [loadingEventResources, setLoadingEventResources] = useState(false)
   const [githubRepository, setGithubRepository] = useState('')
   const [githubLabel, setGithubLabel] = useState('')
   const [slackChannel, setSlackChannel] = useState('')
@@ -245,6 +266,76 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     window.addEventListener('message', handleIntegrationMessage)
     return () => window.removeEventListener('message', handleIntegrationMessage)
   }, [loadIntegrationStatus, integrationStatus?.public_url])
+
+  useEffect(() => {
+    if (eventProvider === 'webhook') {
+      setEventAccountId('')
+      setGithubRepositories([])
+      setSlackChannels([])
+      return
+    }
+    const accounts = integrationStatus?.[eventProvider].accounts || []
+    if (!accounts.some((account) => account.provider_account_id === eventAccountId)) {
+      setEventAccountId(accounts[0]?.provider_account_id || '')
+    }
+  }, [eventProvider, eventAccountId, integrationStatus])
+
+  useEffect(() => {
+    if (!isOpen || tab !== 'create' || createMode !== 'event' || !eventAccountId) {
+      setGithubRepositories([])
+      setSlackChannels([])
+      return
+    }
+    if (eventProvider !== 'github' && eventProvider !== 'slack') return
+    const controller = new AbortController()
+    const load = async () => {
+      setLoadingEventResources(true)
+      try {
+        const endpoint =
+          eventProvider === 'github'
+            ? `/api/integrations/github/repositories?${new URLSearchParams({ account_id: eventAccountId })}`
+            : `/api/integrations/slack/channels?${new URLSearchParams({ account_id: eventAccountId })}`
+        const response = await fetch(endpoint, {
+          credentials: 'same-origin',
+          signal: controller.signal,
+        })
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          throw new Error(data.detail || `Could not load ${eventProvider} resources.`)
+        }
+        const data = await response.json()
+        if (eventProvider === 'github') {
+          const repositories = (data.repositories || []) as EventRepository[]
+          setGithubRepositories(repositories)
+          setGithubRepository((current) =>
+            repositories.some((item) => item.full_name === current && item.can_manage_webhooks)
+              ? current
+              : repositories.find((item) => item.can_manage_webhooks)?.full_name || '',
+          )
+        } else {
+          const channels = (data.channels || []) as EventChannel[]
+          setSlackChannels(channels)
+          setSlackChannel((current) =>
+            channels.some((item) => item.name === current && item.is_member)
+              ? current
+              : channels.find((item) => item.is_member)?.name || '',
+          )
+        }
+      } catch (resourceError) {
+        if (!controller.signal.aborted) {
+          setFormError(
+            resourceError instanceof Error
+              ? resourceError.message
+              : `Could not load ${eventProvider} resources.`,
+          )
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoadingEventResources(false)
+      }
+    }
+    void load()
+    return () => controller.abort()
+  }, [isOpen, tab, createMode, eventProvider, eventAccountId])
 
   const loadRoutineActivity = useCallback(async (routineId: string) => {
     try {
@@ -537,10 +628,22 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       return
     }
 
-    const connectedAccount =
-      eventProvider === 'webhook' ? true : Boolean(integrationStatus?.[eventProvider].accounts[0])
-    if (!connectedAccount) {
-      setFormError('Connect this service before creating its event trigger.')
+    const selectedAccount =
+      eventProvider === 'webhook'
+        ? null
+        : integrationStatus?.[eventProvider].accounts.find(
+            (account) => account.provider_account_id === eventAccountId,
+          )
+    if (eventProvider !== 'webhook' && !selectedAccount) {
+      setFormError('Choose a connected account before creating this event trigger.')
+      return
+    }
+    if (eventProvider === 'slack' && !integrationStatus?.slack.events_ready) {
+      setFormError('Slack event delivery is not ready yet. Orbit’s administrator must finish the one-time Slack app setup.')
+      return
+    }
+    if (eventProvider === 'gmail' && !integrationStatus?.gmail.events_ready) {
+      setFormError('Gmail event delivery is not ready yet. Orbit’s administrator must finish the one-time Google Pub/Sub setup.')
       return
     }
 
@@ -551,6 +654,10 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     if (eventProvider === 'github') {
       if (!githubRepository.trim() || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(githubRepository.trim())) {
         setFormError('Enter a GitHub repository as owner/repository.')
+        return
+      }
+      if (!githubRepositories.some((item) => item.full_name === githubRepository && item.can_manage_webhooks)) {
+        setFormError('Choose a repository where this GitHub account can manage webhooks.')
         return
       }
       resolvedEventType = eventType
@@ -564,8 +671,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         whenToRun += ` with the label “${githubLabel.trim()}”`
       }
     } else if (eventProvider === 'slack') {
-      if (!slackChannel.trim()) {
-        setFormError('Enter the Slack channel Orbit should watch.')
+      if (!slackChannel.trim() || !slackChannels.some((item) => item.name === slackChannel && item.is_member)) {
+        setFormError('Choose a Slack channel where the Orbit app is a member.')
         return
       }
       resolvedEventType = eventType
@@ -589,7 +696,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       }
     } else if (eventProvider === 'gmail') {
       resolvedEventType = 'email.received'
-      const mailbox = integrationStatus?.gmail.accounts[0]?.account_name || 'the connected inbox'
+      const mailbox = selectedAccount?.account_name || 'the connected inbox'
       whenToRun = `When a new email arrives in ${mailbox}`
       if (gmailSender.trim()) {
         conditions.push({ field: 'payload.from', operator: 'contains', value: gmailSender.trim() })
@@ -626,6 +733,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         name: eventRoutineName.trim(),
         instruction: eventActionInstruction.trim(),
         source: eventProvider,
+        provider_account_id: selectedAccount?.provider_account_id,
+        provider_account_name: selectedAccount?.account_name,
         event_type: resolvedEventType,
         when_to_run: whenToRun,
         filters: conditions.length
@@ -651,7 +760,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         eventProvider === 'github'
           ? 'Routine created. Orbit registered a webhook on the selected repository.'
           : eventProvider === 'slack'
-            ? 'Routine created. Finish the Slack Events API setup shown below to start receiving events.'
+            ? 'Routine created. Orbit is listening for matching Slack events.'
             : eventProvider === 'gmail'
               ? 'Routine created. New matching emails will start runs.'
               : 'Routine created. Copy the webhook URL and key below, then send a POST when your event occurs.',
@@ -680,22 +789,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       integrationPopupRef.current = popup
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : `Could not connect ${provider}.`)
-    }
-  }
-
-  const handleDisconnectIntegration = async (provider: 'github' | 'slack' | 'gmail') => {
-    setFormError('')
-    try {
-      const res = await fetch(`/api/integrations/${provider}`, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || `Could not disconnect ${provider}.`)
-      await loadIntegrationStatus()
-      if (provider === 'slack' || provider === 'gmail') {
-        setFormError(`${provider === 'slack' ? 'Slack' : 'Gmail'} disconnected. Its event routines were paused.`)
-        void loadRoutines()
-      }
-    } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : `Could not disconnect ${provider}.`)
     }
   }
 
@@ -755,13 +848,16 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     eventProvider === 'webhook' ||
     Boolean(
       integrationStatus &&
-      integrationStatus[eventProvider].accounts[0] &&
+      eventAccountId &&
+      integrationStatus[eventProvider].accounts.some(
+        (account) => account.provider_account_id === eventAccountId,
+      ) &&
       integrationStatus.token_storage_configured &&
       integrationStatus.public_url_configured &&
       integrationStatus.webhook_payload_limit_configured &&
-      (eventProvider !== 'slack' || integrationStatus.slack.signing_configured) &&
-      (eventProvider !== 'gmail' ||
-        (integrationStatus.gmail.pubsub_configured && integrationStatus.gmail.pubsub_limits_configured)),
+      (eventProvider !== 'slack' || integrationStatus.slack.events_ready) &&
+      (eventProvider !== 'gmail' || integrationStatus.gmail.events_ready) &&
+      (eventProvider !== 'github' || integrationStatus.github.configured),
     )
 
 
@@ -953,15 +1049,30 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                             <p>Orbit uses this connection only to receive the events you configure.</p>
                           </div>
                         </div>
-                        {integrationStatus?.[eventProvider].accounts[0] ? (
-                          <div className="event-connection-panel connected">
+                        {integrationStatus?.[eventProvider].accounts.length ? (
+                          <div className="event-connection-panel connected event-account-picker">
                             <span className="event-connection-dot" />
-                            <div>
-                              <strong>Connected as {integrationStatus[eventProvider].accounts[0].account_name}</strong>
-                              <p>Your account is ready to use for event triggers.</p>
+                            <div className="event-account-picker-copy">
+                              <strong>Choose a connected account</strong>
+                              <select
+                                aria-label={`Connected ${eventProvider} account`}
+                                value={eventAccountId}
+                                onChange={(e) => setEventAccountId(e.target.value)}
+                              >
+                                {integrationStatus[eventProvider].accounts.map((account) => (
+                                  <option key={account.provider_account_id} value={account.provider_account_id}>
+                                    {account.account_name}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
-                            <button type="button" className="routine-secondary-button" onClick={() => void handleDisconnectIntegration(eventProvider)}>
-                              Disconnect
+                            <button
+                              type="button"
+                              className="routine-secondary-button"
+                              disabled={!integrationStatus?.[eventProvider].configured || !integrationStatus?.token_storage_configured || !integrationStatus?.public_url_configured || creatingRoutine}
+                              onClick={() => void handleConnectIntegration(eventProvider)}
+                            >
+                              Connect another
                             </button>
                           </div>
                         ) : (
@@ -971,7 +1082,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                               <p>
                                 {integrationStatus?.[eventProvider].configured
                                   ? 'Connect in a secure sign-in window, then return here.'
-                                  : 'OAuth credentials for this service need to be configured on the Orbit server.'}
+                                  : 'Orbit’s administrator needs to configure this provider’s OAuth credentials.'}
                               </p>
                             </div>
                             <button
@@ -984,32 +1095,28 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                             </button>
                           </div>
                         )}
-                        {eventProvider === 'slack' && integrationStatus?.slack.accounts[0] && (
+                        {eventProvider !== 'github' && integrationStatus && (
                           <div className="event-provider-help">
-                            <strong>Slack event delivery</strong>
-                            <p>Add this URL as the Request URL in your Slack app’s Event Subscriptions and subscribe to the event types you need.</p>
-                            {integrationStatus.slack.events_url && (
-                              <div className="routine-copy-row">
-                                <code>{integrationStatus.slack.events_url}</code>
-                                <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')}>Copy URL</button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {eventProvider === 'gmail' && integrationStatus?.gmail.accounts[0] && (
-                          <div className="event-provider-help">
-                            <strong>Gmail push delivery</strong>
-                            <p>The Orbit server must have Gmail Pub/Sub configured. Connecting a mailbox alone does not enable incoming events.</p>
+                            <strong>Orbit-managed event delivery</strong>
+                            <p>
+                              {eventProvider === 'slack'
+                                ? integrationStatus.slack.events_ready
+                                  ? 'Ready. Orbit’s Slack Events API endpoint is configured for all connected workspaces.'
+                                  : 'Not ready yet. Orbit’s administrator must finish the one-time Slack app Events API setup. You do not need to configure your own Slack app.'
+                                : integrationStatus.gmail.events_ready
+                                  ? 'Ready. Orbit’s Google Pub/Sub delivery is configured for connected mailboxes.'
+                                  : 'Not ready yet. Orbit’s administrator must configure Google Pub/Sub once for Orbit. You do not need to create a Google Cloud project.'}
+                            </p>
                           </div>
                         )}
                         {integrationStatus && (
                           <div className="event-prerequisite-list">
-                            {!integrationStatus.token_storage_configured && <small>Server setup needed: configure INTEGRATION_TOKEN_ENCRYPTION_KEY.</small>}
-                            {!integrationStatus.public_url_configured && <small>Server setup needed: configure ORBIT_PUBLIC_URL with a public HTTPS address.</small>}
-                            {!integrationStatus.webhook_payload_limit_configured && <small>Server setup needed: configure ORBIT_PROVIDER_WEBHOOK_MAX_BYTES.</small>}
-                            {eventProvider === 'slack' && !integrationStatus.slack.signing_configured && <small>Server setup needed: configure SLACK_SIGNING_SECRET.</small>}
-                            {eventProvider === 'gmail' && !integrationStatus.gmail.pubsub_configured && <small>Server setup needed: configure Gmail Pub/Sub.</small>}
-                            {eventProvider === 'gmail' && !integrationStatus.gmail.pubsub_limits_configured && <small>Server setup needed: configure Gmail processing limits.</small>}
+                            {!integrationStatus.token_storage_configured && <small>Orbit setup needed: secure provider token storage is not configured.</small>}
+                            {!integrationStatus.public_url_configured && <small>Orbit setup needed: public HTTPS callback URL is missing.</small>}
+                            {!integrationStatus.webhook_payload_limit_configured && <small>Orbit setup needed: webhook payload limit is missing.</small>}
+                            {eventProvider === 'github' && !integrationStatus.github.configured && <small>Orbit setup needed: GitHub OAuth credentials are missing.</small>}
+                            {eventProvider === 'slack' && !integrationStatus.slack.events_ready && <small>Slack event delivery is not ready yet; contact your Orbit administrator.</small>}
+                            {eventProvider === 'gmail' && !integrationStatus.gmail.events_ready && <small>Gmail event delivery is not ready yet; contact your Orbit administrator.</small>}
                           </div>
                         )}
                       </div>
@@ -1049,8 +1156,33 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                         <>
                           <div className="routines-form-field">
                             <label htmlFor="github-repository">Repository</label>
-                            <input id="github-repository" value={githubRepository} onChange={(e) => setGithubRepository(e.target.value)} placeholder="owner/repository" required />
-                            <small>Orbit will register the event webhook on this repository.</small>
+                            <select
+                              id="github-repository"
+                              value={githubRepository}
+                              onChange={(e) => setGithubRepository(e.target.value)}
+                              disabled={!eventAccountId || loadingEventResources || !githubRepositories.length}
+                              required
+                            >
+                              <option value="">
+                                {loadingEventResources ? 'Loading repositories…' : 'Choose a repository'}
+                              </option>
+                              {githubRepositories.map((repository) => (
+                                <option
+                                  key={repository.full_name}
+                                  value={repository.full_name}
+                                  disabled={!repository.can_manage_webhooks}
+                                >
+                                  {repository.full_name}{repository.private ? ' · Private' : ''}{repository.can_manage_webhooks ? '' : ' · Admin access required'}
+                                </option>
+                              ))}
+                            </select>
+                            <small>
+                              {loadingEventResources
+                                ? 'Loading repositories from the selected GitHub account.'
+                                : githubRepositories.length
+                                  ? 'Orbit can register a webhook on repositories where this account has admin access.'
+                                  : 'No repositories are available for this account, or the account could not list them.'}
+                            </small>
                           </div>
                           <div className="routines-form-field">
                             <label htmlFor="github-label">Only when the issue has this label (optional)</label>
@@ -1062,8 +1194,27 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                         <>
                           <div className="routines-form-field">
                             <label htmlFor="slack-channel">Channel</label>
-                            <input id="slack-channel" value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="customer-escalations" required />
-                            <small>Enter the channel name without #. The Slack app must be a member.</small>
+                            <select
+                              id="slack-channel"
+                              value={slackChannel}
+                              onChange={(e) => setSlackChannel(e.target.value)}
+                              disabled={!eventAccountId || loadingEventResources || !slackChannels.length}
+                              required
+                            >
+                              <option value="">
+                                {loadingEventResources ? 'Loading channels…' : 'Choose a channel'}
+                              </option>
+                              {slackChannels.map((channel) => (
+                                <option key={channel.id} value={channel.name} disabled={!channel.is_member}>
+                                  #{channel.name}{channel.is_private ? ' · Private' : ''}{channel.is_member ? '' : ' · Invite Orbit first'}
+                                </option>
+                              ))}
+                            </select>
+                            <small>
+                              {loadingEventResources
+                                ? 'Loading channels from the selected Slack workspace.'
+                                : 'Only channels where Orbit has been added can receive event triggers.'}
+                            </small>
                           </div>
                           {eventType === 'reaction_added' ? (
                             <div className="routines-form-field">
