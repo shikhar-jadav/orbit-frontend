@@ -359,10 +359,7 @@ function App() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false)
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false)
   const [activeThreadId, setActiveThreadId] = useState<string | null>(initialRoute.threadId)
-  const [pendingRoutineExecution, setPendingRoutineExecution] = useState<{
-    routineId: string
-    runId: string
-  } | null>(null)
+  const [pendingRoutineExecution, setPendingRoutineExecution] = useState<RoutineExecutionPreview | null>(null)
   const [settingsPage, setSettingsPage> = useState(initialRoute.settings)
   const [settingsSection, setSettingsSection] = useState<SettingsSection>(initialRoute.settingsSection)
   const [marketplacePage, setMarketplacePage] = useState(initialRoute.marketplace)
@@ -1098,10 +1095,7 @@ function App() {
     }
     window.history.pushState({}, '', '/')
     setActiveThreadId(null)
-    setPendingRoutineExecution({
-      routineId: execution.routine.id,
-      runId: execution.run.id,
-    })
+    setPendingRoutineExecution(execution)
     setSettingsPage(false)
     setMarketplacePage(false)
     setMessages(routineExecutionToChatMessages(execution))
@@ -1115,6 +1109,48 @@ function App() {
     setError('')
     setRoutinesModalOpen(false)
   }, [sending])
+
+
+  useEffect(() => {
+    const preview = pendingRoutineExecution
+    if (!preview || activeThreadId || sending) return
+    const status = String(preview.run.status || '').toLowerCase()
+    if (['completed', 'failed', 'cancelled', 'skipped'].includes(status)) return
+
+    let active = true
+    let requestInFlight = false
+    const refreshExecution = async () => {
+      if (!active || requestInFlight || document.visibilityState !== 'visible') return
+      requestInFlight = true
+      try {
+        const data = await getJson<{
+          run: RoutineExecutionPreview['run']
+          messages: RoutineExecutionPreview['messages']
+        }>(
+          '/api/routines/' + encodeURIComponent(preview.routine.id) +
+          '/runs/' + encodeURIComponent(preview.run.id),
+        )
+        if (!active) return
+        const updated: RoutineExecutionPreview = {
+          routine: preview.routine,
+          run: data.run,
+          messages: data.messages || [],
+        }
+        setPendingRoutineExecution(updated)
+        setMessages(routineExecutionToChatMessages(updated))
+      } catch {
+        // A transient refresh failure should not remove the last visible execution.
+      } finally {
+        requestInFlight = false
+      }
+    }
+
+    const timer = window.setInterval(() => void refreshExecution(), 2000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [pendingRoutineExecution, activeThreadId, sending])
 
   function navigateSettings(section?: SettingsSection) {
     if (settingsPage && (!section || section === settingsSection)) {
@@ -1293,7 +1329,7 @@ function App() {
         if (!threadId) {
           if (pendingRoutineExecution) {
             const promotionResponse = await fetch(
-              `/api/routines/${encodeURIComponent(pendingRoutineExecution.routineId)}/runs/${encodeURIComponent(pendingRoutineExecution.runId)}/continue`,
+              `/api/routines/${encodeURIComponent(pendingRoutineExecution.routine.id)}/runs/${encodeURIComponent(pendingRoutineExecution.run.id)}/continue`,
               { method: 'POST', credentials: 'same-origin' },
             )
             if (!promotionResponse.ok) {
