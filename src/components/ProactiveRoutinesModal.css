@@ -3192,3 +3192,59 @@ dialog.routines-modal-dialog::backdrop {
     justify-content: flex-start;
   }
 }
+
+
+/* Chat-driven routine creation tip */
+.routine-chat-creation-tip {
+  margin-top: 20px;
+  padding: 18px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(85, 199, 215, 0.2);
+  border-radius: 12px;
+  max-width: 480px;
+  text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.routine-chat-tip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #55c7d7;
+  margin-bottom: 6px;
+}
+
+.routine-chat-tip-subtitle {
+  font-size: 11px;
+  color: #999;
+  margin: 0 0 12px 0 !important;
+  max-width: 100% !important;
+  text-align: left !important;
+  line-height: 1.5;
+}
+
+.routine-chat-tip-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.routine-chat-example {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: border-color 0.15s ease;
+}
+
+.routine-chat-example:hover {
+  border-color: rgba(85, 199, 215, 0.3);
+}
+
+.routine-chat-example code {
+  font-family: inherit;
+  font-size: 11px;
+  color: #e2e8f0;
+}

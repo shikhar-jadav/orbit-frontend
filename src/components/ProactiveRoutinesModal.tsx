@@ -921,17 +921,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                 {unreadCount > 0 && <span className="routine-unread-count">{unreadCount}</span>}
               </button>
             </nav>
-            <button
-              type="button"
-              className="routine-new-button"
-              onClick={() => {
-                setFormError('')
-                setTab('create')
-              }}
-            >
-              <Icon name="plus" size={15} />
-              New routine
-            </button>
             <button className="routine-close-button" onClick={onClose} aria-label="Close routines">
               <Icon name="close" size={17} />
             </button>
@@ -1452,14 +1441,11 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                   <span className="routine-manager-eyebrow">YOUR AUTOMATIONS</span>
                   <h3>All routines <span>{routines.length}</span></h3>
                 </div>
-                <button type="button" className="routine-sidebar-add" onClick={() => setTab('create')} aria-label="Create routine">
-                  <Icon name="plus" size={16} />
-                </button>
               </div>
               <div className="routine-sidebar-list">
                 {loading && <div className="routine-sidebar-message">Loading routines…</div>}
                 {!loading && routines.length === 0 && (
-                  <div className="routine-sidebar-message">Your routines will appear here.</div>
+                  <div className="routine-sidebar-message">No routines yet. Ask Orbit in chat to create a routine or reminder!</div>
                 )}
                 {routines.map((r) => {
                   const readableSchedule = formatHumanSchedule(r.schedule_display || r.schedule_expression, r.one_shot)
@@ -1502,12 +1488,32 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
               {!selectedRoutine ? (
                 <div className="routine-detail-empty">
                   <div className="routine-empty-icon"><Icon name="clock" size={24} /></div>
-                  <h3>Select a routine</h3>
-                  <p>Choose a routine from the list to view its instructions, trigger, and recent runs.</p>
-                  <button type="button" className="routine-primary-button" onClick={() => setTab('create')}>
-                    <Icon name="plus" size={15} />
-                    Create a routine
-                  </button>
+                  <h3>{routines.length > 0 ? 'Select a routine' : 'No routines configured'}</h3>
+                  <p>
+                    {routines.length > 0
+                      ? 'Choose a routine from the sidebar to inspect its instructions, trigger, and recent run history.'
+                      : 'You do not need to register routines here. Tell Orbit in chat what you want to automate!'}
+                  </p>
+                  <div className="routine-chat-creation-tip">
+                    <div className="routine-chat-tip-header">
+                      <Icon name="sparkles" size={15} />
+                      <span>Create routines directly in chat</span>
+                    </div>
+                    <p className="routine-chat-tip-subtitle">
+                      Simply type what you want in normal chat. Orbit registers event triggers and scheduled tasks automatically:
+                    </p>
+                    <div className="routine-chat-tip-examples">
+                      <div className="routine-chat-example">
+                        <code>"Whenever a new issue comes in owner/repo, summarize it and tell me"</code>
+                      </div>
+                      <div className="routine-chat-example">
+                        <code>"Remind me every weekday at 9:00 AM to review pull requests"</code>
+                      </div>
+                      <div className="routine-chat-example">
+                        <code>"When an alert arrives via webhook, analyze the payload"</code>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <section className="routine-detail">
