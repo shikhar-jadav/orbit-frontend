@@ -83,6 +83,27 @@ type RoutineRun = {
   error?: string | null
 }
 
+type ContinuedRunThread = {
+  thread_id: string
+  title: string
+  created_at: string
+  updated_at: string
+  preview: string
+  message_count: number
+  user_id?: string | null
+}
+
+type RoutineRunMessage = {
+  id: number
+  run_id: string
+  entry_type: 'prompt' | 'trigger' | 'status' | 'tool' | 'assistant' | 'error'
+  status?: string | null
+  title: string
+  content: string
+  details?: Record<string, unknown>
+  created_at: string
+}
+
 type Props = {
   isOpen: boolean
   onClose: () => void
@@ -90,6 +111,7 @@ type Props = {
   onClearUnread: () => void
   soundEnabled: boolean
   onToggleSound: () => void
+  onContinueRun?: (thread: ContinuedRunThread) => void
 }
 
 export const ProactiveRoutinesModal: React.FC<Props> = ({
@@ -99,8 +121,9 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   onClearUnread,
   soundEnabled,
   onToggleSound,
+  onContinueRun,
 }) => {
-  const [tab, setTab] = useState<'routines' | 'create' | 'history' | 'detail'>('routines')
+  const [tab, setTab] = useState<'routines' | 'create' | 'history' | 'detail' | 'run'>('routines')
   const [routines, setRoutines] = useState<Routine[]>([])
   const [notifications, setNotifications] = useState<ProactiveNotification[]>([])
   const [loading, setLoading] = useState(false)
@@ -152,6 +175,11 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const [routineEvents, setRoutineEvents] = useState<RoutineEvent[]>([])
   const [routineRuns, setRoutineRuns] = useState<RoutineRun[]>([])
   const [activityUpdatedAt, setActivityUpdatedAt] = useState<string | null>(null)
+  const [selectedRun, setSelectedRun] = useState<RoutineRun | null>(null)
+  const [runConversation, setRunConversation] = useState<RoutineRunMessage[]>([])
+  const [runConversationLoading, setRunConversationLoading] = useState(false)
+  const [runConversationError, setRunConversationError] = useState('')
+  const [continuingRun, setContinuingRun] = useState(false)
   const integrationPopupRef = React.useRef<Window | null>(null)
 
   const loadRoutines = useCallback(async () => {
@@ -260,6 +288,55 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     }
   }, [])
 
+  const loadRunConversation = useCallback(async (routineId: string, runId: string) => {
+    const response = await fetch(
+      `/api/routines/${encodeURIComponent(routineId)}/runs/${encodeURIComponent(runId)}`,
+    )
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.detail || 'Could not load this run conversation.')
+    }
+    setSelectedRun(data.run as RoutineRun)
+    setRunConversation((data.messages || []) as RoutineRunMessage[])
+    setRunConversationError('')
+  }, [])
+
+  const handleOpenRun = async (run: RoutineRun) => {
+    if (!selectedRoutine) return
+    setSelectedRun(run)
+    setRunConversation([])
+    setRunConversationError('')
+    setRunConversationLoading(true)
+    setTab('run')
+    try {
+      await loadRunConversation(selectedRoutine.id, run.id)
+    } catch (err: unknown) {
+      setRunConversationError(err instanceof Error ? err.message : 'Could not load this run conversation.')
+    } finally {
+      setRunConversationLoading(false)
+    }
+  }
+
+  const handleContinueRun = async () => {
+    if (!selectedRoutine || !selectedRun || !onContinueRun) return
+    setContinuingRun(true)
+    setRunConversationError('')
+    try {
+      const response = await fetch(
+        `/api/routines/${encodeURIComponent(selectedRoutine.id)}/runs/${encodeURIComponent(selectedRun.id)}/continue`,
+        { method: 'POST' },
+      )
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.detail || 'Could not continue this run in chat.')
+      if (!data.thread?.thread_id) throw new Error('Orbit did not return the new chat thread.')
+      onContinueRun(data.thread as ContinuedRunThread)
+    } catch (err: unknown) {
+      setRunConversationError(err instanceof Error ? err.message : 'Could not continue this run in chat.')
+    } finally {
+      setContinuingRun(false)
+    }
+  }
+
   const activeRoutineId = selectedRoutine?.id
   useEffect(() => {
     if (!isOpen || tab !== 'detail' || !activeRoutineId) return
@@ -284,6 +361,28 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       window.clearInterval(timer)
     }
   }, [isOpen, tab, activeRoutineId, loadRoutineActivity])
+
+  useEffect(() => {
+    if (!isOpen || tab !== 'run' || !activeRoutineId || !selectedRun?.id) return
+    let stopped = false
+    let requestInFlight = false
+    const refreshRun = async () => {
+      if (stopped || requestInFlight || document.visibilityState !== 'visible') return
+      requestInFlight = true
+      try {
+        await loadRunConversation(activeRoutineId, selectedRun.id)
+      } catch {
+        // Keep the last successfully loaded transcript visible.
+      } finally {
+        requestInFlight = false
+      }
+    }
+    const timer = window.setInterval(() => void refreshRun(), 2000)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+    }
+  }, [isOpen, tab, activeRoutineId, selectedRun?.id, loadRunConversation])
 
   const handleTogglePause = async (routine: Routine) => {
     try {
@@ -802,8 +901,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
             <nav className="routine-manager-tabs" aria-label="Routine views">
               <button
                 type="button"
-                className={tab === 'routines' || tab === 'detail' ? 'active' : ''}
-                aria-current={tab === 'routines' || tab === 'detail' ? 'page' : undefined}
+                className={tab === 'routines' || tab === 'detail' || tab === 'run' ? 'active' : ''}
+                aria-current={tab === 'routines' || tab === 'detail' || tab === 'run' ? 'page' : undefined}
                 onClick={() => setTab('routines')}
               >
                 Routines
@@ -839,7 +938,105 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
           </div>
         </header>
 
-        {tab === 'create' ? (
+        {tab === 'run' ? (
+          <main className="routine-run-conversation-page">
+            <div className="routine-page-heading">
+              <button type="button" className="routine-back-link" onClick={() => setTab('detail')}>
+                <Icon name="chevronLeft" size={15} />
+                Back to {selectedRoutine?.name || 'routine'}
+              </button>
+              <span className="routine-manager-eyebrow">AUTOMATION EXECUTION</span>
+              <div className="routine-run-page-title-row">
+                <div>
+                  <h3>Run conversation</h3>
+                  <p>
+                    {selectedRoutine?.name || 'Routine'} · {selectedRun?.trigger_source?.replaceAll('_', ' ') || 'Execution'}
+                    {selectedRun?.created_at ? ` · ${new Date(selectedRun.created_at).toLocaleString()}` : ''}
+                  </p>
+                </div>
+                {selectedRun && (
+                  <span className={'routine-run-status ' + selectedRun.status.toLowerCase()}>
+                    {selectedRun.status}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="routine-run-conversation-toolbar">
+              <span><i /> Updating while this run is open</span>
+              {selectedRun && typeof selectedRun.duration_ms === 'number' && selectedRun.duration_ms > 0 && (
+                <small>{selectedRun.duration_ms.toLocaleString()} ms</small>
+              )}
+            </div>
+
+            {runConversationError && (
+              <p className="routine-action-status" role="alert">{runConversationError}</p>
+            )}
+
+            <section className="routine-run-transcript" aria-live="polite">
+              {runConversationLoading && runConversation.length === 0 && (
+                <p className="routine-empty-inline">Loading execution conversation…</p>
+              )}
+              {!runConversationLoading && runConversation.length === 0 && (
+                <article className="routine-run-legacy-result">
+                  <span className="routine-manager-eyebrow">SAVED RESULT</span>
+                  <h4>This run predates detailed conversations</h4>
+                  <p>{selectedRun?.result_summary || selectedRun?.error || 'No transcript was saved for this older run.'}</p>
+                </article>
+              )}
+              {runConversation.map((entry) => (
+                <article
+                  className={'routine-run-message ' + entry.entry_type}
+                  key={entry.id}
+                >
+                  <div className="routine-run-message-heading">
+                    <div>
+                      <span className="routine-run-message-kind">
+                        {entry.entry_type === 'prompt' ? 'INSTRUCTION' :
+                          entry.entry_type === 'trigger' ? 'TRIGGER EVENT' :
+                            entry.entry_type === 'tool' ? 'TOOL ACTIVITY' :
+                              entry.entry_type === 'assistant' ? 'ORBIT' :
+                                entry.entry_type === 'error' ? 'ERROR' : 'ACTIVITY'}
+                      </span>
+                      <strong>{entry.title}</strong>
+                    </div>
+                    <div className="routine-run-message-meta">
+                      {entry.status && <span className={'routine-run-status ' + entry.status.toLowerCase()}>{entry.status}</span>}
+                      <time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
+                    </div>
+                  </div>
+                  {entry.content && <p className="routine-run-message-content">{entry.content}</p>}
+                  {entry.details && Object.keys(entry.details).length > 0 && (
+                    <details className="routine-run-message-details">
+                      <summary>{entry.entry_type === 'trigger' ? 'Inspect event data' : entry.entry_type === 'tool' ? 'Inspect tool details' : 'Inspect details'}</summary>
+                      <pre>{JSON.stringify(entry.details, null, 2)}</pre>
+                    </details>
+                  )}
+                </article>
+              ))}
+              {selectedRun?.status === 'running' && (
+                <div className="routine-run-live-state"><i /> Orbit is still working on this run…</div>
+              )}
+            </section>
+
+            <div className="routine-run-conversation-footer">
+              <p>This execution is isolated from your normal chat history. Continue in chat to ask follow-up questions with this run's context.</p>
+              <div>
+                <button type="button" className="routine-secondary-button" onClick={() => setTab('detail')}>
+                  Back to routine
+                </button>
+                <button
+                  type="button"
+                  className="routine-primary-button"
+                  disabled={!selectedRun || !onContinueRun || continuingRun}
+                  onClick={() => void handleContinueRun()}
+                >
+                  {continuingRun ? 'Creating chat…' : 'Continue in chat'}
+                </button>
+              </div>
+            </div>
+          </main>
+        ) : tab === 'create' ? (
           <main className="routine-create-page">
             <div className="routine-page-heading">
               <button type="button" className="routine-back-link" onClick={() => setTab('routines')}>
@@ -1620,6 +1817,13 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                             {run.result_summary && <p>{run.result_summary}</p>}
                             {run.error && <p className="routine-run-error" role="alert">{run.error}</p>}
                             {typeof run.duration_ms === 'number' && <small>{run.duration_ms.toLocaleString()} ms</small>}
+                            <button
+                              type="button"
+                              className="routine-open-run-button"
+                              onClick={() => void handleOpenRun(run)}
+                            >
+                              Open execution <Icon name="chevronRight" size={12} />
+                            </button>
                           </article>
                         ))}
                       </div>
