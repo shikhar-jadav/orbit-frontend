@@ -130,6 +130,18 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     }
   }
 
+  const switchAccount = async (provider: string, accountId?: string) => {
+    try {
+      const url = accountId
+        ? `/api/integrations/${provider}?account_id=${encodeURIComponent(accountId)}`
+        : `/api/integrations/${provider}`
+      await fetch(url, { method: 'DELETE', credentials: 'same-origin' })
+    } catch {
+      // Proceed to prompt for new account
+    }
+    await startOAuth(provider)
+  }
+
   useEffect(() => {
     let active = true
     ;(async () => {
@@ -586,6 +598,17 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                         >
                           <Icon name="settings" size={13} />
                           <span>Configure</span>
+                        </button>
+                      )}
+                      {connector.connected_account?.email && connector.oauthProvider && (
+                        <button
+                          type="button"
+                          className="card-action-btn btn-secondary"
+                          onClick={() => void switchAccount(connector.oauthProvider!, connector.connected_account?.email)}
+                          title="Switch to a different Google account"
+                        >
+                          <Icon name="refresh" size={13} />
+                          <span>Switch</span>
                         </button>
                       )}
                       {connector.is_enabled && !connector.is_authenticated && connector.oauthProvider ? (
