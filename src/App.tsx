@@ -81,30 +81,41 @@ class UnauthorizedError extends Error {
   }
 }
 
-function apiError(message: string, response: Response): never | Promise<never> {
+async function apiError(message: string, response: Response): Promise<never> {
   if (response.status === 401) {
     onUnauthorizedCallback?.()
   }
-  return response
-    .json()
-    .then((body: { detail?: string }) => {
-      const msg = body.detail || message
-      if (response.status === 401) throw new UnauthorizedError(msg)
-      throw new Error(msg)
-    })
-    .catch((error: unknown) => {
-      if (error instanceof UnauthorizedError) throw error
-      if (error instanceof Error && error.message !== 'Unexpected end of JSON input') {
-        throw error
+
+  let detail: string | undefined
+  const ct = response.headers.get('content-type') || ''
+  if (ct.includes('application/json')) {
+    try {
+      const body = (await response.json()) as { detail?: string }
+      if (typeof body?.detail === 'string' && body.detail.trim()) {
+        detail = body.detail.trim()
       }
-      if (response.status === 401) throw new UnauthorizedError(message)
-      throw new Error(message)
-    })
+    } catch {
+      // Ignore JSON parse failure
+    }
+  }
+
+  const fallback =
+    response.status >= 502 && response.status <= 504
+      ? 'Backend service is waking up or temporarily unavailable. Please retry in a few seconds.'
+      : message || `Request failed (${response.status}).`
+
+  const msg = detail || fallback
+  if (response.status === 401) throw new UnauthorizedError(msg)
+  throw new Error(msg)
 }
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url)
-  if (!response.ok) return apiError(`Request failed (${response.status}).`, response)
+  if (!response.ok) return await apiError(`Request failed (${response.status}).`, response)
+  const ct = response.headers.get('content-type') || ''
+  if (!ct.includes('application/json')) {
+    throw new Error('Backend service returned an unexpected HTML response. The server may be sleeping or starting up.')
+  }
   return (await response.json()) as T
 }
 
@@ -114,9 +125,14 @@ async function putJson<T>(url: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!response.ok) return apiError(`Request failed (${response.status}).`, response)
+  if (!response.ok) return await apiError(`Request failed (${response.status}).`, response)
+  const ct = response.headers.get('content-type') || ''
+  if (!ct.includes('application/json')) {
+    throw new Error('Backend service returned an unexpected HTML response. The server may be sleeping or starting up.')
+  }
   return (await response.json()) as T
 }
+
 
 function readAuthViewFromPath(path: string): AuthViewMode | undefined {
   if (path === '/signup') return 'signup'
@@ -1712,9 +1728,11 @@ function App() {
           if (!trimmed.startsWith('data:')) continue
           const jsonText = trimmed.slice(5).trim()
           if (!jsonText) continue
-          const eventData = JSON.parse(jsonText) as {
-            type: string
-            data?: Record<string, unknown>
+          let eventData: { type: string; data?: Record<string, unknown> }
+          try {
+            eventData = JSON.parse(jsonText)
+          } catch {
+            continue
           }
           const data = eventData.data || {}
           if (eventData.type === 'token') {

@@ -66,7 +66,7 @@ export function AddCustomConnectorModal({
           headers: headers.filter((h) => h.key.trim() && h.value),
         }),
       })
-      const data = (await res.json()) as McpProbeResult & { detail?: string }
+      const data = (await res.json().catch(() => ({}))) as McpProbeResult & { detail?: string }
       if (!res.ok) {
         throw new Error(data.detail || 'Could not validate MCP server URL.')
       }
@@ -130,7 +130,7 @@ export function AddCustomConnectorModal({
             }),
           },
         )
-        const data = (await res.json()) as PersonalConnector & { detail?: string }
+        const data = (await res.json().catch(() => ({}))) as PersonalConnector & { detail?: string }
         if (!res.ok) throw new Error(data.detail || 'Could not update connector.')
 
         const connectionChanged =
@@ -185,7 +185,7 @@ export function AddCustomConnectorModal({
           last_status_code: probe?.status_code ?? null,
         }),
       })
-      const data = (await res.json()) as PersonalConnector & { detail?: string }
+      const data = (await res.json().catch(() => ({}))) as PersonalConnector & { detail?: string }
       if (!res.ok) throw new Error(data.detail || 'Could not add custom connector.')
       onSaved(data, false)
       onClose()
@@ -933,7 +933,7 @@ export function ConnectorDetailView({
         `/settings/personal-connectors/${encodeURIComponent(connector.id)}/connect`,
         { method: 'POST' },
       )
-      const data = (await res.json()) as PersonalConnector & { detail?: string }
+      const data = (await res.json().catch(() => ({}))) as PersonalConnector & { detail?: string }
       if (!res.ok) throw new Error(data.detail || 'Could not connect to MCP server.')
       setStartedConnection(false)
       onUpdated(data)
@@ -959,7 +959,7 @@ export function ConnectorDetailView({
           body: JSON.stringify({ token: manualToken.trim() }),
         },
       )
-      const data = (await res.json()) as PersonalConnector & { detail?: string }
+      const data = (await res.json().catch(() => ({}))) as PersonalConnector & { detail?: string }
       if (!res.ok) throw new Error(data.detail || 'Could not authenticate with this token.')
       setStartedConnection(false)
       onUpdated(data)
@@ -981,7 +981,7 @@ export function ConnectorDetailView({
         `/settings/personal-connectors/${encodeURIComponent(connector.id)}/disconnect`,
         { method: 'POST' },
       )
-      const data = (await res.json()) as PersonalConnector & { detail?: string }
+      const data = (await res.json().catch(() => ({}))) as PersonalConnector & { detail?: string }
       if (!res.ok) throw new Error(data.detail || 'Could not disconnect.')
       onUpdated(data)
       onNotify(`Disconnected ${connector.name}.`)
@@ -1018,7 +1018,7 @@ export function ConnectorDetailView({
           body: JSON.stringify({ tool_permissions: patch }),
         },
       )
-      const data = (await res.json()) as PersonalConnector & { detail?: string }
+      const data = (await res.json().catch(() => ({}))) as PersonalConnector & { detail?: string }
       if (!res.ok) throw new Error(data.detail || 'Failed to update permissions.')
       onUpdated(data)
     } catch (err) {

@@ -252,8 +252,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         setSelectedRoutine(updated)
         void loadRoutines()
       } else {
-        const data = await res.json()
-        setRoutineActionStatus(data.detail || 'Could not update routine.')
+        const data = (await res.json().catch(() => ({}))) as { detail?: string }
+        setRoutineActionStatus(data.detail || (res.status >= 502 && res.status <= 504 ? 'Service waking up. Please retry.' : 'Could not update routine.'))
       }
     } catch (err: unknown) {
       setRoutineActionStatus(err instanceof Error ? err.message : 'Could not update routine.')
@@ -287,8 +287,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
           setTab('routines')
         }
       } else {
-        const data = await res.json()
-        setRoutineActionStatus(data.detail || 'Could not delete routine.')
+        const data = (await res.json().catch(() => ({}))) as { detail?: string }
+        setRoutineActionStatus(data.detail || (res.status >= 502 && res.status <= 504 ? 'Service waking up. Please retry.' : 'Could not delete routine.'))
       }
     } catch (err: unknown) {
       setRoutineActionStatus(err instanceof Error ? err.message : 'Could not delete routine.')
