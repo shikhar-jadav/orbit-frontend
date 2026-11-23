@@ -659,7 +659,6 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
               ? 'Routine created. New matching emails will start runs.'
               : 'Routine created. Copy the webhook URL and key below, then send a POST when your event occurs.',
       )
-      setRoutineEvents([])
       setRoutineRuns([])
       setTab('detail')
     } catch (err: unknown) {
