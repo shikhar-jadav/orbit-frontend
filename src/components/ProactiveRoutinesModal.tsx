@@ -698,882 +698,823 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       ariaLabelledBy="routines-modal-title"
       className="routines-modal-dialog"
     >
-        <div className="routines-modal-header">
-          <div className="routines-header-title">
-            <Icon name="clock" size={20} />
-            <h2 id="routines-modal-title">{tab === 'detail' ? 'Routine' : 'Routines & Reminders'}</h2>
+      <div className="routine-manager">
+        <header className="routine-manager-header">
+          <div className="routine-manager-heading">
+            <span className="routine-manager-eyebrow">ORBIT AUTOMATIONS</span>
+            <h2 id="routines-modal-title">Routines</h2>
+            <p>Give Orbit work to do on a schedule or when something happens.</p>
           </div>
-          <button
-            className="icon-btn"
-            onClick={onClose}
-            aria-label="Close dialog"
-          >
-            <Icon name="close" size={16} />
-          </button>
-        </div>
-
-        {tab !== 'detail' ? <div className="routines-tabs">
-          <button
-            className={`routines-tab-btn ${tab === 'routines' ? 'active' : ''}`}
-            onClick={() => setTab('routines')}
-          >
-            Routines ({routines.length})
-          </button>
-          <button
-            className={`routines-tab-btn ${tab === 'create' ? 'active' : ''}`}
-            onClick={() => setTab('create')}
-          >
-            + Create routine
-          </button>
-          <button
-            className={`routines-tab-btn ${tab === 'history' ? 'active' : ''}`}
-            onClick={() => {
-              setTab('history')
-              loadNotifications()
-            }}
-          >
-            History & Alerts {unreadCount > 0 && `(${unreadCount})`}
-          </button>
-        </div> : (
-          <div className="routine-detail-nav">
-            <button className="routine-action-btn" onClick={() => setTab('routines')}>
-              Back to routines
+          <div className="routine-manager-header-actions">
+            <nav className="routine-manager-tabs" aria-label="Routine views">
+              <button
+                type="button"
+                className={tab === 'routines' || tab === 'detail' ? 'active' : ''}
+                aria-current={tab === 'routines' || tab === 'detail' ? 'page' : undefined}
+                onClick={() => setTab('routines')}
+              >
+                Routines
+                <span>{routines.length}</span>
+              </button>
+              <button
+                type="button"
+                className={tab === 'history' ? 'active' : ''}
+                aria-current={tab === 'history' ? 'page' : undefined}
+                onClick={() => {
+                  setTab('history')
+                  void loadNotifications()
+                }}
+              >
+                Activity
+                {unreadCount > 0 && <span className="routine-unread-count">{unreadCount}</span>}
+              </button>
+            </nav>
+            <button
+              type="button"
+              className="routine-new-button"
+              onClick={() => {
+                setFormError('')
+                setTab('create')
+              }}
+            >
+              <Icon name="plus" size={15} />
+              New routine
+            </button>
+            <button className="routine-close-button" onClick={onClose} aria-label="Close routines">
+              <Icon name="close" size={17} />
             </button>
           </div>
-        )}
+        </header>
 
-        <div className="routines-modal-body">
-          {tab === 'routines' && (
-            <div>
-              {loading && <p className="empty-routines">Loading schedules...</p>}
-              {!loading && routines.length === 0 && (
-                <div className="empty-routines">
-                  <p>No routines yet. Start with a schedule or an incoming event.</p>
-                  <button
-                    className="routines-submit-btn"
-                    onClick={() => setTab('create')}
-                    style={{ marginTop: '1rem' }}
-                  >
-                    + Create your first routine
-                  </button>
-                </div>
-              )}
-              {routines.map((r) => {
-                const readableSchedule = formatHumanSchedule(
-                  r.schedule_display || r.schedule_expression,
-                  r.one_shot,
-                )
-                return (
-                  <div className="routine-card" key={r.id}>
-                    <div className="routine-card-header">
-                      <span className="routine-name">{r.name}</span>
-                      <div className="routine-badge-group">
-                        <span
-                          className={`routine-badge ${
-                            r.one_shot ? 'timer' : ''
-                          } ${!r.enabled ? 'paused' : ''}`}
-                        >
-                          {r.trigger_type === 'event'
-                            ? 'Event trigger'
-                            : r.one_shot ? '⏰ One-Time' : '⚡ Recurring'}
-                        </span>
-                        {!r.enabled && (
-                          <span className="routine-badge paused">Paused</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="routine-prompt">{r.action_prompt}</div>
-
-                    {r.trigger_type === 'event' && (
-                      <div className="routine-meta">
-                        <span>
-                          {r.trigger_definition?.when || `When ${r.trigger_definition?.event_type || r.event_type || 'an event'} arrives`}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="routine-meta">
-                      <span>
-                        {r.trigger_type === 'event'
-                          ? `⚡ ${(r.trigger_definition?.source || r.event_source || 'Event')}`
-                          : `📅 ${readableSchedule || r.schedule_expression}`}
-                      </span>
-                      {r.next_run_at && (
-                        <span>
-                          ⏳ Next: {new Date(r.next_run_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="routine-actions">
-                      {r.trigger_type !== 'event' && (
-                        <button
-                          className="routine-action-btn"
-                          onClick={() => handleRunNow(r.id)}
-                          title="Run immediately"
-                        >
-                          <Icon name="check" size={12} />
-                          <span>Run Now</span>
-                        </button>
-                      )}
-                      <button
-                        className="routine-action-btn"
-                        onClick={() => void handleOpenRoutine(r.id)}
-                      >
-                        Open routine
-                      </button>
-                      <button
-                        className="routine-action-btn"
-                        onClick={() => handleTogglePause(r)}
-                      >
-                        <span>{r.enabled ? 'Pause' : 'Resume'}</span>
-                      </button>
-                      {r.one_shot && r.enabled && (
-                        <button
-                          className="routine-action-btn"
-                          onClick={() => handleSnooze(r.id, 10)}
-                          title="Snooze 10 minutes"
-                        >
-                          <Icon name="clock" size={12} />
-                          <span>Snooze 10m</span>
-                        </button>
-                      )}
-                      <button
-                        className="routine-action-btn delete"
-                        onClick={() => handleDelete(r.id)}
-                      >
-                        <Icon name="trash" size={12} />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
+        {tab === 'create' ? (
+          <main className="routine-create-page">
+            <div className="routine-page-heading">
+              <button type="button" className="routine-back-link" onClick={() => setTab('routines')}>
+                <Icon name="chevronLeft" size={15} />
+                Back to routines
+              </button>
+              <span className="routine-manager-eyebrow">NEW AUTOMATION</span>
+              <h3>Create a routine</h3>
+              <p>Choose what starts the routine, then tell Orbit what to do.</p>
             </div>
-          )}
 
-          {tab === 'detail' && selectedRoutine && (
-            <section className="routine-detail">
-              <div className="routine-detail-avatar" aria-hidden="true">
-                {selectedRoutine.name.trim().charAt(0).toUpperCase() || 'R'}
-              </div>
-              <h3>{selectedRoutine.name}</h3>
-
-              <div className="routine-detail-field">
-                <span className="routine-detail-label">Instruction</span>
-                {editingRoutine ? (
-                  <textarea
-                    rows={4}
-                    value={editInstruction}
-                    onChange={(event) => setEditInstruction(event.target.value)}
-                  />
-                ) : (
-                  <p>{selectedRoutine.action_prompt}</p>
-                )}
-              </div>
-
-              <div className="routine-detail-field">
-                <span className="routine-detail-label">When to run</span>
-                {editingRoutine && selectedRoutine.trigger_type === 'event' ? (
-                  <div className="routine-edit-trigger">
-                    <input
-                      aria-label="Event type"
-                      value={editEventType}
-                      onChange={(event) => setEditEventType(event.target.value)}
-                      placeholder="issues.opened"
-                    />
-                    <textarea
-                      aria-label="When to run"
-                      rows={2}
-                      value={editWhen}
-                      onChange={(event) => setEditWhen(event.target.value)}
-                      placeholder="When a new issue is opened with the bug label"
-                    />
-                    <div className="routine-edit-filter">
-                      <input
-                        aria-label="Condition field"
-                        value={editFilterField}
-                        onChange={(event) => setEditFilterField(event.target.value)}
-                        placeholder="payload.labels"
-                      />
-                      <select
-                        aria-label="Condition operator"
-                        value={editFilterOperator}
-                        onChange={(event) =>
-                          setEditFilterOperator(event.target.value as 'equals' | 'contains')
-                        }
-                      >
-                        <option value="equals">equals</option>
-                        <option value="contains">contains</option>
-                      </select>
-                      <input
-                        aria-label="Condition value"
-                        value={editFilterValue}
-                        onChange={(event) => setEditFilterValue(event.target.value)}
-                        placeholder="bug"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <p>
-                    {selectedRoutine.trigger_type === 'event'
-                      ? selectedRoutine.trigger_definition?.when ||
-                        `When ${selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'an event'} arrives`
-                      : selectedRoutine.schedule_display ||
-                        selectedRoutine.schedule_expression ||
-                        'Manual run'}
-                  </p>
-                )}
-              </div>
-
-              {selectedRoutine.trigger_type === 'event' &&
-                (selectedRoutine.trigger_definition?.source ||
-                  selectedRoutine.event_source ||
-                  'webhook') === 'webhook' && (
-                <div className="routine-webhook">
-                  <h4>Webhook setup</h4>
-                  <p>
-                    Send an HTTP POST to this URL when your event occurs. Add the key as a Bearer
-                    Authorization header. Orbit accepts the event and queues the routine; the run
-                    result appears in Orbit's history.
-                  </p>
-                  <div className="routine-copy-row">
-                    <code>{webhookUrl}</code>
-                    <button
-                      type="button"
-                      className="routine-action-btn"
-                      onClick={() => void handleCopyValue(webhookUrl, 'Webhook URL')}
-                    >
-                      Copy URL
-                    </button>
-                  </div>
-                  {selectedRoutine.webhook_secret && (
-                    <>
-                      <div className="routine-copy-row">
-                        <code>Authorization: Bearer {selectedRoutine.webhook_secret}</code>
-                        <button
-                          type="button"
-                          className="routine-action-btn"
-                          onClick={() =>
-                            void handleCopyValue(
-                              `Authorization: Bearer ${selectedRoutine.webhook_secret || ''}`,
-                              'Authorization header',
-                            )
-                          }
-                        >
-                          Copy header
-                        </button>
-                      </div>
-                      <small>Keep this key private. Store it on the server that sends the webhook, not in browser code.</small>
-                    </>
-                  )}
-                  <div className="event-webhook-example">
-                    <span>Example JSON body</span>
-                    <pre>{JSON.stringify({
-                      event_type: selectedRoutine.event_type || 'webhook.received',
-                      event_id: 'your-event-id',
-                      data: { status: 'paid' },
-                    }, null, 2)}</pre>
-                    <button
-                      type="button"
-                      className="routine-action-btn"
-                      onClick={() => void handleCopyValue(
-                        JSON.stringify({
-                          event_type: selectedRoutine.event_type || 'webhook.received',
-                          event_id: 'your-event-id',
-                          data: { status: 'paid' },
-                        }, null, 2),
-                        'Example JSON body',
-                      )}
-                    >
-                      Copy example
-                    </button>
-                  </div>
-                  <small>Only new events with the configured event name and matching conditions enter the execution queue.</small>
+            <div className="routine-create-layout">
+              <aside className="routine-create-intro">
+                <div className="routine-create-icon"><Icon name="zap" size={22} /></div>
+                <h4>Let Orbit handle the repeat work</h4>
+                <p>Routines run in the background. You can inspect each run, pause it, or change its instructions at any time.</p>
+                <div className="routine-create-tip">
+                  <strong>Two ways to start</strong>
+                  <span><b>Schedule</b> — run at a time or interval you describe.</span>
+                  <span><b>Event trigger</b> — start when GitHub, Slack, Gmail, or a webhook sends a matching event.</span>
                 </div>
-              )}
+              </aside>
 
-              {selectedRoutine.trigger_type === 'event' &&
-                (selectedRoutine.trigger_definition?.source ||
-                  selectedRoutine.event_source) === 'github' && (
-                  <div className="routine-webhook">
-                    <h4>GitHub connection</h4>
-                    <p>
-                      Orbit installed a webhook for{' '}
-                      <strong>{selectedRoutine.trigger_definition?.repository || 'the selected repository'}</strong>.
-                      Only new events matching this trigger are queued.
-                    </p>
-                    <small>
-                      GitHub delivers signed events directly to Orbit. Disconnect GitHub only after
-                      pausing or deleting routines that use this account.
-                    </small>
-                  </div>
-                )}
-
-              {selectedRoutine.trigger_type === 'event' &&
-                (selectedRoutine.trigger_definition?.source ||
-                  selectedRoutine.event_source) === 'slack' && (
-                  <div className="routine-webhook">
-                    <h4>Slack connection</h4>
-                    <p>
-                      This routine listens for <strong>{selectedRoutine.trigger_definition?.when}</strong>.
-                      Only new messages or reactions in the selected channel are checked.
-                    </p>
-                    {integrationStatus?.slack.events_url && (
-                      <div className="routine-copy-row">
-                        <code>{integrationStatus.slack.events_url}</code>
-                        <button
-                          type="button"
-                          className="routine-action-btn"
-                          onClick={() =>
-                            void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')
-                          }
-                        >
-                          Copy event URL
-                        </button>
-                      </div>
-                    )}
-                    <small>
-                      Configure this URL in your Slack app’s Event Subscriptions and subscribe to{' '}
-                      <code>app_mention</code>, <code>message.channels</code>, and{' '}
-                      <code>reaction_added</code>.
-                    </small>
-                  </div>
-                )}
-
-              {selectedRoutine.trigger_type === 'event' &&
-                (selectedRoutine.trigger_definition?.source ||
-                  selectedRoutine.event_source) === 'gmail' && (
-                  <div className="routine-webhook">
-                    <h4>Gmail connection</h4>
-                    <p>
-                      This routine watches <strong>{selectedRoutine.trigger_definition?.email_address}</strong>
-                      {' '}for new incoming email. Only new messages are checked; existing mail is not replayed.
-                    </p>
-                    <small>
-                      Orbit renews the Gmail watch automatically. Disconnecting Gmail stops its watch and
-                      pauses routines that use the account.
-                    </small>
-                  </div>
-                )}
-
-              <section className="routine-run-history" aria-label="Routine run history">
-                <div className="routine-run-history-header">
-                  <h4>Run history</h4>
+              <section className="routine-create-form-panel">
+                <div className="routine-create-mode" role="tablist" aria-label="Routine trigger type">
                   <button
                     type="button"
-                    className="routine-action-btn"
-                    onClick={() => void handleOpenRoutine(selectedRoutine.id)}
+                    role="tab"
+                    aria-selected={createMode === 'schedule'}
+                    className={createMode === 'schedule' ? 'active' : ''}
+                    onClick={() => {
+                      setCreateMode('schedule')
+                      setFormError('')
+                    }}
                   >
-                    Refresh
+                    <Icon name="clock" size={15} />
+                    Schedule
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={createMode === 'event'}
+                    className={createMode === 'event' ? 'active' : ''}
+                    onClick={() => {
+                      setCreateMode('event')
+                      setFormError('')
+                    }}
+                  >
+                    <Icon name="zap" size={15} />
+                    Event trigger
                   </button>
                 </div>
-                {routineRuns.length === 0 ? (
-                  <p>No runs yet. Use Test or wait for the next matching event.</p>
-                ) : (
-                  routineRuns.map((run) => (
-                    <article className="routine-run-item" key={run.id}>
-                      <div className="routine-run-item-header">
-                        <strong>{run.trigger_source.replaceAll('_', ' ')}</strong>
-                        <span className={'routine-run-status ' + run.status.toLowerCase()}>
-                          {run.status}
-                        </span>
+
+                {formError && <div className="routine-form-error" role="alert">{formError}</div>}
+
+                {createMode === 'schedule' ? (
+                  <form className="routine-create-form" onSubmit={handleCreateSubmit}>
+                    <div className="routine-form-section-heading">
+                      <span>01</span>
+                      <div>
+                        <h4>What should Orbit do?</h4>
+                        <p>Describe the task and when it should happen in one sentence.</p>
                       </div>
-                      <time dateTime={run.created_at}>
-                        {new Date(run.created_at).toLocaleString()}
-                      </time>
-                      {run.result_summary && <p>{run.result_summary}</p>}
-                      {run.error && <p className="routine-run-error" role="alert">{run.error}</p>}
-                      {typeof run.duration_ms === 'number' && (
-                        <small>{run.duration_ms.toLocaleString()} ms</small>
-                      )}
-                    </article>
-                  ))
-                )}
-              </section>
-
-              {selectedRoutine.trigger_type === 'event' && (
-                <section className="routine-event-history" aria-label="Recent matched events">
-                  <h4>Recent matches</h4>
-                  {routineEvents.length === 0 ? (
-                    <p>No matching events yet. Wait for a matching provider event, or send a test webhook if this routine uses a custom webhook.</p>
-                  ) : (
-                    routineEvents.map((event) => (
-                      <details key={event.id}>
-                        <summary>
-                          {event.event_type} · {event.routine_status}
-                        </summary>
-                        <p>
-                          Received {new Date(event.received_at).toLocaleString()} from {event.source}
-                        </p>
-                        {event.routine_error && <p role="alert">{event.routine_error}</p>}
-                        <pre>{JSON.stringify(event.payload, null, 2)}</pre>
-                      </details>
-                    ))
-                  )}
-                </section>
-              )}
-
-              {routineActionStatus && (
-                <p className="routine-action-status" role="status">{routineActionStatus}</p>
-              )}
-
-              <div className="routine-detail-actions">
-                {editingRoutine ? (
-                  <>
-                    <button className="routine-action-btn" onClick={() => void handleSaveRoutine()}>
-                      Save
-                    </button>
-                    <button className="routine-action-btn" onClick={() => setEditingRoutine(false)}>
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      className="routine-action-btn"
-                      onClick={() => void handleTogglePause(selectedRoutine)}
-                    >
-                      {selectedRoutine.enabled ? 'Pause' : 'Resume'}
-                    </button>
-                    <button
-                      className="routine-action-btn routine-test-btn"
-                      disabled={testingRoutine}
-                      onClick={() => void handleRunNow(selectedRoutine.id)}
-                    >
-                      {testingRoutine
-                        ? 'Running…'
-                        : selectedRoutine.trigger_type === 'event'
-                          ? 'Run latest event'
-                          : 'Test'}
-                    </button>
-                    <button
-                      className="routine-action-btn"
-                      onClick={() => setEditingRoutine(true)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="routine-action-btn delete"
-                      onClick={() => void handleDelete(selectedRoutine.id)}
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
-              </div>
-              <p className="routine-test-note">
-                A test does real work. Tool calls that need approval are declined in the background;
-                use chat for approval-required actions.
-              </p>
-            </section>
-          )}
-
-          {tab === 'create' && (
-            <div className="routine-create">
-              <div className="routine-create-mode" role="tablist" aria-label="Routine type">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={createMode === 'schedule'}
-                  className={createMode === 'schedule' ? 'active' : ''}
-                  onClick={() => setCreateMode('schedule')}
-                >
-                  Schedule
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={createMode === 'event'}
-                  className={createMode === 'event' ? 'active' : ''}
-                  onClick={() => setCreateMode('event')}
-                >
-                  Event
-                </button>
-              </div>
-              {formError && <div className="error-toast" role="alert">{formError}</div>}
-              {createMode === 'schedule' ? (
-                <form className="routines-form" onSubmit={handleCreateSubmit}>
-                  <div className="routines-form-field">
-                    <label htmlFor="routine-request">What would you like to schedule?</label>
+                    </div>
+                    <label htmlFor="routine-request">Instruction</label>
                     <textarea
                       id="routine-request"
-                      rows={4}
+                      rows={6}
                       maxLength={1000}
-                      placeholder="For example: Remind me to drink water every 2 hours on weekdays at 9 AM."
+                      placeholder="Every weekday at 9 AM, check the latest GitHub issues in my repository and send me a concise summary of anything urgent."
                       value={routineRequest}
                       onChange={(e) => setRoutineRequest(e.target.value)}
                       disabled={creatingRoutine}
                       required
                     />
-                    <p className="schedule-help-text">
-                      Say what to do and when. One-time dates, repeating intervals, weekdays, and monthly schedules are supported.
-                    </p>
-                  </div>
-                  <button type="submit" className="routines-submit-btn" disabled={creatingRoutine}>
-                    {creatingRoutine ? 'Creating schedule...' : 'Create schedule'}
-                  </button>
-                </form>
-              ) : (
-                <form className="routines-form event-routine-form" onSubmit={(event) => void handleCreateEvent(event)}>
-                  <section className="event-setup-section">
-                    <div className="event-step-heading">
-                      <span className="event-step-number">1</span>
-                      <div>
-                        <h3>Choose the service</h3>
-                        <p>Pick the app or system that should wake Orbit. This event connection is separate from installing a regular connector for chat tools.</p>
-                      </div>
+                    <div className="routine-field-hint">
+                      Example: “Every Monday at 9 AM, review new leads and prepare a follow-up list.”
                     </div>
-                    <div className="event-provider-grid">
-                      {([
-                        ['github', 'GitHub', 'Issues, pull requests and comments'],
-                        ['slack', 'Slack', 'Mentions, messages and reactions'],
-                        ['gmail', 'Gmail', 'New incoming email'],
-                        ['webhook', 'Custom webhook', 'Any app that can send an HTTP event'],
-                      ] as const).map(([provider, title, description]) => {
-                        const providerStatus = provider === 'webhook' ? null : integrationStatus?.[provider]
-                        const connected = provider === 'webhook' || Boolean(providerStatus?.accounts[0])
-                        return (
-                          <button
-                            type="button"
-                            key={provider}
-                            className={'event-provider-card' + (eventProvider === provider ? ' selected' : '')}
-                            aria-pressed={eventProvider === provider}
-                            onClick={() => {
-                              setEventProvider(provider)
-                              if (provider === 'github') setEventType('issues.opened')
-                              if (provider === 'slack') setEventType('app_mention')
-                              if (provider === 'gmail') setEventType('email.received')
-                            }}
-                          >
-                            <span className="event-provider-title">{title}</span>
-                            <span className="event-provider-description">{description}</span>
-                            <span className={'event-provider-state' + (connected ? ' connected' : '')}>
-                              {provider === 'webhook' ? 'No app connection needed' : connected ? 'Connected' : 'Connection required'}
-                            </span>
-                          </button>
-                        )
-                      })}
+                    <div className="routine-form-footer">
+                      <span>Orbit will interpret the schedule using your local timezone.</span>
+                      <button type="submit" className="routine-primary-button" disabled={creatingRoutine || !routineRequest.trim()}>
+                        {creatingRoutine ? 'Creating…' : 'Create routine'}
+                        <Icon name="arrowUp" size={15} />
+                      </button>
                     </div>
-                  </section>
-
-                  {eventProvider !== 'webhook' && (
-                    <section className="event-setup-section">
-                      <div className="event-step-heading">
-                        <span className="event-step-number">2</span>
+                  </form>
+                ) : (
+                  <form className="routine-create-form event-routine-form" onSubmit={(event) => void handleCreateEvent(event)}>
+                    <div className="routine-form-section">
+                      <div className="routine-form-section-heading">
+                        <span>01</span>
                         <div>
-                          <h3>Connect {eventProvider === 'github' ? 'GitHub' : eventProvider === 'slack' ? 'Slack' : 'Gmail'}</h3>
-                          <p>This connection is used to receive events for your routines.</p>
+                          <h4>What should wake Orbit?</h4>
+                          <p>Choose the service that sends the event.</p>
                         </div>
                       </div>
-                      {integrationStatus?.[eventProvider].accounts[0] ? (
-                        <div className="event-connection-panel connected">
-                          <span className="event-connection-dot" />
-                          <div>
-                            <strong>Connected as {integrationStatus[eventProvider].accounts[0].account_name}</strong>
-                            <p>Orbit can use this account for event triggers.</p>
-                          </div>
-                          <button
-                            type="button"
-                            className="routine-action-btn"
-                            onClick={() => void handleDisconnectIntegration(eventProvider)}
-                          >
-                            Disconnect
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="event-connection-panel">
-                          <div>
-                            <strong>{integrationStatus ? 'Service not connected' : 'Checking connection…'}</strong>
-                            <p>
-                              {integrationStatus?.[eventProvider].configured
-                                ? 'Connect your account in a secure sign-in window. You can return here when it is finished.'
-                                : 'This service needs OAuth credentials configured by the Orbit server before it can be connected.'}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            className="routine-action-btn event-connect-btn"
-                            disabled={!integrationStatus?.[eventProvider].configured || !integrationStatus?.token_storage_configured || !integrationStatus?.public_url_configured || creatingRoutine}
-                            onClick={() => void handleConnectIntegration(eventProvider)}
-                          >
-                            Connect {eventProvider === 'github' ? 'GitHub' : eventProvider === 'slack' ? 'Slack' : 'Gmail'}
-                          </button>
-                        </div>
-                      )}
-
-                      {eventProvider === 'github' && integrationStatus?.github.accounts[0] && (
-                        <div className="event-provider-help">
-                          <strong>GitHub setup</strong>
-                          <p>After you create the routine, Orbit automatically registers a signed webhook on the repository you choose. You do not need to paste a webhook URL into GitHub.</p>
-                        </div>
-                      )}
-
-                      {eventProvider === 'slack' && integrationStatus?.slack.accounts[0] && (
-                        <div className="event-provider-help">
-                          <strong>One extra Slack setup step</strong>
-                          <p>Slack delivers events to this shared URL. In your Slack app, open Event Subscriptions, turn events on, and add this as the Request URL. Subscribe to the Bot Events you need: app_mention, message.channels, and/or reaction_added. Invite the Slack app into the channel you want Orbit to watch.</p>
-                          {integrationStatus.slack.events_url && (
-                            <div className="routine-copy-row">
-                              <code>{integrationStatus.slack.events_url}</code>
-                              <button type="button" className="routine-action-btn" onClick={() => void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')}>Copy URL</button>
-                            </div>
-                          )}
-                          {!integrationStatus.slack.signing_configured && <small>Orbit's Slack signing secret is not configured on the server yet.</small>}
-                          {!integrationStatus.public_url_configured && <small>Set ORBIT_PUBLIC_URL to a public HTTPS address before Slack can deliver events.</small>}
-                        </div>
-                      )}
-
-                      {eventProvider === 'gmail' && integrationStatus?.gmail.accounts[0] && (
-                        <div className="event-provider-help">
-                          <strong>Gmail push setup</strong>
-                          <p>Orbit uses Gmail push notifications to detect new mail. You connect your mailbox here; the Orbit server must also have its Gmail Pub/Sub push subscription configured.</p>
-                          {!integrationStatus.gmail.pubsub_configured && <small>Gmail Pub/Sub is not configured on the Orbit server yet. A mailbox connection alone is not enough to receive events.</small>}
-                          {!integrationStatus.gmail.pubsub_limits_configured && <small>Gmail processing limits are not configured on the Orbit server yet.</small>}
-                          {!integrationStatus.public_url_configured && <small>Set ORBIT_PUBLIC_URL to a public HTTPS address for provider event delivery.</small>}
-                        </div>
-                      )}
-
-                      {integrationStatus && (
-                        <div className="event-prerequisite-list">
-                          {!integrationStatus.token_storage_configured && <small>Server setup needed: set INTEGRATION_TOKEN_ENCRYPTION_KEY to store provider tokens securely.</small>}
-                          {!integrationStatus.public_url_configured && <small>Server setup needed: set ORBIT_PUBLIC_URL to a public HTTPS address so the provider can deliver events.</small>}
-                          {!integrationStatus.webhook_payload_limit_configured && <small>Server setup needed: set ORBIT_PROVIDER_WEBHOOK_MAX_BYTES to a positive body-size limit.</small>}
-                          {eventProvider === 'slack' && !integrationStatus.slack.signing_configured && <small>Server setup needed: set SLACK_SIGNING_SECRET to verify Slack event deliveries.</small>}
-                          {eventProvider === 'gmail' && !integrationStatus.gmail.pubsub_configured && <small>Server setup needed: configure the Gmail Pub/Sub topic, audience and push service account.</small>}
-                        </div>
-                      )}
-                    </section>
-                  )}
-
-                  <section className="event-setup-section">
-                    <div className="event-step-heading">
-                      <span className="event-step-number">{eventProvider === 'webhook' ? '2' : '3'}</span>
-                      <div>
-                        <h3>Choose the event</h3>
-                        <p>Tell Orbit exactly what kind of activity should start this routine.</p>
+                      <div className="event-provider-grid">
+                        {([
+                          ['github', 'GitHub', 'Issues, pull requests and comments'],
+                          ['slack', 'Slack', 'Mentions, messages and reactions'],
+                          ['gmail', 'Gmail', 'New incoming email'],
+                          ['webhook', 'Webhook', 'Events from any app or service'],
+                        ] as const).map(([provider, title, description]) => {
+                          const providerStatus = provider === 'webhook' ? null : integrationStatus?.[provider]
+                          const connected = provider === 'webhook' || Boolean(providerStatus?.accounts[0])
+                          return (
+                            <button
+                              type="button"
+                              key={provider}
+                              className={'event-provider-card' + (eventProvider === provider ? ' selected' : '')}
+                              aria-pressed={eventProvider === provider}
+                              onClick={() => {
+                                setEventProvider(provider)
+                                if (provider === 'github') setEventType('issues.opened')
+                                if (provider === 'slack') setEventType('app_mention')
+                                if (provider === 'gmail') setEventType('email.received')
+                              }}
+                            >
+                              <span className="event-provider-topline">
+                                <span className="event-provider-mark">{provider === 'github' ? 'GH' : provider === 'slack' ? 'S' : provider === 'gmail' ? 'G' : '↗'}</span>
+                                <span className={'event-provider-indicator' + (connected ? ' connected' : '')} />
+                              </span>
+                              <strong className="event-provider-title">{title}</strong>
+                              <span className="event-provider-description">{description}</span>
+                              <span className={'event-provider-state' + (connected ? ' connected' : '')}>
+                                {provider === 'webhook' ? 'No account needed' : connected ? 'Connected' : 'Connect account'}
+                              </span>
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
 
                     {eventProvider !== 'webhook' && (
-                      <div className="routines-form-field">
-                        <label htmlFor="event-type">Event</label>
-                        <select id="event-type" value={eventType} onChange={(e) => setEventType(e.target.value)}>
-                          {(eventProvider === 'github'
-                            ? [
-                                ['issues.opened', 'A new issue is opened'],
-                                ['issues.labeled', 'A label is added to an issue'],
-                                ['pull_request.opened', 'A pull request is opened'],
-                                ['issue_comment.created', 'A comment is created on an issue or pull request'],
-                              ]
-                            : eventProvider === 'slack'
-                              ? [
-                                  ['app_mention', 'Orbit is mentioned'],
-                                  ['message.channels', 'A new channel message is posted'],
-                                  ['reaction_added', 'A reaction is added to a message'],
-                                ]
-                              : [['email.received', 'A new email arrives']]
-                          ).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
-                        </select>
-                      </div>
-                    )}
-
-                    {eventProvider === 'github' && (
-                      <>
-                        <div className="routines-form-field">
-                          <label htmlFor="github-repository">Repository</label>
-                          <input id="github-repository" value={githubRepository} onChange={(e) => setGithubRepository(e.target.value)} placeholder="owner/repository" required />
-                          <small>Orbit installs the webhook only on this repository.</small>
+                      <div className="routine-form-section">
+                        <div className="routine-form-section-heading">
+                          <span>02</span>
+                          <div>
+                            <h4>Connect your account</h4>
+                            <p>Orbit uses this connection only to receive the events you configure.</p>
+                          </div>
                         </div>
-                        <div className="routines-form-field">
-                          <label htmlFor="github-label">Only when the issue has this label (optional)</label>
-                          <input id="github-label" value={githubLabel} onChange={(e) => setGithubLabel(e.target.value)} placeholder="bug, support, urgent…" />
-                        </div>
-                      </>
-                    )}
-
-                    {eventProvider === 'slack' && (
-                      <>
-                        <div className="routines-form-field">
-                          <label htmlFor="slack-channel">Channel</label>
-                          <input id="slack-channel" value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="customer-escalations" required />
-                          <small>Enter the channel name without the #. The Slack app must be a member of this channel.</small>
-                        </div>
-                        {eventType === 'reaction_added' ? (
-                          <div className="routines-form-field">
-                            <label htmlFor="slack-reaction">Only this reaction (optional)</label>
-                            <input id="slack-reaction" value={slackReaction} onChange={(e) => setSlackReaction(e.target.value)} placeholder="eyes" />
+                        {integrationStatus?.[eventProvider].accounts[0] ? (
+                          <div className="event-connection-panel connected">
+                            <span className="event-connection-dot" />
+                            <div>
+                              <strong>Connected as {integrationStatus[eventProvider].accounts[0].account_name}</strong>
+                              <p>Your account is ready to use for event triggers.</p>
+                            </div>
+                            <button type="button" className="routine-secondary-button" onClick={() => void handleDisconnectIntegration(eventProvider)}>
+                              Disconnect
+                            </button>
                           </div>
                         ) : (
-                          <div className="routines-form-field">
-                            <label htmlFor="slack-phrase">Only messages containing this phrase (optional)</label>
-                            <input id="slack-phrase" value={slackPhrase} onChange={(e) => setSlackPhrase(e.target.value)} placeholder="needs review" />
+                          <div className="event-connection-panel">
+                            <div>
+                              <strong>{integrationStatus ? 'Account not connected' : 'Checking connection…'}</strong>
+                              <p>
+                                {integrationStatus?.[eventProvider].configured
+                                  ? 'Connect in a secure sign-in window, then return here.'
+                                  : 'OAuth credentials for this service need to be configured on the Orbit server.'}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="routine-secondary-button"
+                              disabled={!integrationStatus?.[eventProvider].configured || !integrationStatus?.token_storage_configured || !integrationStatus?.public_url_configured || creatingRoutine}
+                              onClick={() => void handleConnectIntegration(eventProvider)}
+                            >
+                              Connect {eventProvider === 'github' ? 'GitHub' : eventProvider === 'slack' ? 'Slack' : 'Gmail'}
+                            </button>
                           </div>
                         )}
-                      </>
+                        {eventProvider === 'slack' && integrationStatus?.slack.accounts[0] && (
+                          <div className="event-provider-help">
+                            <strong>Slack event delivery</strong>
+                            <p>Add this URL as the Request URL in your Slack app’s Event Subscriptions and subscribe to the event types you need.</p>
+                            {integrationStatus.slack.events_url && (
+                              <div className="routine-copy-row">
+                                <code>{integrationStatus.slack.events_url}</code>
+                                <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')}>Copy URL</button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {eventProvider === 'gmail' && integrationStatus?.gmail.accounts[0] && (
+                          <div className="event-provider-help">
+                            <strong>Gmail push delivery</strong>
+                            <p>The Orbit server must have Gmail Pub/Sub configured. Connecting a mailbox alone does not enable incoming events.</p>
+                          </div>
+                        )}
+                        {integrationStatus && (
+                          <div className="event-prerequisite-list">
+                            {!integrationStatus.token_storage_configured && <small>Server setup needed: configure INTEGRATION_TOKEN_ENCRYPTION_KEY.</small>}
+                            {!integrationStatus.public_url_configured && <small>Server setup needed: configure ORBIT_PUBLIC_URL with a public HTTPS address.</small>}
+                            {!integrationStatus.webhook_payload_limit_configured && <small>Server setup needed: configure ORBIT_PROVIDER_WEBHOOK_MAX_BYTES.</small>}
+                            {eventProvider === 'slack' && !integrationStatus.slack.signing_configured && <small>Server setup needed: configure SLACK_SIGNING_SECRET.</small>}
+                            {eventProvider === 'gmail' && !integrationStatus.gmail.pubsub_configured && <small>Server setup needed: configure Gmail Pub/Sub.</small>}
+                            {eventProvider === 'gmail' && !integrationStatus.gmail.pubsub_limits_configured && <small>Server setup needed: configure Gmail processing limits.</small>}
+                          </div>
+                        )}
+                      </div>
                     )}
 
-                    {eventProvider === 'gmail' && (
-                      <>
-                        <div className="routines-form-field">
-                          <label htmlFor="gmail-sender">Only from this sender (optional)</label>
-                          <input id="gmail-sender" type="email" value={gmailSender} onChange={(e) => setGmailSender(e.target.value)} placeholder="alerts@example.com" />
+                    <div className="routine-form-section">
+                      <div className="routine-form-section-heading">
+                        <span>{eventProvider === 'webhook' ? '02' : '03'}</span>
+                        <div>
+                          <h4>When should it run?</h4>
+                          <p>Select an event and narrow it with optional conditions.</p>
                         </div>
+                      </div>
+                      {eventProvider !== 'webhook' && (
                         <div className="routines-form-field">
-                          <label htmlFor="gmail-subject">Subject contains (optional)</label>
-                          <input id="gmail-subject" value={gmailSubject} onChange={(e) => setGmailSubject(e.target.value)} placeholder="Invoice or Support request" />
+                          <label htmlFor="event-type">Event</label>
+                          <select id="event-type" value={eventType} onChange={(e) => setEventType(e.target.value)}>
+                            {(eventProvider === 'github'
+                              ? [
+                                  ['issues.opened', 'A new issue is opened'],
+                                  ['issues.labeled', 'A label is added to an issue'],
+                                  ['pull_request.opened', 'A pull request is opened'],
+                                  ['issue_comment.created', 'A comment is created on an issue or pull request'],
+                                ]
+                              : eventProvider === 'slack'
+                                ? [
+                                    ['app_mention', 'Orbit is mentioned'],
+                                    ['message.channels', 'A new channel message is posted'],
+                                    ['reaction_added', 'A reaction is added to a message'],
+                                  ]
+                                : [['email.received', 'A new email arrives']]
+                            ).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+                          </select>
                         </div>
-                      </>
-                    )}
-
-                    {eventProvider === 'webhook' && (
-                      <>
-                        <div className="routines-form-field">
-                          <label htmlFor="webhook-event-type">Event name</label>
-                          <input id="webhook-event-type" value={webhookEventType} onChange={(e) => setWebhookEventType(e.target.value)} placeholder="invoice.paid" required maxLength={120} />
-                          <small>Your sender can include this value as event_type in its JSON body. If it leaves event_type out, Orbit uses this configured event name.</small>
-                        </div>
-                        <div className="routines-form-field">
-                          <label htmlFor="webhook-when">Trigger description (optional)</label>
-                          <input id="webhook-when" value={webhookWhen} onChange={(e) => setWebhookWhen(e.target.value)} placeholder="When a paid invoice event is received" maxLength={500} />
-                        </div>
-                        <div className="routines-form-field">
-                          <label htmlFor="webhook-filter-field">Only when this JSON field matches (optional)</label>
-                          <input id="webhook-filter-field" value={webhookFilterField} onChange={(e) => setWebhookFilterField(e.target.value)} placeholder="payload.data.status" maxLength={128} />
-                          <small>Use payload. followed by the field path from the JSON body.</small>
-                        </div>
-                        <div className="event-webhook-condition-row">
+                      )}
+                      {eventProvider === 'github' && (
+                        <>
                           <div className="routines-form-field">
-                            <label htmlFor="webhook-filter-operator">Condition</label>
-                            <select id="webhook-filter-operator" value={webhookFilterOperator} onChange={(e) => setWebhookFilterOperator(e.target.value as 'equals' | 'contains')}>
-                              <option value="equals">equals</option>
-                              <option value="contains">contains</option>
-                            </select>
+                            <label htmlFor="github-repository">Repository</label>
+                            <input id="github-repository" value={githubRepository} onChange={(e) => setGithubRepository(e.target.value)} placeholder="owner/repository" required />
+                            <small>Orbit will register the event webhook on this repository.</small>
                           </div>
                           <div className="routines-form-field">
-                            <label htmlFor="webhook-filter-value">Matching value</label>
-                            <input id="webhook-filter-value" value={webhookFilterValue} onChange={(e) => setWebhookFilterValue(e.target.value)} placeholder="paid" maxLength={500} />
+                            <label htmlFor="github-label">Only when the issue has this label (optional)</label>
+                            <input id="github-label" value={githubLabel} onChange={(e) => setGithubLabel(e.target.value)} placeholder="bug, support, urgent…" />
                           </div>
-                        </div>
-                      </>
-                    )}
-                  </section>
+                        </>
+                      )}
+                      {eventProvider === 'slack' && (
+                        <>
+                          <div className="routines-form-field">
+                            <label htmlFor="slack-channel">Channel</label>
+                            <input id="slack-channel" value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="customer-escalations" required />
+                            <small>Enter the channel name without #. The Slack app must be a member.</small>
+                          </div>
+                          {eventType === 'reaction_added' ? (
+                            <div className="routines-form-field">
+                              <label htmlFor="slack-reaction">Only this reaction (optional)</label>
+                              <input id="slack-reaction" value={slackReaction} onChange={(e) => setSlackReaction(e.target.value)} placeholder="eyes" />
+                            </div>
+                          ) : (
+                            <div className="routines-form-field">
+                              <label htmlFor="slack-phrase">Only messages containing this phrase (optional)</label>
+                              <input id="slack-phrase" value={slackPhrase} onChange={(e) => setSlackPhrase(e.target.value)} placeholder="needs review" />
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {eventProvider === 'gmail' && (
+                        <>
+                          <div className="routines-form-field">
+                            <label htmlFor="gmail-sender">Only from this sender (optional)</label>
+                            <input id="gmail-sender" type="email" value={gmailSender} onChange={(e) => setGmailSender(e.target.value)} placeholder="alerts@example.com" />
+                          </div>
+                          <div className="routines-form-field">
+                            <label htmlFor="gmail-subject">Subject contains (optional)</label>
+                            <input id="gmail-subject" value={gmailSubject} onChange={(e) => setGmailSubject(e.target.value)} placeholder="Invoice or support request" />
+                          </div>
+                        </>
+                      )}
+                      {eventProvider === 'webhook' && (
+                        <>
+                          <div className="routines-form-field">
+                            <label htmlFor="webhook-event-type">Event name</label>
+                            <input id="webhook-event-type" value={webhookEventType} onChange={(e) => setWebhookEventType(e.target.value)} placeholder="invoice.paid" required maxLength={120} />
+                            <small>Use the same event name in the JSON sent to Orbit.</small>
+                          </div>
+                          <div className="routines-form-field">
+                            <label htmlFor="webhook-when">Trigger description (optional)</label>
+                            <input id="webhook-when" value={webhookWhen} onChange={(e) => setWebhookWhen(e.target.value)} placeholder="When a paid invoice event is received" maxLength={500} />
+                          </div>
+                          <div className="routines-form-field">
+                            <label htmlFor="webhook-filter-field">Only when this JSON field matches (optional)</label>
+                            <input id="webhook-filter-field" value={webhookFilterField} onChange={(e) => setWebhookFilterField(e.target.value)} placeholder="payload.data.status" maxLength={128} />
+                          </div>
+                          <div className="event-webhook-condition-row">
+                            <div className="routines-form-field">
+                              <label htmlFor="webhook-filter-operator">Condition</label>
+                              <select id="webhook-filter-operator" value={webhookFilterOperator} onChange={(e) => setWebhookFilterOperator(e.target.value as 'equals' | 'contains')}>
+                                <option value="equals">equals</option>
+                                <option value="contains">contains</option>
+                              </select>
+                            </div>
+                            <div className="routines-form-field">
+                              <label htmlFor="webhook-filter-value">Matching value</label>
+                              <input id="webhook-filter-value" value={webhookFilterValue} onChange={(e) => setWebhookFilterValue(e.target.value)} placeholder="paid" maxLength={500} />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
 
-                  <section className="event-setup-section">
-                    <div className="event-step-heading">
-                      <span className="event-step-number">{eventProvider === 'webhook' ? '3' : '4'}</span>
-                      <div>
-                        <h3>What should Orbit do?</h3>
-                        <p>Give the routine a name and describe the work it should perform after a match.</p>
+                    <div className="routine-form-section">
+                      <div className="routine-form-section-heading">
+                        <span>{eventProvider === 'webhook' ? '03' : '04'}</span>
+                        <div>
+                          <h4>What should Orbit do?</h4>
+                          <p>Give the routine a name and clear instructions for the work.</p>
+                        </div>
+                      </div>
+                      <div className="routines-form-field">
+                        <label htmlFor="event-routine-name">Routine name</label>
+                        <input id="event-routine-name" value={eventRoutineName} onChange={(e) => setEventRoutineName(e.target.value)} placeholder="Triage new support issues" required maxLength={120} />
+                      </div>
+                      <div className="routines-form-field">
+                        <label htmlFor="event-action-instruction">Instruction</label>
+                        <textarea
+                          id="event-action-instruction"
+                          rows={5}
+                          maxLength={4000}
+                          placeholder="Review the new issue, identify the likely cause, check related files, and write a concise summary."
+                          value={eventActionInstruction}
+                          onChange={(e) => setEventActionInstruction(e.target.value)}
+                          disabled={creatingRoutine}
+                          required
+                        />
+                        <small>Describe the task and where the result should be delivered. External actions that need approval remain subject to Orbit’s approval flow.</small>
                       </div>
                     </div>
-                    <div className="routines-form-field">
-                      <label htmlFor="event-routine-name">Routine name</label>
-                      <input id="event-routine-name" value={eventRoutineName} onChange={(e) => setEventRoutineName(e.target.value)} placeholder="Triage new support issues" required maxLength={120} />
-                    </div>
-                    <div className="routines-form-field">
-                      <label htmlFor="event-action-instruction">Instructions for Orbit</label>
-                      <textarea
-                        id="event-action-instruction"
-                        rows={5}
-                        maxLength={4000}
-                        placeholder="Review the new issue, identify the likely cause, check related files, and write a concise summary in Orbit."
-                        value={eventActionInstruction}
-                        onChange={(e) => setEventActionInstruction(e.target.value)}
-                        disabled={creatingRoutine}
-                        required
-                      />
-                      <small>Describe the task and where the result should be delivered. Keep external actions such as sending messages or publishing behind an approval step.</small>
-                    </div>
-                  </section>
 
-                  <div className="event-final-note">
-                    <strong>Only new matching events will start this routine.</strong>
-                    <span>Orbit checks the service, event type and conditions before starting the agent. Older activity is not replayed.</span>
-                  </div>
-                  <button type="submit" className="routines-submit-btn" disabled={creatingRoutine || !eventProviderReady}>
-                    {creatingRoutine ? 'Creating event trigger…' : 'Create event trigger'}
-                  </button>
-                </form>
+                    <div className="event-final-note">
+                      <strong>Only new matching events start this routine.</strong>
+                      <span>Orbit checks the service, event type, and conditions before starting the agent. Older activity is not replayed.</span>
+                    </div>
+                    <div className="routine-form-footer">
+                      <span>Your event connection and conditions can be reviewed after creation.</span>
+                      <button type="submit" className="routine-primary-button" disabled={creatingRoutine || !eventProviderReady}>
+                        {creatingRoutine ? 'Creating…' : 'Create event routine'}
+                        <Icon name="arrowUp" size={15} />
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </section>
+            </div>
+          </main>
+        ) : tab === 'history' ? (
+          <main className="routine-activity-page">
+            <div className="routine-page-heading">
+              <span className="routine-manager-eyebrow">AUTOMATION ACTIVITY</span>
+              <h3>Activity</h3>
+              <p>Notifications and updates from your routines.</p>
+            </div>
+            <div className="routine-activity-toolbar">
+              <button type="button" className="routine-secondary-button" onClick={onToggleSound}>
+                <Icon name="bell" size={14} />
+                Sound {soundEnabled ? 'on' : 'off'}
+              </button>
+              {notificationPermission !== 'granted' && (
+                <button type="button" className="routine-secondary-button" onClick={() => void requestDesktopPermission()}>
+                  Enable desktop alerts
+                </button>
+              )}
+              {notifications.some((n) => !n.is_read) && (
+                <button type="button" className="routine-secondary-button" onClick={() => void handleMarkAllRead()}>
+                  Mark all as read
+                </button>
               )}
             </div>
-          )}
-
-          {tab === 'history' && (
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '1rem',
-                }}
-              >
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <button
-                    className="routine-action-btn"
-                    onClick={onToggleSound}
-                    title="Toggle chime audio"
-                  >
-                    <span>🔔 Sound Chime: {soundEnabled ? 'ON' : 'OFF'}</span>
-                  </button>
-                  {notificationPermission !== 'granted' && (
-                    <button
-                      className="routine-action-btn"
-                      onClick={requestDesktopPermission}
-                    >
-                      Enable Desktop Alerts
-                    </button>
-                  )}
-                </div>
-                {notifications.some((n) => !n.is_read) && (
-                  <button
-                    className="routine-action-btn"
-                    onClick={handleMarkAllRead}
-                  >
-                    Mark All Read
-                  </button>
-                )}
-              </div>
-
+            <div className="routine-activity-list">
               {notifications.length === 0 ? (
-                <p className="empty-routines">No recent notification history.</p>
+                <div className="routine-empty-state">
+                  <div className="routine-empty-icon"><Icon name="bell" size={22} /></div>
+                  <h4>No activity yet</h4>
+                  <p>When a routine runs or sends an alert, it will appear here.</p>
+                </div>
               ) : (
                 notifications.map((n) => {
-                  // Clean message for display in history
                   const cleanMsg = n.message
                     .replace(/Reminder \/ Routine '[^']+' triggered successfully\./g, '')
                     .replace(/\*Executed in \d+ms at [^*]+\*/g, '')
                     .trim() || n.title
-
                   return (
-                    <div
-                      key={n.id}
-                      className={`notif-history-item ${!n.is_read ? 'unread' : ''}`}
-                    >
-                      <div className="notif-history-header">
-                        <span>{n.title}</span>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>
-                          {new Date(n.created_at).toLocaleString([], {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+                    <article key={n.id} className={'routine-activity-item' + (!n.is_read ? ' unread' : '')}>
+                      <span className="routine-activity-dot" />
+                      <div className="routine-activity-copy">
+                        <div className="routine-activity-title-row">
+                          <strong>{n.title}</strong>
+                          <time dateTime={n.created_at}>{new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time>
+                        </div>
+                        <p>{cleanMsg}</p>
                       </div>
-                      <div className="notif-history-body">{cleanMsg}</div>
-                    </div>
+                    </article>
                   )
                 })
               )}
             </div>
-          )}
-        </div>
+          </main>
+        ) : (
+          <div className="routine-workspace">
+            <aside className="routine-sidebar">
+              <div className="routine-sidebar-heading">
+                <div>
+                  <span className="routine-manager-eyebrow">YOUR AUTOMATIONS</span>
+                  <h3>All routines <span>{routines.length}</span></h3>
+                </div>
+                <button type="button" className="routine-sidebar-add" onClick={() => setTab('create')} aria-label="Create routine">
+                  <Icon name="plus" size={16} />
+                </button>
+              </div>
+              <div className="routine-sidebar-list">
+                {loading && <div className="routine-sidebar-message">Loading routines…</div>}
+                {!loading && routines.length === 0 && (
+                  <div className="routine-sidebar-message">Your routines will appear here.</div>
+                )}
+                {routines.map((r) => {
+                  const readableSchedule = formatHumanSchedule(r.schedule_display || r.schedule_expression, r.one_shot)
+                  const isSelected = selectedRoutine?.id === r.id
+                  const triggerSummary = r.trigger_type === 'event'
+                    ? r.trigger_definition?.when || ('When ' + (r.trigger_definition?.event_type || r.event_type || 'an event') + ' arrives')
+                    : readableSchedule || r.schedule_expression || 'Scheduled routine'
+                  return (
+                    <button
+                      type="button"
+                      key={r.id}
+                      className={'routine-sidebar-item' + (isSelected ? ' selected' : '')}
+                      onClick={() => void handleOpenRoutine(r.id)}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="routine-sidebar-item-icon">
+                        <Icon name={r.trigger_type === 'event' ? 'zap' : 'clock'} size={15} />
+                      </span>
+                      <span className="routine-sidebar-item-copy">
+                        <strong>{r.name}</strong>
+                        <span>{triggerSummary}</span>
+                        <span className="routine-sidebar-item-meta">
+                          <i className={r.enabled ? 'active' : ''} />
+                          {r.enabled ? 'Active' : 'Paused'}
+                          <b>·</b>
+                          {r.trigger_type === 'event' ? (r.trigger_definition?.source || r.event_source || 'Event') : r.one_shot ? 'One-time' : 'Schedule'}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="routine-sidebar-footer">
+                <span><i /> Active</span>
+                <span><i className="paused" /> Paused</span>
+              </div>
+            </aside>
+
+            <main className="routine-detail-pane">
+              {!selectedRoutine ? (
+                <div className="routine-detail-empty">
+                  <div className="routine-empty-icon"><Icon name="clock" size={24} /></div>
+                  <h3>Select a routine</h3>
+                  <p>Choose a routine from the list to view its instructions, trigger, and recent runs.</p>
+                  <button type="button" className="routine-primary-button" onClick={() => setTab('create')}>
+                    <Icon name="plus" size={15} />
+                    Create a routine
+                  </button>
+                </div>
+              ) : (
+                <section className="routine-detail">
+                  <div className="routine-detail-topline">
+                    <div>
+                      <span className={'routine-status-pill' + (selectedRoutine.enabled ? ' active' : ' paused')}>
+                        <i />
+                        {selectedRoutine.enabled ? 'Active' : 'Paused'}
+                      </span>
+                      <span className="routine-detail-kind">
+                        {selectedRoutine.trigger_type === 'event' ? 'Event-triggered routine' : selectedRoutine.one_shot ? 'One-time routine' : 'Scheduled routine'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={selectedRoutine.enabled}
+                      className={'routine-switch' + (selectedRoutine.enabled ? ' on' : '')}
+                      onClick={() => void handleTogglePause(selectedRoutine)}
+                      aria-label={selectedRoutine.enabled ? 'Pause routine' : 'Resume routine'}
+                    >
+                      <span />
+                    </button>
+                  </div>
+
+                  <div className="routine-detail-title-row">
+                    <div className="routine-detail-avatar" aria-hidden="true">
+                      {selectedRoutine.name.trim().charAt(0).toUpperCase() || 'R'}
+                    </div>
+                    <div className="routine-detail-title-copy">
+                      {editingRoutine ? (
+                        <input
+                          className="routine-title-input"
+                          aria-label="Routine name"
+                          value={editName}
+                          onChange={(event) => setEditName(event.target.value)}
+                        />
+                      ) : (
+                        <h3>{selectedRoutine.name}</h3>
+                      )}
+                      <p>{selectedRoutine.trigger_type === 'event' ? (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'Event') + ' trigger' : 'Runs ' + (selectedRoutine.one_shot ? 'once' : 'on a schedule')}</p>
+                    </div>
+                  </div>
+
+                  <div className="routine-detail-section">
+                    <div className="routine-section-heading">
+                      <div>
+                        <span className="routine-manager-eyebrow">THE WORK</span>
+                        <h4>Instruction</h4>
+                      </div>
+                    </div>
+                    {editingRoutine ? (
+                      <textarea
+                        className="routine-instruction-input"
+                        rows={5}
+                        value={editInstruction}
+                        onChange={(event) => setEditInstruction(event.target.value)}
+                        aria-label="Routine instruction"
+                      />
+                    ) : (
+                      <div className="routine-instruction-box">{selectedRoutine.action_prompt}</div>
+                    )}
+                  </div>
+
+                  <div className="routine-detail-section">
+                    <div className="routine-section-heading">
+                      <div>
+                        <span className="routine-manager-eyebrow">THE TRIGGER</span>
+                        <h4>When to run</h4>
+                      </div>
+                      <span className="routine-trigger-type">{selectedRoutine.trigger_type === 'event' ? 'Event' : 'Schedule'}</span>
+                    </div>
+                    {editingRoutine && selectedRoutine.trigger_type === 'event' ? (
+                      <div className="routine-edit-trigger">
+                        <input
+                          aria-label="Event type"
+                          value={editEventType}
+                          onChange={(event) => setEditEventType(event.target.value)}
+                          placeholder="issues.opened"
+                        />
+                        <textarea
+                          aria-label="When to run"
+                          rows={2}
+                          value={editWhen}
+                          onChange={(event) => setEditWhen(event.target.value)}
+                          placeholder="When a new issue is opened"
+                        />
+                        <div className="routine-edit-filter">
+                          <input
+                            aria-label="Condition field"
+                            value={editFilterField}
+                            onChange={(event) => setEditFilterField(event.target.value)}
+                            placeholder="payload.labels"
+                          />
+                          <select
+                            aria-label="Condition operator"
+                            value={editFilterOperator}
+                            onChange={(event) => setEditFilterOperator(event.target.value as 'equals' | 'contains')}
+                          >
+                            <option value="equals">equals</option>
+                            <option value="contains">contains</option>
+                          </select>
+                          <input
+                            aria-label="Condition value"
+                            value={editFilterValue}
+                            onChange={(event) => setEditFilterValue(event.target.value)}
+                            placeholder="bug"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="routine-trigger-summary">
+                        <span className="routine-trigger-icon"><Icon name={selectedRoutine.trigger_type === 'event' ? 'zap' : 'clock'} size={16} /></span>
+                        <div>
+                          <strong>
+                            {selectedRoutine.trigger_type === 'event'
+                              ? selectedRoutine.trigger_definition?.when || ('When ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'an event') + ' arrives')
+                              : selectedRoutine.schedule_display || selectedRoutine.schedule_expression || 'Manual run'}
+                          </strong>
+                          <p>
+                            {selectedRoutine.trigger_type === 'event'
+                              ? (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') + ' · ' + (selectedRoutine.trigger_definition?.event_type || selectedRoutine.event_type || 'Event')
+                              : selectedRoutine.next_run_at
+                                ? 'Next run ' + new Date(selectedRoutine.next_run_at).toLocaleString()
+                                : selectedRoutine.one_shot ? 'One-time schedule' : 'Recurring schedule'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source || 'webhook') === 'webhook' && (
+                    <div className="routine-detail-section">
+                      <div className="routine-section-heading">
+                        <div>
+                          <span className="routine-manager-eyebrow">CONNECTION</span>
+                          <h4>Webhook endpoint</h4>
+                        </div>
+                      </div>
+                      <p className="routine-detail-help">Send an HTTP POST to this URL when your event occurs. Include the authorization key as a Bearer token.</p>
+                      <div className="routine-copy-row">
+                        <code>{webhookUrl}</code>
+                        <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(webhookUrl, 'Webhook URL')}>Copy URL</button>
+                      </div>
+                      {selectedRoutine.webhook_secret && (
+                        <div className="routine-copy-row">
+                          <code>Authorization: Bearer {selectedRoutine.webhook_secret}</code>
+                          <button
+                            type="button"
+                            className="routine-secondary-button"
+                            onClick={() => void handleCopyValue('Authorization: Bearer ' + (selectedRoutine.webhook_secret || ''), 'Authorization header')}
+                          >
+                            Copy key
+                          </button>
+                        </div>
+                      )}
+                      <div className="event-webhook-example">
+                        <span>Example event payload</span>
+                        <pre>{JSON.stringify({ event_type: selectedRoutine.event_type || 'webhook.received', event_id: 'your-event-id', data: { status: 'paid' } }, null, 2)}</pre>
+                        <button
+                          type="button"
+                          className="routine-secondary-button"
+                          onClick={() => void handleCopyValue(JSON.stringify({ event_type: selectedRoutine.event_type || 'webhook.received', event_id: 'your-event-id', data: { status: 'paid' } }, null, 2), 'Example JSON body')}
+                        >
+                          Copy example
+                        </button>
+                      </div>
+                      <small className="routine-security-note">Keep the authorization key private. Store it on the server sending the event, never in browser code.</small>
+                    </div>
+                  )}
+
+                  {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'github' && (
+                    <div className="routine-provider-note">
+                      <strong>GitHub connection</strong>
+                      <p>Orbit registered a webhook for <b>{selectedRoutine.trigger_definition?.repository || 'the selected repository'}</b>. Only new matching events are queued.</p>
+                    </div>
+                  )}
+                  {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'slack' && (
+                    <div className="routine-provider-note">
+                      <strong>Slack connection</strong>
+                      <p>This routine listens for {selectedRoutine.trigger_definition?.when || 'matching Slack activity'}. Configure the Slack Events API with the shared endpoint below.</p>
+                      {integrationStatus?.slack.events_url && (
+                        <div className="routine-copy-row">
+                          <code>{integrationStatus.slack.events_url}</code>
+                          <button type="button" className="routine-secondary-button" onClick={() => void handleCopyValue(integrationStatus.slack.events_url || '', 'Slack event URL')}>Copy URL</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {selectedRoutine.trigger_type === 'event' && (selectedRoutine.trigger_definition?.source || selectedRoutine.event_source) === 'gmail' && (
+                    <div className="routine-provider-note">
+                      <strong>Gmail connection</strong>
+                      <p>This routine watches {selectedRoutine.trigger_definition?.email_address || integrationStatus?.gmail.accounts[0]?.account_name || 'the connected inbox'} for new incoming email. Existing messages are not replayed.</p>
+                    </div>
+                  )}
+
+                  <div className="routine-detail-section routine-history-section">
+                    <div className="routine-section-heading">
+                      <div>
+                        <span className="routine-manager-eyebrow">EXECUTION LOG</span>
+                        <h4>Recent runs</h4>
+                      </div>
+                      <button type="button" className="routine-text-button" onClick={() => void handleOpenRoutine(selectedRoutine.id)}>
+                        <Icon name="refresh" size={13} />
+                        Refresh
+                      </button>
+                    </div>
+                    {routineRuns.length === 0 ? (
+                      <p className="routine-empty-inline">No runs yet. Test this routine or wait for its next matching trigger.</p>
+                    ) : (
+                      <div className="routine-run-list">
+                        {routineRuns.map((run) => (
+                          <article className="routine-run-item" key={run.id}>
+                            <div className="routine-run-item-header">
+                              <strong>{run.trigger_source.replaceAll('_', ' ')}</strong>
+                              <span className={'routine-run-status ' + run.status.toLowerCase()}>{run.status}</span>
+                            </div>
+                            <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
+                            {run.result_summary && <p>{run.result_summary}</p>}
+                            {run.error && <p className="routine-run-error" role="alert">{run.error}</p>}
+                            {typeof run.duration_ms === 'number' && <small>{run.duration_ms.toLocaleString()} ms</small>}
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedRoutine.trigger_type === 'event' && (
+                    <div className="routine-detail-section">
+                      <div className="routine-section-heading">
+                        <div>
+                          <span className="routine-manager-eyebrow">EVENT DELIVERY</span>
+                          <h4>Recent matching events</h4>
+                        </div>
+                      </div>
+                      {routineEvents.length === 0 ? (
+                        <p className="routine-empty-inline">No matching events received yet. The routine will start when a new event matches its trigger.</p>
+                      ) : (
+                        <div className="routine-event-list">
+                          {routineEvents.map((event) => (
+                            <details key={event.id}>
+                              <summary>{event.event_type} <span>· {event.routine_status}</span></summary>
+                              <p>Received {new Date(event.received_at).toLocaleString()} from {event.source}</p>
+                              {event.routine_error && <p role="alert">{event.routine_error}</p>}
+                              <pre>{JSON.stringify(event.payload, null, 2)}</pre>
+                            </details>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {routineActionStatus && <p className="routine-action-status" role="status">{routineActionStatus}</p>}
+                  {editingRoutine && selectedRoutine.trigger_type !== 'event' && (
+                    <p className="routine-edit-note">The schedule stays unchanged here. To change its timing, create a new scheduled routine with the updated time.</p>
+                  )}
+                  <div className="routine-detail-actions">
+                    {editingRoutine ? (
+                      <>
+                        <button type="button" className="routine-primary-button" onClick={() => void handleSaveRoutine()}>
+                          Save changes
+                        </button>
+                        <button type="button" className="routine-secondary-button" onClick={() => setEditingRoutine(false)}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="routine-primary-button"
+                          disabled={testingRoutine}
+                          onClick={() => void handleRunNow(selectedRoutine.id)}
+                        >
+                          {testingRoutine ? 'Running…' : 'Test run'}
+                        </button>
+                        <button type="button" className="routine-secondary-button" onClick={() => setEditingRoutine(true)}>
+                          <Icon name="edit" size={13} />
+                          Edit
+                        </button>
+                        <button type="button" className="routine-secondary-button" onClick={() => void handleTogglePause(selectedRoutine)}>
+                          {selectedRoutine.enabled ? 'Pause' : 'Resume'}
+                        </button>
+                        <button type="button" className="routine-danger-button" onClick={() => void handleDelete(selectedRoutine.id)}>
+                          <Icon name="trash" size={13} />
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <p className="routine-test-note">A test performs real work using this instruction. Tool actions that need approval are declined during background runs.</p>
+                </section>
+              )}
+            </main>
+          </div>
+        )}
+      </div>
     </ModernDialog>
   )
 }
