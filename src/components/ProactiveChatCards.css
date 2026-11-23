@@ -346,3 +346,139 @@
   from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+
+/* Routine result cards share the updated Routines manager visual language. */
+#root .routine-setup-card,
+#root .proactive-alert-card {
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 13px;
+  background: #292929;
+  box-shadow: none;
+  color: #e9e9e9;
+}
+
+#root .routine-setup-card {
+  padding: 15px 16px;
+  gap: 12px;
+}
+
+#root .routine-setup-card.is-routine,
+#root .proactive-alert-card.is-routine {
+  border-left: 2px solid rgba(85, 199, 215, 0.56);
+}
+
+#root .routine-setup-card.is-reminder,
+#root .proactive-alert-card.is-reminder {
+  border-left: 2px solid rgba(194, 169, 116, 0.55);
+}
+
+#root .routine-setup-header,
+#root .proactive-alert-header {
+  align-items: center;
+  gap: 10px;
+}
+
+#root .routine-setup-icon,
+#root .proactive-alert-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(85, 199, 215, 0.16);
+  border-radius: 9px;
+  color: #a3e2e7;
+  background: rgba(85, 199, 215, 0.09);
+}
+
+#root .routine-setup-name,
+#root .proactive-alert-name {
+  color: #ededed;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+#root .routine-setup-badge,
+#root .proactive-alert-pill {
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 5px;
+  color: #b7b7b7;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 8px;
+  font-weight: 650;
+}
+
+#root .routine-setup-badge.status-active {
+  color: #8bd3aa;
+  border-color: rgba(105, 201, 155, 0.18);
+  background: rgba(105, 201, 155, 0.08);
+}
+
+#root .routine-setup-badge.status-paused {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#root .routine-setup-body,
+#root .proactive-alert-body {
+  color: #b6b6b6;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+#root .routine-setup-prompt {
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 8px;
+  color: #c4c4c4;
+  background: #222;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+#root .routine-setup-meta-item {
+  color: #919191;
+  font-size: 9px;
+}
+
+#root .routine-setup-footer,
+#root .proactive-alert-footer {
+  border-top-color: rgba(255, 255, 255, 0.07);
+}
+
+#root .routine-card-btn,
+#root .proactive-alert-btn {
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 7px;
+  color: #cbcbcb;
+  background: #343434;
+  font-size: 9px;
+}
+
+#root .routine-card-btn:hover:not(:disabled),
+#root .proactive-alert-btn:hover:not(:disabled) {
+  border-color: rgba(85, 199, 215, 0.25);
+  color: #e7f7f8;
+  background: rgba(85, 199, 215, 0.09);
+}
+
+#root .routine-card-btn.secondary,
+#root .proactive-alert-btn.secondary,
+#root .proactive-alert-btn.subtle {
+  color: #a8a8a8;
+  background: transparent;
+}
+
+#root .routine-card-btn.danger {
+  color: #e4a0a0;
+  border-color: rgba(230, 115, 115, 0.17);
+  background: rgba(170, 65, 65, 0.07);
+}
+
+#root .routine-card-feedback,
+#root .proactive-alert-feedback {
+  color: #98d8dd;
+  font-size: 9px;
+}
