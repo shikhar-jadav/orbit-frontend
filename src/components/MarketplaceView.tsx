@@ -14,6 +14,7 @@ import './MarketplaceView.css'
 type MarketplaceViewProps = {
   onClose: () => void
   onOpenCapabilities?: () => void
+  initialTab?: 'all' | 'connectors' | 'skills'
 }
 
 async function fetchMarketplaceJson<T>(
@@ -48,13 +49,13 @@ async function fetchMarketplaceJson<T>(
   }
 }
 
-export function MarketplaceView({ onClose, onOpenCapabilities }: MarketplaceViewProps) {
+export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all' }: MarketplaceViewProps) {
   const [catalog, setCatalog] = useState<MarketplaceCatalog | null>(null)
   const [loading, setLoading] = useState(true)
   const [reloadNonce, setReloadNonce] = useState(0)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState<'all' | 'connectors' | 'skills'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'connectors' | 'skills'>(initialTab)
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [installedOnly, setInstalledOnly] = useState(false)
 

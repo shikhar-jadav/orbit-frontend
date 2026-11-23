@@ -19,6 +19,7 @@ type CapabilitiesSectionProps = {
   onNavigateMarketplace?: () => void
   onCloseSettings: () => void
   onModalOpenChange?: (open: boolean) => void
+  initialTab?: CapabilitiesTab
 }
 
 function formatShortDate(iso: string): string {
@@ -35,8 +36,9 @@ export function CapabilitiesSection({
   onNavigateMarketplace,
   onCloseSettings,
   onModalOpenChange,
+  initialTab = 'skills',
 }: CapabilitiesSectionProps) {
-  const [tab, setTab] = useState<CapabilitiesTab>('skills')
+  const [tab, setTab] = useState<CapabilitiesTab>(initialTab)
   const [view, setView] = useState<CapabilitiesView>('yours')
   const [search, setSearch] = useState('')
   const [skillFilter, setSkillFilter] = useState<SkillFilter>('all')
