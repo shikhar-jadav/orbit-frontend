@@ -574,13 +574,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                         }`}
                       />
                       <span>
-                        {connector.is_enabled
-                          ? !connector.is_authenticated && connector.oauthProvider
-                            ? 'Sign-in required'
-                            : connector.is_configured
-                              ? 'Active'
-                              : 'Config required'
-                          : 'Available'}
+                        {connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'Connected' : 'Not connected'}
                       </span>
                     </div>
 
@@ -595,41 +589,13 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                           <span>Configure</span>
                         </button>
                       )}
-                      {connector.connected_account?.email && connector.oauthProvider && (
-                        <button
-                          type="button"
-                          className="card-action-btn btn-secondary"
-                          onClick={() => void switchAccount(connector.oauthProvider!, connector.connected_account?.email)}
-                          title="Switch to a different Google account"
-                        >
-                          <Icon name="refresh" size={13} />
-                          <span>Switch</span>
-                        </button>
-                      )}
-                      {connector.is_enabled && !connector.is_authenticated && connector.oauthProvider ? (
-                        <button
-                          type="button"
-                          className="card-action-btn btn-primary"
-                          onClick={() => void startOAuth(connector.oauthProvider!)}
-                        >
-                          <span>Sign in with Google</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className={`card-action-btn ${connector.is_enabled ? 'btn-installed' : 'btn-primary'}`}
-                          onClick={() => void toggleConnector(connector)}
-                        >
-                          {connector.is_enabled ? (
-                            <>
-                              <Icon name="check" size={13} />
-                              <span>Enabled</span>
-                            </>
-                          ) : (
-                            <span>Enable</span>
-                          )}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className={`card-action-btn ${connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`}
+                        onClick={() => openConnectorDetails(connector)}
+                      >
+                        {connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'Connected' : 'Connect'}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -702,6 +668,42 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
           )
         )}
       </div>
+
+      {/* Connector details */}
+      {selectedConnectorDetails && (
+        <div className="marketplace-modal-backdrop" onClick={(event) => { if (event.target === event.currentTarget) setSelectedConnectorDetails(null) }}>
+          <section className="marketplace-modal-card" role="dialog" aria-modal="true" aria-labelledby="connector-details-title">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="card-icon-badge connector-icon-badge"><Icon name={(selectedConnectorDetails.icon as IconName) || 'tool'} size={20} /></div>
+                <div><h2 id="connector-details-title">{selectedConnectorDetails.name}</h2><span className="card-category">{selectedConnectorDetails.category} · {selectedConnectorDetails.authType}</span></div>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setSelectedConnectorDetails(null)} aria-label="Close details"><Icon name="close" size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p className="modal-description">{selectedConnectorDetails.description}</p>
+              {selectedConnectorDetails.connected_account?.email && (
+                <p className="config-help-text">Connected account: <strong>{selectedConnectorDetails.connected_account.email}</strong></p>
+              )}
+              <div>
+                <strong style={{ color: '#fff', fontSize: 13 }}>What this connector can do</strong>
+                <div className="card-capabilities" style={{ marginTop: 10 }}>
+                  {selectedConnectorDetails.capabilities.map((capability) => <span className="capability-tag" key={capability}>{capability}</span>)}
+                </div>
+              </div>
+              {selectedConnectorDetails.website && <a href={selectedConnectorDetails.website} target="_blank" rel="noreferrer" className="config-help-text">Connector documentation</a>}
+              <p className="config-help-text">{selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'Connected and available to Orbit.' : 'Connect this account to make the connector available in Orbit.'}</p>
+            </div>
+            <div className="modal-footer">
+              {selectedConnectorDetails.configFields.length > 0 && <button type="button" className="card-action-btn btn-secondary" onClick={() => { setConfiguringConnector(selectedConnectorDetails); setConfigFormValues(selectedConnectorDetails.config || {}); setConfigEnabled(selectedConnectorDetails.is_enabled); setSelectedConnectorDetails(null) }}>Configure</button>}
+              <button type="button" className={`card-action-btn ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`} onClick={() => connectFromDetails(selectedConnectorDetails)} title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}>
+                {selectedConnectorDetails.is_authenticated && selectedConnectorDetails.is_enabled ? 'Connected' : 'Connect'}
+              </button>
+              <button type="button" className="card-action-btn btn-secondary" onClick={() => setSelectedConnectorDetails(null)}>Close</button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Configure Connector Modal */}
       {configuringConnector && (
