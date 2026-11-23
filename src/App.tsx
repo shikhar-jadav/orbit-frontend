@@ -214,7 +214,8 @@ function routineExecutionToChatMessages(execution: RoutineExecutionPreview): Mes
   const instruction = String((promptEntry && promptEntry.content) || routine.action_prompt || '').trim()
   let userContent = instruction || ('Run routine: ' + routine.name)
 
-  const triggerDetails = isRecord(triggerEntry && triggerEntry.details) ? triggerEntry.details : {}
+  const triggerDetails: Record<string, unknown> =
+    triggerEntry && isRecord(triggerEntry.details) ? triggerEntry.details : {}
   if (triggerEntry) {
     const source = String(triggerDetails.source || 'event')
     const eventType = String(triggerDetails.event_type || 'event')
