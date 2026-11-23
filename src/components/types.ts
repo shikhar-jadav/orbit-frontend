@@ -253,6 +253,8 @@ export type IconName =
   | 'paperPlane'
   | 'filter'
   | 'link'
+  | 'mail'
+  | 'gmail'
 
 export type AuthUser = {
   user_id: string
