@@ -49,6 +49,9 @@ type PendingSignupResult = {
 }
 
 async function readErrorDetail(res: Response, fallback: string): Promise<string> {
+  if (res.status >= 502 && res.status <= 504) {
+    return 'The server is waking up or temporarily unavailable. Please try again in a few moments.'
+  }
   try {
     const data = await res.json()
     if (typeof data?.detail === 'string' && data.detail.trim()) {
@@ -396,12 +399,21 @@ export function AuthScreen({
     resetMessages()
     setLoading(true)
     try {
-      const res = await fetch('/auth/discover', {
+      let res = await fetch('/auth/discover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({ email: trimmed }),
       })
+      if (!res.ok && res.status >= 502 && res.status <= 504) {
+        await new Promise((r) => setTimeout(r, 1500))
+        res = await fetch('/auth/discover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ email: trimmed }),
+        })
+      }
       if (!res.ok) {
         setError(await readErrorDetail(res, 'Could not look up that email address.'))
         return
