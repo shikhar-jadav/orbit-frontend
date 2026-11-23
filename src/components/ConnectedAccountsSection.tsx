@@ -89,6 +89,13 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
   }, [loadStatus])
 
   useEffect(() => {
+    const handleIntegrationUpdate = () => { void loadStatus() }
+    window.addEventListener('orbit:integrations-updated', handleIntegrationUpdate)
+    return () => window.removeEventListener('orbit:integrations-updated', handleIntegrationUpdate)
+  }, [loadStatus])
+
+
+  useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const popup = popupRef.current
       const provider = popupProviderRef.current
@@ -109,6 +116,7 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
         setConnecting(null)
         setError('')
         setNotice(`${PROVIDERS.find((item) => item.id === provider)?.name || provider} connected successfully.`)
+        window.dispatchEvent(new Event('orbit:integrations-updated'))
         void loadStatus()
       } else if (event.data?.type === 'orbit_integration_error') {
         if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
@@ -130,6 +138,15 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
   const connect = async (provider: Provider) => {
     setError('')
     setNotice('')
+    // Reserve the popup synchronously during the click event. Opening it after
+    // the OAuth-start request can be blocked by browser popup protection.
+    const popup = window.open('about:blank', 'orbit-connected-account', 'popup,width=620,height=760')
+    if (!popup) {
+      setError('Allow pop-ups for Orbit to connect this account.')
+      return
+    }
+    popupRef.current = popup
+    popupProviderRef.current = provider
     setConnecting(provider)
     try {
       const response = await fetch(`/api/integrations/${provider}/oauth/start`, {
@@ -137,20 +154,16 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
         credentials: 'same-origin',
       })
       if (response.status === 401) {
+        popup.close()
+        popupRef.current = null
+        popupProviderRef.current = null
         onUnauthorized()
         return
       }
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.detail || `Could not connect ${provider}.`)
       if (typeof data.auth_url !== 'string') throw new Error('The provider did not return an authorization URL.')
-      const popup = window.open(
-        data.auth_url,
-        'orbit-connected-account',
-        'popup,width=620,height=760',
-      )
-      if (!popup) throw new Error('Allow pop-ups to connect this account.')
-      popupRef.current = popup
-      popupProviderRef.current = provider
+      popup.location.href = data.auth_url
       popup.focus()
       popupPollRef.current = window.setInterval(() => {
         if (!popup.closed) return
@@ -163,6 +176,9 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
         void loadStatus()
       }, 700)
     } catch (connectError) {
+      popup.close()
+      popupRef.current = null
+      popupProviderRef.current = null
       setConnecting(null)
       setError(connectError instanceof Error ? connectError.message : `Could not connect ${provider}.`)
     }

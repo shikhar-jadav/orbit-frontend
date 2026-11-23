@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Icon } from './Icon'
@@ -15,43 +15,26 @@ type MarketplaceViewProps = {
   onClose: () => void
   onOpenCapabilities?: () => void
   initialTab?: 'all' | 'connectors' | 'skills'
+  initialConnectorId?: string | null
 }
 
-async function fetchMarketplaceJson<T>(
-  primaryUrl: string,
-  fallbackUrl?: string,
-  options?: RequestInit,
-): Promise<T> {
-  const tryFetch = async (url: string) => {
-    const res = await fetch(url, options)
-    const ct = res.headers.get('content-type') || ''
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '')
-      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 100) || res.statusText}`)
-    }
-    if (!ct.includes('application/json')) {
-      throw new Error('Received non-JSON HTML response (check API proxy)')
-    }
-    return (await res.json()) as T
+async function fetchMarketplaceJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, options)
+  const ct = res.headers.get('content-type') || ''
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    throw new Error(`HTTP ${res.status}: ${errText.slice(0, 100) || res.statusText}`)
   }
-
-  try {
-    return await tryFetch(primaryUrl)
-  } catch (primaryErr) {
-    if (fallbackUrl) {
-      try {
-        return await tryFetch(fallbackUrl)
-      } catch {
-        throw primaryErr
-      }
-    }
-    throw primaryErr
+  if (!ct.includes('application/json')) {
+    throw new Error('Received non-JSON HTML response (check API proxy)')
   }
+  return (await res.json()) as T
 }
 
-export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all' }: MarketplaceViewProps) {
+export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all', initialConnectorId }: MarketplaceViewProps) {
   const popupRef = useRef<Window | null>(null)
   const popupProviderRef = useRef<string | null>(null)
+  const pendingConnectorIdRef = useRef<string | null>(null)
   const [catalog, setCatalog] = useState<MarketplaceCatalog | null>(null)
   const [loading, setLoading] = useState(true)
   const [reloadNonce, setReloadNonce] = useState(0)
@@ -63,6 +46,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
 
   // Modals state
   const [configuringConnector, setConfiguringConnector] = useState<MarketplaceConnector | null>(null)
+  const [selectedConnectorDetails, setSelectedConnectorDetails] = useState<MarketplaceConnector | null>(null)
   const [configFormValues, setConfigFormValues] = useState<Record<string, ConnectorConfigValue>>({})
   const [configEnabled, setConfigEnabled] = useState(true)
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({})
@@ -91,10 +75,27 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         popupRef.current = null
         popupProviderRef.current = null
         showToast(`${provider === 'gmail' ? 'Gmail' : provider} connected successfully!`)
-        triggerReload()
+        const connectorId = pendingConnectorIdRef.current
+        pendingConnectorIdRef.current = null
+        const refreshAfterConnect = async () => {
+          if (connectorId) {
+            try {
+              await fetch(`/api/marketplace/connectors/${encodeURIComponent(connectorId)}/toggle`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin', body: JSON.stringify({ enabled: true }),
+              })
+            } catch {
+              // The provider account is saved even if the connector setting needs a retry.
+            }
+          }
+          window.dispatchEvent(new Event('orbit:integrations-updated'))
+          window.dispatchEvent(new Event('orbit:marketplace-updated'))
+        }
+        void refreshAfterConnect()
       } else if (event.data?.type === 'orbit_integration_error') {
         popupRef.current = null
         popupProviderRef.current = null
+        pendingConnectorIdRef.current = null
         showToast(String(event.data.message || 'The account could not be connected.'))
       }
     }
@@ -102,7 +103,16 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
-  const startOAuth = async (provider: string) => {
+  const startOAuth = async (provider: string, connectorId?: string) => {
+    // Open synchronously from the click event before waiting for the API.
+    const popup = window.open('about:blank', 'orbit-oauth-popup', 'popup,width=620,height=760')
+    if (!popup) {
+      showToast('Please allow popups in your browser to connect this account.')
+      return
+    }
+    popupRef.current = popup
+    popupProviderRef.current = provider
+    pendingConnectorIdRef.current = connectorId || null
     try {
       const response = await fetch(`/api/integrations/${provider}/oauth/start`, {
         method: 'POST',
@@ -115,31 +125,15 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
       if (typeof data.auth_url !== 'string') {
         throw new Error('No authorization URL returned from server.')
       }
-      popupProviderRef.current = provider
-      const popup = window.open(
-        data.auth_url,
-        'orbit-oauth-popup',
-        'popup,width=620,height=760',
-      )
-      popupRef.current = popup
-      if (!popup) {
-        throw new Error('Please allow popups in your browser to sign in with Google.')
-      }
+      popup.location.href = data.auth_url
+      popup.focus()
     } catch (err) {
+      popupRef.current?.close()
+      popupRef.current = null
+      popupProviderRef.current = null
+      pendingConnectorIdRef.current = null
       showToast(err instanceof Error ? err.message : 'Failed to launch sign-in window.')
     }
-  }
-
-  const switchAccount = async (provider: string, accountId?: string) => {
-    try {
-      const url = accountId
-        ? `/api/integrations/${provider}?account_id=${encodeURIComponent(accountId)}`
-        : `/api/integrations/${provider}`
-      await fetch(url, { method: 'DELETE', credentials: 'same-origin' })
-    } catch {
-      // Proceed to prompt for new account
-    }
-    await startOAuth(provider)
   }
 
   useEffect(() => {
@@ -148,7 +142,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
       try {
         const data = await fetchMarketplaceJson<MarketplaceCatalog>(
           '/api/marketplace',
-          '/marketplace',
         )
         if (!active) return
         setCatalog(data)
@@ -166,10 +159,28 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     }
   }, [reloadNonce])
 
-  const triggerReload = () => {
+  const triggerReload = useCallback(() => {
     setLoading(true)
     setReloadNonce((n) => n + 1)
-  }
+  }, [])
+
+  useEffect(() => {
+    const refreshCatalog = () => triggerReload()
+    window.addEventListener('orbit:marketplace-updated', refreshCatalog)
+    window.addEventListener('orbit:integrations-updated', refreshCatalog)
+    return () => {
+      window.removeEventListener('orbit:marketplace-updated', refreshCatalog)
+      window.removeEventListener('orbit:integrations-updated', refreshCatalog)
+    }
+  }, [triggerReload])
+
+  useEffect(() => {
+    if (!catalog) return
+    const targetId = initialConnectorId || selectedConnectorDetails?.id
+    if (!targetId) return
+    const connector = catalog.connectors.find((item) => item.id === targetId)
+    if (connector && connector !== selectedConnectorDetails) setSelectedConnectorDetails(connector)
+  }, [initialConnectorId, catalog, selectedConnectorDetails?.id])
 
   // Toggle skill install
   const toggleSkill = async (skill: MarketplaceSkill) => {
@@ -177,7 +188,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     try {
       await fetchMarketplaceJson(
         `/api/marketplace/skills/${encodeURIComponent(skill.id)}/toggle`,
-        `/marketplace/skills/${encodeURIComponent(skill.id)}/toggle`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -199,63 +209,58 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
           },
         }
       })
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
       showToast(nextState ? `Installed ${skill.name}` : `Uninstalled ${skill.name}`)
     } catch (err) {
       showToast(`Error: ${err instanceof Error ? err.message : 'Action failed'}`)
     }
   }
 
-  // Toggle connector enabled
-  const toggleConnector = async (connector: MarketplaceConnector) => {
-    const nextState = !connector.is_enabled
-    if (nextState && connector.oauthProvider && !connector.is_authenticated) {
-      void startOAuth(connector.oauthProvider)
-    }
+  const setConnectorEnabled = async (connector: MarketplaceConnector, enabled: boolean) => {
     try {
       await fetchMarketplaceJson(
         `/api/marketplace/connectors/${encodeURIComponent(connector.id)}/toggle`,
-        `/marketplace/connectors/${encodeURIComponent(connector.id)}/toggle`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled: nextState }),
-        },
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ enabled }) },
       )
       setCatalog((current) => {
         if (!current) return current
-        const updatedConnectors = current.connectors.map((c) => {
-          if (c.id === connector.id) {
-            const nextStatus: MarketplaceConnector['status'] =
-              nextState && c.is_configured
+        const updatedConnectors = current.connectors.map((item) => {
+          if (item.id !== connector.id) return item
+          const nextStatus: MarketplaceConnector['status'] = !enabled
+            ? 'available'
+            : item.is_authenticated === false
+              ? 'needs_auth'
+              : item.is_configured
                 ? 'active'
-                : nextState
-                ? 'needs_config'
-                : 'available'
-            return { ...c, is_enabled: nextState, status: nextStatus }
-          }
-          return c
+                : 'needs_config'
+          return { ...item, is_enabled: enabled, status: nextStatus }
         })
-        const activeCount = updatedConnectors.filter((c) => c.is_enabled && c.is_configured).length
-        return {
-          ...current,
-          connectors: updatedConnectors,
-          stats: {
-            ...current.stats,
-            active_connectors: activeCount,
-          },
-        }
+        return { ...current, connectors: updatedConnectors, stats: {
+          ...current.stats,
+          active_connectors: updatedConnectors.filter((item) => item.is_enabled && item.is_configured && item.is_authenticated !== false).length,
+        } }
       })
-      showToast(nextState ? `Enabled ${connector.name}` : `Disabled ${connector.name}`)
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
+      showToast(enabled ? `Connected ${connector.name}` : `Disconnected ${connector.name}`)
     } catch (err) {
       showToast(`Error: ${err instanceof Error ? err.message : 'Action failed'}`)
     }
+  }
+
+  const openConnectorDetails = (connector: MarketplaceConnector) => {
+    setSelectedConnectorDetails(connector)
+  }
+
+  const connectFromDetails = (connector: MarketplaceConnector) => {
+    if (connector.oauthProvider) void startOAuth(connector.oauthProvider, connector.id)
+    else if (!connector.is_enabled) void setConnectorEnabled(connector, true)
   }
 
   // Open Configure Modal
   const openConfigureModal = (connector: MarketplaceConnector) => {
     setConfiguringConnector(connector)
     setConfigFormValues(connector.config || {})
-    setConfigEnabled(connector.is_enabled)
+    setConfigEnabled(true)
     setShowPasswordMap({})
   }
 
@@ -267,7 +272,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
       setSavingConfig(true)
       await fetchMarketplaceJson(
         `/api/marketplace/connectors/${encodeURIComponent(configuringConnector.id)}/config`,
-        `/marketplace/connectors/${encodeURIComponent(configuringConnector.id)}/config`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -278,6 +282,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         },
       )
       triggerReload()
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
       setConfiguringConnector(null)
       showToast(`Saved configuration for ${configuringConnector.name}`)
     } catch (err) {
@@ -295,7 +300,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     try {
       const data = await fetchMarketplaceJson<{ readme?: string }>(
         `/api/marketplace/skills/${encodeURIComponent(skill.id)}/readme`,
-        `/marketplace/skills/${encodeURIComponent(skill.id)}/readme`,
       )
       setReadmeContent(data.readme || '# No documentation provided.')
     } catch {
@@ -474,14 +478,16 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         )}
 
         {/* Loading / Error */}
-        {loading && (
+        {loading && catalog && <p className="config-help-text" role="status">Refreshing Marketplace…</p>}
+        {error && catalog && <p className="config-help-text" role="status">Could not refresh Marketplace: {error}</p>}
+        {loading && !catalog && (
           <div className="marketplace-state-box">
             <span className="spinner" />
             <p>Loading catalog…</p>
           </div>
         )}
 
-        {!loading && error && (
+        {!catalog && !loading && error && (
           <div className="marketplace-state-box marketplace-error-box">
             <Icon name="alertTriangle" size={26} />
             <p>{error}</p>
@@ -492,7 +498,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         )}
 
         {/* Catalog Grid / Empty State */}
-        {!loading && !error && (
+        {catalog && (
           totalCatalogItems === 0 ? (
             <div className="marketplace-empty-card">
               <div className="marketplace-empty-icon">
@@ -578,13 +584,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                         }`}
                       />
                       <span>
-                        {connector.is_enabled
-                          ? !connector.is_authenticated && connector.oauthProvider
-                            ? 'Sign-in required'
-                            : connector.is_configured
-                              ? 'Active'
-                              : 'Config required'
-                          : 'Available'}
+                        {connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'Connected' : 'Not connected'}
                       </span>
                     </div>
 
@@ -599,41 +599,13 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                           <span>Configure</span>
                         </button>
                       )}
-                      {connector.connected_account?.email && connector.oauthProvider && (
-                        <button
-                          type="button"
-                          className="card-action-btn btn-secondary"
-                          onClick={() => void switchAccount(connector.oauthProvider!, connector.connected_account?.email)}
-                          title="Switch to a different Google account"
-                        >
-                          <Icon name="refresh" size={13} />
-                          <span>Switch</span>
-                        </button>
-                      )}
-                      {connector.is_enabled && !connector.is_authenticated && connector.oauthProvider ? (
-                        <button
-                          type="button"
-                          className="card-action-btn btn-primary"
-                          onClick={() => void startOAuth(connector.oauthProvider!)}
-                        >
-                          <span>Sign in with Google</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className={`card-action-btn ${connector.is_enabled ? 'btn-installed' : 'btn-primary'}`}
-                          onClick={() => void toggleConnector(connector)}
-                        >
-                          {connector.is_enabled ? (
-                            <>
-                              <Icon name="check" size={13} />
-                              <span>Enabled</span>
-                            </>
-                          ) : (
-                            <span>Enable</span>
-                          )}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className={`card-action-btn ${connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`}
+                        onClick={() => openConnectorDetails(connector)}
+                      >
+                        {connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'Connected' : 'Connect'}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -707,6 +679,42 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         )}
       </div>
 
+      {/* Connector details */}
+      {selectedConnectorDetails && (
+        <div className="marketplace-modal-backdrop" onClick={(event) => { if (event.target === event.currentTarget) setSelectedConnectorDetails(null) }}>
+          <section className="marketplace-modal-card" role="dialog" aria-modal="true" aria-labelledby="connector-details-title">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="card-icon-badge connector-icon-badge"><Icon name={(selectedConnectorDetails.icon as IconName) || 'tool'} size={20} /></div>
+                <div><h2 id="connector-details-title">{selectedConnectorDetails.name}</h2><span className="card-category">{selectedConnectorDetails.category} · {selectedConnectorDetails.authType}</span></div>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setSelectedConnectorDetails(null)} aria-label="Close details"><Icon name="close" size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p className="modal-description">{selectedConnectorDetails.description}</p>
+              {selectedConnectorDetails.connected_account?.email && (
+                <p className="config-help-text">Connected account: <strong>{selectedConnectorDetails.connected_account.email}</strong></p>
+              )}
+              <div>
+                <strong style={{ color: '#fff', fontSize: 13 }}>What this connector can do</strong>
+                <div className="card-capabilities" style={{ marginTop: 10 }}>
+                  {selectedConnectorDetails.capabilities.map((capability) => <span className="capability-tag" key={capability}>{capability}</span>)}
+                </div>
+              </div>
+              {selectedConnectorDetails.website && <a href={selectedConnectorDetails.website} target="_blank" rel="noreferrer" className="config-help-text">Connector documentation</a>}
+              <p className="config-help-text">{selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'Connected and available to Orbit.' : 'Connect this account to make the connector available in Orbit.'}</p>
+            </div>
+            <div className="modal-footer">
+              {selectedConnectorDetails.configFields.length > 0 && <button type="button" className="card-action-btn btn-secondary" onClick={() => { setConfiguringConnector(selectedConnectorDetails); setConfigFormValues(selectedConnectorDetails.config || {}); setConfigEnabled(true); setSelectedConnectorDetails(null) }}>Configure</button>}
+              <button type="button" disabled={!selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured} className={`card-action-btn ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`} onClick={() => connectFromDetails(selectedConnectorDetails)} title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}>
+                {selectedConnectorDetails.is_authenticated && selectedConnectorDetails.is_enabled ? 'Connected' : 'Connect'}
+              </button>
+              <button type="button" className="card-action-btn btn-secondary" onClick={() => setSelectedConnectorDetails(null)}>Close</button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {/* Configure Connector Modal */}
       {configuringConnector && (
         <div
@@ -743,18 +751,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
             >
               <div className="modal-body">
                 <p className="modal-description">{configuringConnector.description}</p>
-
-                <label className="config-toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={configEnabled}
-                    onChange={(e) => setConfigEnabled(e.target.checked)}
-                  />
-                  <div>
-                    <strong>Enable Connector</strong>
-                    <span>Allow the agent to access this service in chats and execution.</span>
-                  </div>
-                </label>
 
                 {(!configuringConnector.configFields || configuringConnector.configFields.length === 0) && (
                   <p className="config-help-text" style={{ margin: '1rem 0', fontSize: '0.875rem' }}>

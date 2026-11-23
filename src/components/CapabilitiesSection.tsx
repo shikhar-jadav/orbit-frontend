@@ -16,7 +16,7 @@ type SkillFilter = 'all' | 'active' | 'drafts'
 type SortOrder = 'newest' | 'name'
 
 type CapabilitiesSectionProps = {
-  onNavigateMarketplace?: () => void
+  onNavigateMarketplace?: (connectorId?: string) => void
   onCloseSettings: () => void
   onModalOpenChange?: (open: boolean) => void
   initialTab?: CapabilitiesTab
@@ -109,6 +109,12 @@ export function CapabilitiesSection({
       active = false
     }
   }, [reloadNonce])
+
+  useEffect(() => {
+    const refreshMarketplace = () => setReloadNonce((value) => value + 1)
+    window.addEventListener('orbit:marketplace-updated', refreshMarketplace)
+    return () => window.removeEventListener('orbit:marketplace-updated', refreshMarketplace)
+  }, [])
 
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
@@ -226,24 +232,6 @@ export function CapabilitiesSection({
     }
   }
 
-  async function toggleMarketplaceConnector(conn: MarketplaceConnector) {
-    const nextEnabled = !conn.is_enabled
-    try {
-      const res = await fetch(`/marketplace/connectors/${encodeURIComponent(conn.id)}/toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: nextEnabled }),
-      })
-      if (!res.ok) return
-      setMarketplaceConnectors((prev) =>
-        prev.map((c) => (c.id === conn.id ? { ...c, is_enabled: nextEnabled } : c)),
-      )
-      showToast(nextEnabled ? `Enabled ${conn.name}` : `Disabled ${conn.name}`)
-    } catch {
-      // ignore
-    }
-  }
-
   const filteredPersonalSkills = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = personalSkills.filter((s) => {
@@ -296,10 +284,10 @@ export function CapabilitiesSection({
     ? personalConnectors.find((c) => c.id === selectedConnectorId) ?? null
     : null
 
-  function handleOpenMarketplace() {
+  function handleOpenMarketplace(connectorId?: string) {
     if (onNavigateMarketplace) {
       onCloseSettings()
-      onNavigateMarketplace()
+      onNavigateMarketplace(connectorId)
     }
   }
 
@@ -627,7 +615,7 @@ export function CapabilitiesSection({
                     Create personal skill
                   </button>
                   {onNavigateMarketplace && (
-                    <button type="button" className="sp-btn-ghost" onClick={handleOpenMarketplace}>
+                    <button type="button" className="sp-btn-ghost" onClick={() => handleOpenMarketplace()}>
                       Open Marketplace
                     </button>
                   )}
@@ -657,10 +645,10 @@ export function CapabilitiesSection({
                     </div>
                     <button
                       type="button"
-                      className={conn.is_enabled ? 'sp-btn-subtle' : 'sp-btn-white'}
-                      onClick={() => void toggleMarketplaceConnector(conn)}
+                      className={conn.is_enabled && conn.is_authenticated !== false ? 'sp-btn-subtle' : 'sp-btn-white'}
+                      onClick={() => handleOpenMarketplace(conn.id)}
                     >
-                      {conn.is_enabled ? 'Enabled' : 'Enable'}
+                      {conn.is_enabled && conn.is_configured && conn.is_authenticated !== false ? 'Connected' : 'Connect'}
                     </button>
                   </div>
                 ))}
@@ -686,7 +674,7 @@ export function CapabilitiesSection({
                   Add custom connector
                 </button>
                 {onNavigateMarketplace && (
-                  <button type="button" className="sp-btn-ghost" onClick={handleOpenMarketplace}>
+                  <button type="button" className="sp-btn-ghost" onClick={() => handleOpenMarketplace()}>
                     Open Marketplace
                   </button>
                 )}
@@ -1042,9 +1030,9 @@ export function CapabilitiesSection({
                     <button
                       type="button"
                       className="sp-btn-subtle"
-                      onClick={() => void toggleMarketplaceConnector(conn)}
+                      onClick={() => handleOpenMarketplace(conn.id)}
                     >
-                      Disable
+                      Connected
                     </button>
                   </div>
                 </div>
