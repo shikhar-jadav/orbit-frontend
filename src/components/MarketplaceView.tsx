@@ -516,14 +516,16 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                     </div>
 
                     <div className="card-actions">
-                      <button
-                        type="button"
-                        className="card-action-btn btn-secondary"
-                        onClick={() => openConfigureModal(connector)}
-                      >
-                        <Icon name="settings" size={13} />
-                        <span>Configure</span>
-                      </button>
+                      {connector.configFields && connector.configFields.length > 0 && (
+                        <button
+                          type="button"
+                          className="card-action-btn btn-secondary"
+                          onClick={() => openConfigureModal(connector)}
+                        >
+                          <Icon name="settings" size={13} />
+                          <span>Configure</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={`card-action-btn ${connector.is_enabled ? 'btn-installed' : 'btn-primary'}`}
@@ -659,6 +661,12 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                     <span>Allow the agent to access this service in chats and execution.</span>
                   </div>
                 </label>
+
+                {(!configuringConnector.configFields || configuringConnector.configFields.length === 0) && (
+                  <p className="config-help-text" style={{ margin: '1rem 0', fontSize: '0.875rem' }}>
+                    This connector is built-in and co-hosted with the backend. It automatically uses your authenticated credentials — no manual server URLs or secrets are required.
+                  </p>
+                )}
 
                 {configuringConnector.configFields?.map((field) => {
                   const isPassword = field.type === 'password'
