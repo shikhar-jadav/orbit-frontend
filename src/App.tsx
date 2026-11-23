@@ -360,7 +360,7 @@ function App() {
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false)
   const [activeThreadId, setActiveThreadId] = useState<string | null>(initialRoute.threadId)
   const [pendingRoutineExecution, setPendingRoutineExecution] = useState<RoutineExecutionPreview | null>(null)
-  const [settingsPage, setSettingsPage> = useState(initialRoute.settings)
+  const [settingsPage, setSettingsPage] = useState(initialRoute.settings)
   const [settingsSection, setSettingsSection] = useState<SettingsSection>(initialRoute.settingsSection)
   const [marketplacePage, setMarketplacePage] = useState(initialRoute.marketplace)
   const [threadMenuId, setThreadMenuId] = useState<string | null>(null)
