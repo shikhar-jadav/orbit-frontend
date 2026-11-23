@@ -232,24 +232,6 @@ export function CapabilitiesSection({
     }
   }
 
-  async function toggleMarketplaceConnector(conn: MarketplaceConnector) {
-    const nextEnabled = !conn.is_enabled
-    try {
-      const res = await fetch(`/marketplace/connectors/${encodeURIComponent(conn.id)}/toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: nextEnabled }),
-      })
-      if (!res.ok) return
-      setMarketplaceConnectors((prev) =>
-        prev.map((c) => (c.id === conn.id ? { ...c, is_enabled: nextEnabled } : c)),
-      )
-      showToast(nextEnabled ? `Enabled ${conn.name}` : `Disabled ${conn.name}`)
-    } catch {
-      // ignore
-    }
-  }
-
   const filteredPersonalSkills = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = personalSkills.filter((s) => {
@@ -666,7 +648,7 @@ export function CapabilitiesSection({
                       className={conn.is_enabled && conn.is_authenticated !== false ? 'sp-btn-subtle' : 'sp-btn-white'}
                       onClick={() => handleOpenMarketplace(conn.id)}
                     >
-                      {conn.is_enabled && conn.is_authenticated !== false ? 'Connected' : 'Connect'}
+                      {conn.is_enabled && conn.is_configured && conn.is_authenticated !== false ? 'Connected' : 'Connect'}
                     </button>
                   </div>
                 ))}
