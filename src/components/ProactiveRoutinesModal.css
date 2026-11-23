@@ -2699,3 +2699,215 @@ dialog.routines-modal-dialog::backdrop {
     gap: 4px;
   }
 }
+
+
+/* Live event-to-run feedback */
+.routine-live-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #91bfc1;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.routine-live-refresh i,
+.routine-event-waiting-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #65c99e;
+  box-shadow: 0 0 0 3px rgba(101, 201, 158, 0.1);
+}
+
+.routine-event-current {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(85, 199, 215, 0.14);
+  border-radius: 8px;
+  background: #222;
+}
+
+.routine-event-current strong {
+  color: #e2e2e2;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.routine-event-current p {
+  margin: 5px 0 0;
+  color: #8f9b9c;
+  font-size: 9px;
+}
+
+.routine-event-pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin: 12px 0 0;
+}
+
+.routine-event-step {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 7px;
+  color: #777;
+  background: rgba(255, 255, 255, 0.018);
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.routine-event-step-marker {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 50%;
+  color: #858585;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.routine-event-step.complete {
+  color: #9fcfc0;
+  border-color: rgba(101, 201, 158, 0.18);
+  background: rgba(101, 201, 158, 0.035);
+}
+
+.routine-event-step.complete .routine-event-step-marker {
+  color: #9cdbb9;
+  border-color: rgba(101, 201, 158, 0.28);
+  background: rgba(101, 201, 158, 0.1);
+}
+
+.routine-event-step.current {
+  color: #c7e6e8;
+  border-color: rgba(85, 199, 215, 0.3);
+  background: rgba(85, 199, 215, 0.07);
+}
+
+.routine-event-step.current .routine-event-step-marker {
+  color: #b6edf0;
+  border-color: rgba(85, 199, 215, 0.45);
+  background: rgba(85, 199, 215, 0.13);
+}
+
+.routine-event-step.failed {
+  color: #e6a0a0;
+  border-color: rgba(232, 100, 100, 0.22);
+  background: rgba(232, 100, 100, 0.055);
+}
+
+.routine-event-step.failed .routine-event-step-marker {
+  color: #f3aaaa;
+  border-color: rgba(232, 100, 100, 0.32);
+  background: rgba(232, 100, 100, 0.1);
+}
+
+.routine-event-progress-copy {
+  margin: 10px 0 0;
+  color: #9c9c9c;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.routine-event-waiting {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed rgba(85, 199, 215, 0.2);
+  border-radius: 8px;
+  background: rgba(85, 199, 215, 0.035);
+}
+
+.routine-event-waiting-dot {
+  margin-top: 5px;
+}
+
+.routine-event-waiting strong {
+  color: #d2e5e6;
+  font-size: 10px;
+}
+
+.routine-event-waiting p {
+  margin: 5px 0 0;
+  color: #8e9b9c;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.routine-event-payload {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  padding-top: 8px;
+}
+
+.routine-event-payload summary {
+  color: #9ca9aa;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.routine-event-payload pre {
+  max-height: 190px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 7px;
+  color: #bcbcbc;
+  background: #202020;
+  font-size: 9px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.routine-run-status.queued,
+.routine-run-status.pending {
+  color: #d8c18e;
+  background: rgba(216, 193, 142, 0.1);
+}
+
+.routine-run-status.running,
+.routine-run-status.retrying,
+.routine-run-status.processing {
+  color: #9fdce2;
+  background: rgba(85, 199, 215, 0.11);
+}
+
+.routine-run-status.skipped {
+  color: #b0b0b0;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+@media (max-width: 760px) {
+  .routine-event-pipeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .routine-live-refresh {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .routine-event-current {
+    flex-direction: column;
+  }
+
+  .routine-event-step {
+    font-size: 8px;
+  }
+}
