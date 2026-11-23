@@ -268,10 +268,15 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         body: JSON.stringify({ minutes }),
       })
       if (res.ok) {
-        loadRoutines()
+        const data = await res.json()
+        setSelectedRoutine((current) =>
+          current?.id === routineId ? { ...current, next_run_at: data.next_run_at } : current,
+        )
+        setRoutineActionStatus(`Snoozed for ${minutes} minutes.`)
+        void loadRoutines()
       }
     } catch {
-      // ignore
+      setRoutineActionStatus('Could not snooze this routine.')
     }
   }
 
@@ -1501,6 +1506,12 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                         <button type="button" className="routine-secondary-button" onClick={() => void handleTogglePause(selectedRoutine)}>
                           {selectedRoutine.enabled ? 'Pause' : 'Resume'}
                         </button>
+                        {selectedRoutine.one_shot && selectedRoutine.enabled && (
+                          <button type="button" className="routine-secondary-button" onClick={() => void handleSnooze(selectedRoutine.id, 10)}>
+                            <Icon name="clock" size={13} />
+                            Snooze 10m
+                          </button>
+                        )}
                         <button type="button" className="routine-danger-button" onClick={() => void handleDelete(selectedRoutine.id)}>
                           <Icon name="trash" size={13} />
                           Delete
