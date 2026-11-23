@@ -175,10 +175,12 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   }, [triggerReload])
 
   useEffect(() => {
-    if (!initialConnectorId || !catalog) return
-    const connector = catalog.connectors.find((item) => item.id === initialConnectorId)
-    if (connector) setSelectedConnectorDetails(connector)
-  }, [initialConnectorId, catalog])
+    if (!catalog) return
+    const targetId = initialConnectorId || selectedConnectorDetails?.id
+    if (!targetId) return
+    const connector = catalog.connectors.find((item) => item.id === targetId)
+    if (connector && connector !== selectedConnectorDetails) setSelectedConnectorDetails(connector)
+  }, [initialConnectorId, catalog, selectedConnectorDetails?.id])
 
   // Toggle skill install
   const toggleSkill = async (skill: MarketplaceSkill) => {
@@ -222,9 +224,17 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
       )
       setCatalog((current) => {
         if (!current) return current
-        const updatedConnectors = current.connectors.map((item) => item.id === connector.id
-          ? { ...item, is_enabled: enabled, status: enabled ? (item.is_authenticated ? 'active' : 'needs_auth') : 'available' }
-          : item)
+        const updatedConnectors = current.connectors.map((item) => {
+          if (item.id !== connector.id) return item
+          const nextStatus: MarketplaceConnector['status'] = !enabled
+            ? 'available'
+            : item.is_authenticated === false
+              ? 'needs_auth'
+              : item.is_configured
+                ? 'active'
+                : 'needs_config'
+          return { ...item, is_enabled: enabled, status: nextStatus }
+        })
         return { ...current, connectors: updatedConnectors, stats: {
           ...current.stats,
           active_connectors: updatedConnectors.filter((item) => item.is_enabled && item.is_configured && item.is_authenticated !== false).length,
@@ -235,6 +245,10 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     } catch (err) {
       showToast(`Error: ${err instanceof Error ? err.message : 'Action failed'}`)
     }
+  }
+
+  const openConnectorDetails = (connector: MarketplaceConnector) => {
+    setSelectedConnectorDetails(connector)
   }
 
   const connectFromDetails = (connector: MarketplaceConnector) => {
