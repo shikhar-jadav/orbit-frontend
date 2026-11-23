@@ -2360,6 +2360,14 @@ function App() {
             onClearUnread={() => setUnreadNotifCount(0)}
             soundEnabled={soundEnabled}
             onToggleSound={toggleSound}
+            onContinueRun={(thread) => {
+              setThreads((current) => [
+                thread as Thread,
+                ...current.filter((item) => item.thread_id !== thread.thread_id),
+              ])
+              setRoutinesModalOpen(false)
+              navigateThread(thread.thread_id)
+            }}
           />
         </Suspense>
       )}
