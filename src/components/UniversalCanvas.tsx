@@ -1,10 +1,39 @@
 import { useState, useEffect, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { getFileCategory, formatFriendlyTitle } from './ArtifactCard'
+import { getFileCategory, formatFriendlyTitle } from './artifactUtils'
+import type { A2UICanvasData } from './A2UICanvas'
 import { GenerativeUIWidget } from './GenerativeUIWidget'
 import { A2UICanvas } from './A2UICanvas'
 import './UniversalCanvas.css'
+
+interface CanvasSheet {
+  sheet_name?: string
+  rows?: string[][]
+}
+
+interface CanvasSlide {
+  title?: string
+  text_blocks?: string[]
+  notes?: string
+}
+
+interface CanvasPreviewData {
+  type?: string
+  content?: string
+  raw_text?: string
+  extension?: string
+  filename?: string
+  html?: string
+  serve_url?: string
+  rows?: string[][]
+  sheets?: CanvasSheet[]
+  total_slides?: number
+  slides?: CanvasSlide[]
+  raw_url?: string
+  category?: string
+  svg_content?: string
+}
 
 export interface CanvasItem {
   type: 'file' | 'artifact' | 'a2ui' | 'generative_ui'
@@ -13,7 +42,7 @@ export interface CanvasItem {
   artifactType?: string
   language?: string
   content?: string
-  spec?: any
+  spec?: A2UICanvasData['spec']
   html?: string
   mimeType?: string
   sizeBytes?: number
@@ -36,7 +65,7 @@ export function UniversalCanvas({
 }: UniversalCanvasProps) {
   const [loading, setLoading] = useState<boolean>(item.type === 'file' && !item.content)
   const [error, setError] = useState<string | null>(null)
-  const [previewData, setPreviewData] = useState<any>(null)
+  const [previewData, setPreviewData] = useState<CanvasPreviewData | null>(null)
   const [viewMode, setViewMode] = useState<'preview' | 'source'>('preview')
   const [copied, setCopied] = useState<boolean>(false)
   const [activeSheetIndex, setActiveSheetIndex] = useState<number>(0)
@@ -50,10 +79,16 @@ export function UniversalCanvas({
 
   useEffect(() => {
     let isMounted = true
+    let previewSettled = false
+    let loadingTimer: number | undefined
 
     if (item.type === 'file' && filePath) {
-      setLoading(true)
-      setError(null)
+      loadingTimer = window.setTimeout(() => {
+        if (isMounted && !previewSettled) {
+          setLoading(true)
+          setError(null)
+        }
+      }, 0)
 
       fetch(`/threads/${encodeURIComponent(threadId)}/workspace/preview?path=${encodeURIComponent(filePath)}`)
         .then(async (res) => {
@@ -64,8 +99,9 @@ export function UniversalCanvas({
           return res.json()
         })
         .then((data) => {
+          previewSettled = true
           if (isMounted) {
-            setPreviewData(data)
+            setPreviewData(data as CanvasPreviewData)
             setLoading(false)
             // Default viewMode based on extension
             const ext = (filePath.split('.').pop() || '').toLowerCase()
@@ -77,8 +113,9 @@ export function UniversalCanvas({
           }
         })
         .catch((err) => {
+          previewSettled = true
           if (isMounted) {
-            setError(err.message || 'Error loading preview')
+            setError(err instanceof Error ? err.message : 'Error loading preview')
             setLoading(false)
           }
         })
@@ -94,6 +131,7 @@ export function UniversalCanvas({
 
     return () => {
       isMounted = false
+      if (loadingTimer !== undefined) window.clearTimeout(loadingTimer)
     }
   }, [item, filePath, threadId])
 
@@ -332,7 +370,7 @@ export function UniversalCanvas({
             {previewData.sheets && previewData.sheets.length > 0 && (
               <div className="canvas-sheet-tabs-bar">
                 <div className="canvas-sheet-tabs">
-                  {previewData.sheets.map((sheet: any, idx: number) => (
+                  {previewData.sheets.map((sheet, idx: number) => (
                     <button
                       key={sheet.sheet_name || idx}
                       className={`canvas-sheet-tab ${activeSheetIndex === idx ? 'active' : ''}`}
@@ -479,7 +517,7 @@ export function UniversalCanvas({
 
             {/* Thumbnail Pills */}
             <div className="canvas-pptx-thumbnails">
-              {previewData.slides?.map((slide: any, sIdx: number) => (
+              {previewData.slides?.map((slide, sIdx: number) => (
                 <button
                   key={sIdx}
                   className={`canvas-thumb-btn ${activeSlideIndex === sIdx ? 'active' : ''}`}
