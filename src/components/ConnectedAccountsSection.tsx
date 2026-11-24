@@ -68,7 +68,6 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
   const popupPollRef = useRef<number | null>(null)
 
   const loadStatus = useCallback(async () => {
-    setLoading(true)
     try {
       const response = await fetch('/api/integrations/status', { credentials: 'same-origin' })
       if (response.status === 401) {
@@ -89,7 +88,10 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
   }, [loadStatus])
 
   useEffect(() => {
-    const handleIntegrationUpdate = () => { void loadStatus() }
+    const handleIntegrationUpdate = () => {
+      setLoading(true)
+      void loadStatus()
+    }
     window.addEventListener('orbit:integrations-updated', handleIntegrationUpdate)
     return () => window.removeEventListener('orbit:integrations-updated', handleIntegrationUpdate)
   }, [loadStatus])
