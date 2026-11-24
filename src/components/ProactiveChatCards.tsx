@@ -9,7 +9,7 @@ export interface RoutineSetupCardProps {
   onOpenModal?: () => void
 }
 
-export function parseRoutineToolOutput(output: string, args?: Record<string, unknown>) {
+function parseRoutineToolOutput(output: string, args?: Record<string, unknown>) {
   if (!output || typeof output !== 'string') return null
 
   const isReminder = output.includes('Reminder scheduled:') || args?.action === 'schedule'
@@ -70,7 +70,7 @@ export function parseRoutineToolOutput(output: string, args?: Record<string, unk
   }
 }
 
-export function formatHumanSchedule(expr?: string, isOneShot?: boolean): string {
+function formatHumanSchedule(expr?: string, isOneShot?: boolean): string {
   if (!expr) return ''
   const clean = expr.trim()
 
@@ -152,7 +152,7 @@ export function formatHumanSchedule(expr?: string, isOneShot?: boolean): string 
       if (isToday) return `Today at ${timeStr}`
       return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${timeStr}`
     }
-  } catch {}
+  } catch { /* Invalid date strings use the original schedule text. */ }
 
   return clean
 }
