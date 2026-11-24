@@ -15,7 +15,7 @@ interface ArtifactWidgetProps {
   onOpenCanvas?: (item: CanvasItem) => void
 }
 
-export function ArtifactWidget({ artifact, onRun: _onRun, onOpenCanvas }: ArtifactWidgetProps) {
+export function ArtifactWidget({ artifact, onOpenCanvas }: ArtifactWidgetProps) {
   const isCode = artifact.artifact_type === 'code' || !!artifact.language
   const isPlan = artifact.artifact_type === 'markdown_plan' || artifact.artifact_type === 'plan'
 
