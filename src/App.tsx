@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import './OrbitDesign.css'
@@ -12,6 +12,39 @@ import type {
   ProactiveNotification,
   RoutineExecutionPreview,
 } from './components/ProactiveRoutinesModal'
+
+type MarketplaceBoundaryState = { hasError: boolean; retryKey: number }
+
+class MarketplaceErrorBoundary extends Component<{ children: React.ReactNode }, MarketplaceBoundaryState> {
+  state: MarketplaceBoundaryState = { hasError: false, retryKey: 0 }
+
+  static getDerivedStateFromError(): Partial<MarketplaceBoundaryState> {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Marketplace crashed while rendering:', error)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="panel-lazy-loading" role="alert" style={{ flexDirection: 'column', gap: 12, padding: 24 }}>
+          <strong>Marketplace could not be displayed.</strong>
+          <span style={{ color: 'var(--text-muted, #999)', fontSize: 13 }}>The rest of Orbit is still available. Try loading Marketplace again.</span>
+          <button
+            type="button"
+            onClick={() => this.setState((state) => ({ hasError: false, retryKey: state.retryKey + 1 }))}
+            style={{ padding: '9px 14px', borderRadius: 8, cursor: 'pointer' }}
+          >
+            Retry Marketplace
+          </button>
+        </div>
+      )
+    }
+    return <React.Fragment key={this.state.retryKey}>{this.props.children}</React.Fragment>
+  }
+}
 
 export const preloadSettings = () => import('./components/SettingsPanel')
 export const preloadMarketplace = () => import('./components/MarketplaceView')
@@ -2670,14 +2703,16 @@ function App() {
         </ModernDialog>
 
         {marketplacePage ? (
-          <Suspense fallback={<div className="panel-lazy-loading"><span className="spinner" /></div>}>
-            <MarketplaceView
-              onClose={navigateMarketplace}
-              onOpenCapabilities={() => navigateSettings('capabilities')}
-              initialTab={marketplaceInitialTab}
-              initialConnectorId={marketplaceInitialConnectorId}
-            />
-          </Suspense>
+          <MarketplaceErrorBoundary>
+            <Suspense fallback={<div className="panel-lazy-loading"><span className="spinner" /></div>}>
+              <MarketplaceView
+                onClose={navigateMarketplace}
+                onOpenCapabilities={() => navigateSettings('capabilities')}
+                initialTab={marketplaceInitialTab}
+                initialConnectorId={marketplaceInitialConnectorId}
+              />
+            </Suspense>
+          </MarketplaceErrorBoundary>
         ) : settingsPage ? (
           <Suspense fallback={<div className="panel-lazy-loading"><span className="spinner" /></div>}>
             <SettingsPanel
