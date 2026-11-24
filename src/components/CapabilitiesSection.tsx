@@ -12,6 +12,30 @@ import type {
 
 const capabilitiesDataCache: Partial<Record<'skills' | 'connectors' | 'marketplace', { data: unknown; fetchedAt: number }>> = {}
 const CAPABILITIES_CACHE_TTL_MS = 5 * 60_000
+let inflightMarketplaceFetch: Promise<MarketplaceCatalog | null> | null = null
+
+async function fetchMarketplaceCatalogCached(force = false): Promise<MarketplaceCatalog | null> {
+  const existing = capabilitiesDataCache.marketplace
+  if (!force && existing && Date.now() - existing.fetchedAt < CAPABILITIES_CACHE_TTL_MS) {
+    return existing.data as MarketplaceCatalog
+  }
+  if (!force && inflightMarketplaceFetch) {
+    return inflightMarketplaceFetch
+  }
+  const req = fetch('/marketplace', { credentials: 'same-origin' })
+    .then(async (response) => {
+      if (!response.ok) return null
+      const catalog = (await response.json()) as MarketplaceCatalog
+      capabilitiesDataCache.marketplace = { data: catalog, fetchedAt: Date.now() }
+      return catalog
+    })
+    .catch(() => null)
+    .finally(() => {
+      if (inflightMarketplaceFetch === req) inflightMarketplaceFetch = null
+    })
+  inflightMarketplaceFetch = req
+  return req
+}
 
 type CapabilitiesTab = 'skills' | 'connectors'
 type CapabilitiesView = 'yours' | 'discover'
@@ -90,7 +114,6 @@ export function CapabilitiesSection({
 
   useEffect(() => {
     let active = true
-    const timer = window.setTimeout(() => {
     const sectionKey =
       view === 'discover' ? 'marketplace' : tab === 'skills' ? 'skills' : 'connectors'
     const forceReload = lastReloadNonce.current !== reloadNonce
@@ -133,45 +156,38 @@ export function CapabilitiesSection({
     ;(async () => {
       try {
         if (sectionKey === 'marketplace') {
-          const response = await fetch('/marketplace')
-          if (!response.ok) return
-          const catalog = (await response.json()) as MarketplaceCatalog
-          if (!active) return
+          const catalog = await fetchMarketplaceCatalogCached(forceReload)
+          if (!active || !catalog) return
           setMarketplaceSkills(catalog.skills ?? [])
           setMarketplaceConnectors(catalog.connectors ?? [])
-          capabilitiesDataCache.marketplace = { data: catalog, fetchedAt: Date.now() }
         } else if (sectionKey === 'skills') {
-          const [skillsResponse, marketplaceResponse] = await Promise.all([
-            fetch('/settings/personal-skills'),
-            fetch('/marketplace'),
-          ])
-          if (!skillsResponse.ok) return
-          const skills = (await skillsResponse.json()) as PersonalSkill[]
-          if (!active) return
-          setPersonalSkills(skills)
-          capabilitiesDataCache.skills = { data: skills, fetchedAt: Date.now() }
-          if (marketplaceResponse.ok) {
-            const catalog = (await marketplaceResponse.json()) as MarketplaceCatalog
-            if (!active) return
-            setMarketplaceSkills(catalog.skills ?? [])
-            capabilitiesDataCache.marketplace = { data: catalog, fetchedAt: Date.now() }
-          }
+          const marketplacePromise = fetchMarketplaceCatalogCached(forceReload).then((catalog) => {
+            if (active && catalog) setMarketplaceSkills(catalog.skills ?? [])
+          })
+          const skillsPromise = fetch('/settings/personal-skills', { credentials: 'same-origin' })
+            .then(async (res) => {
+              if (!res.ok) return
+              const skills = (await res.json()) as PersonalSkill[]
+              if (!active) return
+              setPersonalSkills(skills)
+              capabilitiesDataCache.skills = { data: skills, fetchedAt: Date.now() }
+              setLoading(false)
+            })
+          await Promise.all([skillsPromise, marketplacePromise])
         } else {
-          const [connectorsResponse, marketplaceResponse] = await Promise.all([
-            fetch('/settings/personal-connectors'),
-            fetch('/marketplace'),
-          ])
-          if (!connectorsResponse.ok) return
-          const connectors = (await connectorsResponse.json()) as PersonalConnector[]
-          if (!active) return
-          setPersonalConnectors(connectors)
-          capabilitiesDataCache.connectors = { data: connectors, fetchedAt: Date.now() }
-          if (marketplaceResponse.ok) {
-            const catalog = (await marketplaceResponse.json()) as MarketplaceCatalog
-            if (!active) return
-            setMarketplaceConnectors(catalog.connectors ?? [])
-            capabilitiesDataCache.marketplace = { data: catalog, fetchedAt: Date.now() }
-          }
+          const marketplacePromise = fetchMarketplaceCatalogCached(forceReload).then((catalog) => {
+            if (active && catalog) setMarketplaceConnectors(catalog.connectors ?? [])
+          })
+          const connectorsPromise = fetch('/settings/personal-connectors', { credentials: 'same-origin' })
+            .then(async (res) => {
+              if (!res.ok) return
+              const connectors = (await res.json()) as PersonalConnector[]
+              if (!active) return
+              setPersonalConnectors(connectors)
+              capabilitiesDataCache.connectors = { data: connectors, fetchedAt: Date.now() }
+              setLoading(false)
+            })
+          await Promise.all([connectorsPromise, marketplacePromise])
         }
 
         loadedData.current[sectionKey] = true
@@ -182,11 +198,8 @@ export function CapabilitiesSection({
       }
     })()
 
-    return
-    }, 0)
     return () => {
       active = false
-      window.clearTimeout(timer)
     }
   }, [reloadNonce, tab, view])
 
