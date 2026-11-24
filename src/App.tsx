@@ -1350,10 +1350,10 @@ function App() {
       const optimisticMessageId = `user-${Date.now()}`
       const assistantId = `assistant-${Date.now()}`
 
-      // Show the user's message immediately while a new thread is being created.
-      // On a cold backend, POST /threads can take several seconds; that network
-      // round-trip must not block the composer from giving instant feedback.
-      if (!threadId && !pendingRoutineExecution) {
+      // Add the user turn and assistant placeholder immediately for existing
+      // and new threads. This keeps the conversation visibly active while
+      // uploads, thread creation, and the first model response are starting.
+      if (!pendingRoutineExecution) {
         setMessages((current) => [
           ...current,
           {
