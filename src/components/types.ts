@@ -401,5 +401,5 @@ export type HITLSubmission = {
   alwaysAllow?: boolean
   connectorId?: string
   toolName?: string
-  answers?: Record<string, any>
+  answers?: Record<string, unknown>
 }
