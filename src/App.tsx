@@ -1072,7 +1072,9 @@ function App() {
   }, [activeThreadId, currentUser])
 
   const sendingRef = useRef(sending)
-  sendingRef.current = sending
+  useEffect(() => {
+    sendingRef.current = sending
+  }, [sending])
 
   const loadOlderMessages = useCallback(async () => {
     if (!activeThreadId || !hasOlderMessages || loadingOlderMessages || !messages.length) return
@@ -2429,7 +2431,6 @@ function App() {
     } finally {
       if (tokenFrameId !== null) {
         cancelAnimationFrame(tokenFrameId)
-        tokenFrameId = null
       }
       flushTokenBuffer()
       if (abortControllerRef.current === controller) abortControllerRef.current = null
