@@ -1,5 +1,5 @@
-import { Component, lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import { Component, Fragment, lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import './App.css'
 import './OrbitDesign.css'
 import { Icon } from './components/Icon'
@@ -15,7 +15,7 @@ import type {
 
 type MarketplaceBoundaryState = { hasError: boolean; retryKey: number }
 
-class MarketplaceErrorBoundary extends Component<{ children: React.ReactNode }, MarketplaceBoundaryState> {
+class MarketplaceErrorBoundary extends Component<{ children: ReactNode }, MarketplaceBoundaryState> {
   state: MarketplaceBoundaryState = { hasError: false, retryKey: 0 }
 
   static getDerivedStateFromError(): Partial<MarketplaceBoundaryState> {
@@ -42,7 +42,7 @@ class MarketplaceErrorBoundary extends Component<{ children: React.ReactNode }, 
         </div>
       )
     }
-    return <React.Fragment key={this.state.retryKey}>{this.props.children}</React.Fragment>
+    return <Fragment key={this.state.retryKey}>{this.props.children}</Fragment>
   }
 }
 
