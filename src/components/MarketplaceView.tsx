@@ -568,7 +568,17 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
               {filteredConnectors.map((connector) => (
                 <div
                   key={`connector-${connector.id}`}
-                  className={`marketplace-card ${connector.is_enabled ? 'active-card' : ''}`}
+                  className={`marketplace-card marketplace-connector-card ${connector.is_enabled ? 'active-card' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View details for ${connector.name}`}
+                  onClick={(event) => { event.stopPropagation(); openConnectorDetails(connector) }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      openConnectorDetails(connector)
+                    }
+                  }}
                 >
                   <div className="card-top">
                     <div className="card-icon-badge connector-icon-badge">
@@ -625,7 +635,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                         <button
                           type="button"
                           className="card-action-btn btn-secondary"
-                          onClick={() => openConfigureModal(connector)}
+                          onClick={(event) => { event.stopPropagation(); openConfigureModal(connector) }}
                         >
                           <Icon name="settings" size={13} />
                           <span>Configure</span>
@@ -713,35 +723,106 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
 
       {/* Connector details */}
       {selectedConnectorDetails && (
-        <div className="marketplace-modal-backdrop" onClick={(event) => { if (event.target === event.currentTarget) setSelectedConnectorDetails(null) }}>
-          <section className="marketplace-modal-card" role="dialog" aria-modal="true" aria-labelledby="connector-details-title">
-            <div className="modal-header">
+        <div
+          className="marketplace-modal-backdrop"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedConnectorDetails(null)
+          }}
+        >
+          <section className="marketplace-modal-card connector-details-modal" role="dialog" aria-modal="true" aria-labelledby="connector-details-title">
+            <div className="modal-header connector-details-header">
               <div className="modal-header-left">
-                <div className="card-icon-badge connector-icon-badge"><Icon name={(selectedConnectorDetails.icon as IconName) || 'tool'} size={20} /></div>
-                <div><h2 id="connector-details-title">{selectedConnectorDetails.name}</h2><span className="card-category">{selectedConnectorDetails.category} · {selectedConnectorDetails.authType}</span></div>
+                <div className="card-icon-badge connector-icon-badge connector-details-icon">
+                  <Icon name={(selectedConnectorDetails.icon as IconName) || 'tool'} size={26} />
+                </div>
+                <div className="connector-details-heading">
+                  <div className="connector-details-title-row">
+                    <h2 id="connector-details-title">{selectedConnectorDetails.name}</h2>
+                    <span className="card-type-pill connector-pill">Connector</span>
+                  </div>
+                  <span className="card-category">{selectedConnectorDetails.category} · {selectedConnectorDetails.authType}</span>
+                </div>
               </div>
               <button type="button" className="modal-close-btn" onClick={() => setSelectedConnectorDetails(null)} aria-label="Close details"><Icon name="close" size={16} /></button>
             </div>
-            <div className="modal-body">
-              <p className="modal-description">{selectedConnectorDetails.description}</p>
-              {selectedConnectorDetails.connected_account?.email && (
-                <p className="config-help-text">Connected account: <strong>{selectedConnectorDetails.connected_account.email}</strong></p>
-              )}
-              <div>
-                <strong style={{ color: '#fff', fontSize: 13 }}>What this connector can do</strong>
-                <div className="card-capabilities" style={{ marginTop: 10 }}>
-                  {selectedConnectorDetails.capabilities.map((capability) => <span className="capability-tag" key={capability}>{capability}</span>)}
-                </div>
+
+            <div className="modal-body connector-details-body">
+              <p className="connector-details-description">{selectedConnectorDetails.description}</p>
+
+              <div className="connector-details-status">
+                <span className={`status-dot ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'active' : 'available'}`} />
+                <strong>{selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'Connected' : selectedConnectorDetails.is_enabled ? 'Setup required' : 'Not connected'}</strong>
+                {selectedConnectorDetails.connected_account?.email && <span>· {selectedConnectorDetails.connected_account.email}</span>}
+                {selectedConnectorDetails.connected_account?.account_name && !selectedConnectorDetails.connected_account?.email && <span>· {selectedConnectorDetails.connected_account.account_name}</span>}
               </div>
-              {selectedConnectorDetails.website && <a href={selectedConnectorDetails.website} target="_blank" rel="noreferrer" className="config-help-text">Connector documentation</a>}
-              <p className="config-help-text">{selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'Connected and available to Orbit.' : 'Connect this account to make the connector available in Orbit.'}</p>
+
+              <section className="connector-detail-section">
+                <h3>Overview</h3>
+                <p>{selectedConnectorDetails.description}</p>
+                <div className="connector-detail-meta">
+                  <div><span>Category</span><strong>{selectedConnectorDetails.category}</strong></div>
+                  <div><span>Authentication</span><strong>{selectedConnectorDetails.authType}</strong></div>
+                  <div><span>Connection status</span><strong>{selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'Active' : 'Not connected'}</strong></div>
+                </div>
+              </section>
+
+              <section className="connector-detail-section">
+                <h3>What you can do</h3>
+                {selectedConnectorDetails.capabilities?.length ? (
+                  <ul className="connector-capability-list">
+                    {selectedConnectorDetails.capabilities.map((capability) => (
+                      <li key={capability}><Icon name="check" size={14} /><span>{capability}</span></li>
+                    ))}
+                  </ul>
+                ) : <p>Capabilities will be shown here when provided by this connector.</p>}
+              </section>
+
+              <section className="connector-detail-section">
+                <h3>Setup and permissions</h3>
+                <p>{selectedConnectorDetails.oauthProvider
+                  ? 'Orbit will ask you to authorize access with the provider. You can review and approve the requested access during sign-in.'
+                  : selectedConnectorDetails.configFields?.length
+                    ? 'This connector needs configuration before it can be used. Only enter credentials in the secure configuration form.'
+                    : 'This connector uses Orbit’s built-in connection flow. Connect it to make its available actions accessible to your agent.'}</p>
+                {selectedConnectorDetails.configFields?.length > 0 && (
+                  <div className="connector-config-field-list">
+                    <span className="connector-detail-label">Configuration fields</span>
+                    {selectedConnectorDetails.configFields.map((field) => (
+                      <div key={field.key}><span>{field.label}</span><span>{field.required ? 'Required' : 'Optional'}</span></div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {selectedConnectorDetails.website && (
+                <section className="connector-detail-section connector-docs-section">
+                  <h3>Resources</h3>
+                  <a href={selectedConnectorDetails.website} target="_blank" rel="noreferrer">
+                    <Icon name="externalLink" size={14} /> Official website and documentation
+                  </a>
+                </section>
+              )}
             </div>
-            <div className="modal-footer">
-              {selectedConnectorDetails.configFields.length > 0 && <button type="button" className="card-action-btn btn-secondary" onClick={() => { setConfiguringConnector(selectedConnectorDetails); setConfigFormValues(selectedConnectorDetails.config || {}); setConfigEnabled(true); setSelectedConnectorDetails(null) }}>Configure</button>}
-              <button type="button" disabled={!selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured} className={`card-action-btn ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`} onClick={() => connectFromDetails(selectedConnectorDetails)} title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}>
+
+            <div className="modal-footer connector-details-footer">
+              <button type="button" className="card-action-btn btn-secondary" onClick={() => setSelectedConnectorDetails(null)}>Close</button>
+              {selectedConnectorDetails.configFields?.length > 0 && (
+                <button type="button" className="card-action-btn btn-secondary" onClick={() => {
+                  setConfiguringConnector(selectedConnectorDetails)
+                  setConfigFormValues(selectedConnectorDetails.config || {})
+                  setConfigEnabled(true)
+                  setSelectedConnectorDetails(null)
+                }}>Configure</button>
+              )}
+              <button
+                type="button"
+                disabled={!selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured}
+                className={`card-action-btn ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`}
+                onClick={() => connectFromDetails(selectedConnectorDetails)}
+                title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}
+              >
                 {selectedConnectorDetails.is_authenticated && selectedConnectorDetails.is_enabled ? 'Connected' : 'Connect'}
               </button>
-              <button type="button" className="card-action-btn btn-secondary" onClick={() => setSelectedConnectorDetails(null)}>Close</button>
             </div>
           </section>
         </div>
