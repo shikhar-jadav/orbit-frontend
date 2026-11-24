@@ -1043,11 +1043,50 @@ function App() {
       )
         .then((data) => {
           if (!data || !Array.isArray(data.messages) || !data.messages.length) return
+
+          // Cross-tab sync returns persisted rows after the user's message ID.
+          // The live SSE response already rendered the assistant message, but its
+          // temporary client ID differs from the persisted database ID. Match the
+          // completed response by role + content/parts before appending the row.
+          const incomingIds = data.messages
+            .map((message) => Number(message.id))
+            .filter((id) => Number.isFinite(id))
+          if (incomingIds.length) {
+            latestMessageIdRef.current = Math.max(latestMessageIdRef.current, ...incomingIds)
+          }
+
           setMessages((current) => {
             const knownIds = new Set(current.map((message) => String(message.id)))
-            const newMessages = data.messages.filter(
-              (message) => !knownIds.has(String(message.id)),
-            )
+            const newMessages = data.messages.filter((incoming) => {
+              if (knownIds.has(String(incoming.id))) return false
+
+              const incomingContent = String(incoming.content || '').replace(/\\s+/g, ' ').trim()
+              const incomingParts = Array.isArray(incoming.parts) ? incoming.parts : []
+              const incomingTools = Array.isArray(incoming.tools) ? incoming.tools : []
+
+              const alreadyRendered = current.some((existing) => {
+                if (existing.role !== incoming.role) return false
+                const existingContent = String(existing.content || '').replace(/\\s+/g, ' ').trim()
+
+                // Non-empty completed assistant/user content is the stable
+                // cross-path identity when the server and optimistic IDs differ.
+                if (incomingContent && existingContent === incomingContent) return true
+
+                // Tool-only/empty-content messages can be matched by their
+                // persisted structured parts instead.
+                if (!incomingContent && !existingContent) {
+                  const existingParts = Array.isArray(existing.parts) ? existing.parts : []
+                  const existingTools = Array.isArray(existing.tools) ? existing.tools : []
+                  if (
+                    (incomingParts.length && JSON.stringify(existingParts) === JSON.stringify(incomingParts)) ||
+                    (incomingTools.length && JSON.stringify(existingTools) === JSON.stringify(incomingTools))
+                  ) return true
+                }
+                return false
+              })
+
+              return !alreadyRendered
+            })
             return newMessages.length ? [...current, ...newMessages] : current
           })
         })
