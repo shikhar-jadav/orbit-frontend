@@ -170,6 +170,13 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     slack: IntegrationStatus
     gmail: IntegrationStatus
   } | null>(null)
+  const eventProviderAccounts =
+    eventProvider === 'webhook' ? [] : integrationStatus?.[eventProvider].accounts ?? []
+  const activeEventAccountId = eventProviderAccounts.some(
+    (account) => account.provider_account_id === eventAccountId,
+  )
+    ? eventAccountId
+    : eventProviderAccounts[0]?.provider_account_id || ''
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null)
   const [editingRoutine, setEditingRoutine] = useState(false)
   const [editName, setEditName] = useState('')
@@ -252,21 +259,25 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   }, [])
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return
+    const timer = window.setTimeout(() => {
       // Routine list is the only data needed to open this view. Notifications and
       // account status are fetched lazily when their tabs are visited.
       void loadRoutines()
-    }
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [isOpen, loadRoutines])
 
   useEffect(() => {
-    if (isOpen && tab === 'history') void loadNotifications()
+    if (!isOpen || tab !== 'history') return
+    const timer = window.setTimeout(() => void loadNotifications(), 0)
+    return () => window.clearTimeout(timer)
   }, [isOpen, tab, loadNotifications])
 
   useEffect(() => {
-    if (isOpen && tab === 'create' && createMode === 'event' && !integrationStatus) {
-      void loadIntegrationStatus()
-    }
+    if (!isOpen || tab !== 'create' || createMode !== 'event' || integrationStatus) return
+    const timer = window.setTimeout(() => void loadIntegrationStatus(), 0)
+    return () => window.clearTimeout(timer)
   }, [isOpen, tab, createMode, integrationStatus, loadIntegrationStatus])
 
   useEffect(() => {
@@ -284,13 +295,14 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       if (!integrationPopupRef.current || event.source !== integrationPopupRef.current) return
       const apiOrigin = integrationStatus?.public_url
       if (!apiOrigin) return
-      let expectedOrigin = ''
-      try {
-        expectedOrigin = new URL(apiOrigin).origin
-      } catch {
-        return
-      }
-      if (event.origin !== expectedOrigin) return
+      const expectedOrigin = (() => {
+        try {
+          return new URL(apiOrigin).origin
+        } catch {
+          return null
+        }
+      })()
+      if (!expectedOrigin || event.origin !== expectedOrigin) return
       if (!['github', 'slack', 'gmail'].includes(String(event.data?.provider || ''))) return
       if (
         event.data?.type === 'orbit_integration_connected' ||
@@ -311,24 +323,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   }, [loadIntegrationStatus, integrationStatus?.public_url])
 
   useEffect(() => {
-    if (eventProvider === 'webhook') {
-      setEventAccountId('')
-      setGithubRepositories([])
-      setSlackChannels([])
-      return
-    }
-    const accounts = integrationStatus?.[eventProvider].accounts || []
-    if (!accounts.some((account) => account.provider_account_id === eventAccountId)) {
-      setEventAccountId(accounts[0]?.provider_account_id || '')
-    }
-  }, [eventProvider, eventAccountId, integrationStatus])
-
-  useEffect(() => {
-    if (!isOpen || tab !== 'create' || createMode !== 'event' || !eventAccountId) {
-      setGithubRepositories([])
-      setSlackChannels([])
-      return
-    }
+    if (!isOpen || tab !== 'create' || createMode !== 'event' || !activeEventAccountId) return
     if (eventProvider !== 'github' && eventProvider !== 'slack') return
     const controller = new AbortController()
     const load = async () => {
@@ -336,8 +331,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       try {
         const endpoint =
           eventProvider === 'github'
-            ? `/api/integrations/github/repositories?${new URLSearchParams({ account_id: eventAccountId })}`
-            : `/api/integrations/slack/channels?${new URLSearchParams({ account_id: eventAccountId })}`
+            ? `/api/integrations/github/repositories?${new URLSearchParams({ account_id: activeEventAccountId })}`
+            : `/api/integrations/slack/channels?${new URLSearchParams({ account_id: activeEventAccountId })}`
         const response = await fetch(endpoint, {
           credentials: 'same-origin',
           signal: controller.signal,
@@ -378,7 +373,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     }
     void load()
     return () => controller.abort()
-  }, [isOpen, tab, createMode, eventProvider, eventAccountId])
+  }, [isOpen, tab, createMode, eventProvider, activeEventAccountId])
 
   const loadRoutineActivity = useCallback(async (routineId: string) => {
     const requestId = ++routineActivityRequestRef.current
@@ -687,7 +682,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
       eventProvider === 'webhook'
         ? null
         : integrationStatus?.[eventProvider].accounts.find(
-            (account) => account.provider_account_id === eventAccountId,
+            (account) => account.provider_account_id === activeEventAccountId,
           )
     if (eventProvider !== 'webhook' && !selectedAccount) {
       setFormError('Choose a connected account before creating this event trigger.')
@@ -703,8 +698,8 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
     }
 
     const conditions: Array<Record<string, unknown>> = []
-    let resolvedEventType = eventType
-    let whenToRun = ''
+    let resolvedEventType: string
+    let whenToRun: string
 
     if (eventProvider === 'github') {
       if (!githubRepository.trim() || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(githubRepository.trim())) {
@@ -1118,7 +1113,7 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
                               <strong>Choose a connected account</strong>
                               <select
                                 aria-label={`Connected ${eventProvider} account`}
-                                value={eventAccountId}
+                                value={activeEventAccountId}
                                 onChange={(e) => setEventAccountId(e.target.value)}
                               >
                                 {integrationStatus[eventProvider].accounts.map((account) => (
