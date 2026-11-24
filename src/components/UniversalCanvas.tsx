@@ -42,7 +42,7 @@ export interface CanvasItem {
   artifactType?: string
   language?: string
   content?: string
-  spec?: A2UICanvasData['spec']
+  spec?: unknown
   html?: string
   mimeType?: string
   sizeBytes?: number
@@ -340,7 +340,7 @@ export function UniversalCanvas({
         ) : item.type === 'a2ui' && item.spec ? (
           <div className="canvas-a2ui-wrapper">
             <A2UICanvas
-              canvas={{ canvas_id: 'canvas-active', title: item.title || 'A2UI Canvas', spec: item.spec }}
+              canvas={{ canvas_id: 'canvas-active', title: item.title || 'A2UI Canvas', spec: item.spec as A2UICanvasData['spec'] }}
               onAction={onA2UIAction}
             />
           </div>
