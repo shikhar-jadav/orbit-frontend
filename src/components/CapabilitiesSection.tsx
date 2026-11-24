@@ -11,7 +11,7 @@ import type {
 } from './types'
 
 const capabilitiesDataCache: Partial<Record<'skills' | 'connectors' | 'marketplace', { data: unknown; fetchedAt: number }>> = {}
-const CAPABILITIES_CACHE_TTL_MS = 30_000
+const CAPABILITIES_CACHE_TTL_MS = 5 * 60_000
 
 type CapabilitiesTab = 'skills' | 'connectors'
 type CapabilitiesView = 'yours' | 'discover'
