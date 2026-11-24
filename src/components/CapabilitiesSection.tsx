@@ -10,6 +10,9 @@ import type {
   PersonalSkill,
 } from './types'
 
+const capabilitiesDataCache: Partial<Record<'skills' | 'connectors' | 'marketplace', { data: unknown; fetchedAt: number }>> = {}
+const CAPABILITIES_CACHE_TTL_MS = 30_000
+
 type CapabilitiesTab = 'skills' | 'connectors'
 type CapabilitiesView = 'yours' | 'discover'
 type SkillFilter = 'all' | 'active' | 'drafts'
@@ -99,7 +102,27 @@ export function CapabilitiesSection({
       }
     }
 
-    setLoading(true)
+    const cached = capabilitiesDataCache[sectionKey]
+    if (cached) {
+      if (sectionKey === 'marketplace') {
+        const catalog = cached.data as MarketplaceCatalog
+        setMarketplaceSkills(catalog.skills ?? [])
+        setMarketplaceConnectors(catalog.connectors ?? [])
+      } else if (sectionKey === 'skills') {
+        setPersonalSkills(cached.data as PersonalSkill[])
+      } else {
+        setPersonalConnectors(cached.data as PersonalConnector[])
+      }
+      setLoading(false)
+      if (!forceReload && Date.now() - cached.fetchedAt < CAPABILITIES_CACHE_TTL_MS) {
+        loadedData.current[sectionKey] = true
+        return () => {
+          active = false
+        }
+      }
+    }
+
+    setLoading(!cached)
     ;(async () => {
       try {
         if (sectionKey === 'marketplace') {
@@ -109,18 +132,21 @@ export function CapabilitiesSection({
           if (!active) return
           setMarketplaceSkills(catalog.skills ?? [])
           setMarketplaceConnectors(catalog.connectors ?? [])
+          capabilitiesDataCache.marketplace = { data: catalog, fetchedAt: Date.now() }
         } else if (sectionKey === 'skills') {
           const response = await fetch('/settings/personal-skills')
           if (!response.ok) return
           const skills = (await response.json()) as PersonalSkill[]
           if (!active) return
           setPersonalSkills(skills)
+          capabilitiesDataCache.skills = { data: skills, fetchedAt: Date.now() }
         } else {
           const response = await fetch('/settings/personal-connectors')
           if (!response.ok) return
           const connectors = (await response.json()) as PersonalConnector[]
           if (!active) return
           setPersonalConnectors(connectors)
+          capabilitiesDataCache.connectors = { data: connectors, fetchedAt: Date.now() }
         }
 
         loadedData.current[sectionKey] = true
@@ -139,6 +165,7 @@ export function CapabilitiesSection({
   useEffect(() => {
     const refreshMarketplace = () => {
       loadedData.current.marketplace = false
+      delete capabilitiesDataCache.marketplace
       if (view === 'discover') setReloadNonce((value) => value + 1)
     }
     window.addEventListener('orbit:marketplace-updated', refreshMarketplace)
