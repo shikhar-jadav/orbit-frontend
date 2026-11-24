@@ -58,7 +58,7 @@ export function ModernDialog({
         dialog.close()
       }
     }
-  }, [isOpen]
+  }, [isOpen])
 
   // Clear retained content after exit animation finishes
   const handleTransitionEnd = (e: React.TransitionEvent<HTMLDialogElement>) => {
