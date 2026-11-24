@@ -806,10 +806,13 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                             !message.content &&
                             !message.tools?.length &&
                             !message.parts?.length ? (
-                              <div className="message-loading-skeleton" aria-label="Thinking">
-                                <span />
-                                <span />
-                                <span />
+                              <div className="message-loading-skeleton" role="status" aria-live="polite">
+                                <span className="message-loading-label">Orbit is thinking</span>
+                                <span className="message-loading-dots" aria-hidden="true">
+                                  <i />
+                                  <i />
+                                  <i />
+                                </span>
                               </div>
                             ) : null}
 
