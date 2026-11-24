@@ -806,8 +806,7 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                             !message.content &&
                             !message.tools?.length &&
                             !message.parts?.length ? (
-                              <div className="message-loading-skeleton" role="status" aria-live="polite">
-                                <span className="message-loading-label">Orbit is thinking</span>
+                              <div className="message-loading-skeleton" role="status" aria-live="polite" aria-label="Orbit is thinking">
                                 <span className="message-loading-dots" aria-hidden="true">
                                   <i />
                                   <i />
