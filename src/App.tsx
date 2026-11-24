@@ -46,10 +46,10 @@ class MarketplaceErrorBoundary extends Component<{ children: ReactNode }, Market
   }
 }
 
-export const preloadSettings = () => import('./components/SettingsPanel')
-export const preloadMarketplace = () => import('./components/MarketplaceView')
-export const preloadCanvas = () => import('./components/UniversalCanvas')
-export const preloadRoutines = () => import('./components/ProactiveRoutinesModal')
+const preloadSettings = () => import('./components/SettingsPanel')
+const preloadMarketplace = () => import('./components/MarketplaceView')
+const preloadCanvas = () => import('./components/UniversalCanvas')
+const preloadRoutines = () => import('./components/ProactiveRoutinesModal')
 
 const SettingsPanel = lazy(() => preloadSettings().then((m) => ({ default: m.SettingsPanel })))
 const MarketplaceView = lazy(() => preloadMarketplace().then((m) => ({ default: m.MarketplaceView })))
@@ -488,7 +488,7 @@ function App() {
       const next = !prev
       try {
         localStorage.setItem('orbit_notification_sound', String(next))
-      } catch {}
+      } catch { /* Browser APIs may be unavailable. */ }
       return next
     })
   }
@@ -522,7 +522,7 @@ function App() {
                   setMessages(data.messages)
                   setHasOlderMessages(data.has_more_messages)
                 }
-              }).catch(() => {})
+              }).catch(() => undefined)
             }
 
             if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
@@ -539,7 +539,7 @@ function App() {
                   body: notif.message.slice(0, 160),
                   icon: '/favicon.ico',
                 })
-              } catch {}
+              } catch { /* Browser APIs may be unavailable. */ }
             }
           }
         } catch {
@@ -550,12 +550,12 @@ function App() {
       eventSource.onerror = () => {
         eventSource?.close()
       }
-    } catch {}
+    } catch { /* Browser APIs may be unavailable. */ }
 
     return () => {
       eventSource?.close()
     }
-  }, [currentUser, soundEnabled])
+  }, [currentUser, soundEnabled, activeThreadId])
   const [attachments, setAttachments] = useState<File[]>([])
   const [search, setSearch] = useState('')
   const deferredSearch = useDeferredValue(search)
@@ -921,7 +921,7 @@ function App() {
         if (!active) return
         setUserPreferences(prefData)
       })
-      .catch(() => {})
+      .catch(() => undefined)
 
     return () => {
       active = false
@@ -1113,7 +1113,7 @@ function App() {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
-        Notification.requestPermission().catch(() => {})
+        Notification.requestPermission().catch(() => undefined)
       }
     }
   }, [])
@@ -1174,7 +1174,7 @@ function App() {
             return newMessages.length ? [...current, ...newMessages] : current
           })
         })
-        .catch(() => {})
+        .catch(() => undefined)
     }, 30000)
 
     return () => window.clearInterval(pollInterval)
@@ -1455,7 +1455,7 @@ function App() {
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify(composerResumePayload),
-          }).catch(() => {})
+          }).catch(() => undefined)
         }
         return
       }
@@ -1949,7 +1949,7 @@ function App() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(resumePayload),
-        }).catch(() => {})
+        }).catch(() => undefined)
       }
 
     },
@@ -1983,7 +1983,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(skipPayload),
-      }).catch(() => {})
+      }).catch(() => undefined)
     }
   }, [hitlRequest, activeThreadId])
 
@@ -2014,7 +2014,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(declinePayload),
-      }).catch(() => {})
+      }).catch(() => undefined)
     }
   }, [hitlRequest, activeThreadId])
 
@@ -2840,7 +2840,7 @@ function App() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ minutes: 10 }),
                     })
-                  } catch {}
+                  } catch { /* Browser APIs may be unavailable. */ }
                   setInAppToast(null)
                 }}
               >
