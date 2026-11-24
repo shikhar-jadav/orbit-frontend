@@ -27,7 +27,7 @@ import {
   rememberRecentAccount,
   type RecentAuthAccount,
 } from './components/userUtils'
-import { deduplicateMessageParts, extractRemainingMessageText } from './components/messagePartUtils'
+import { collapseRepeatedResponse, deduplicateMessageParts, extractRemainingMessageText } from './components/messagePartUtils'
 
 import type {
   AuthSessionResponse,
@@ -1624,7 +1624,7 @@ function App() {
                 )
               } else if (eventType === 'done') {
                 receivedTerminalEvent = true
-                const finalContent = String(data.content || '')
+                const finalContent = collapseRepeatedResponse(String(data.content || ''))
                 const turnId =
                   typeof data.turn_id === 'number' || typeof data.turn_id === 'string'
                     ? data.turn_id
