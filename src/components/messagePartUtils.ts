@@ -60,7 +60,7 @@ export function extractRemainingMessageText(
  * superseded by post-tool text, preventing doubled assistant bubbles.
  */
 export function deduplicateMessageParts(parts: MessagePart[] | undefined): MessagePart[] {
-  if (!parts || parts.length <= 1) return parts || []
+  if (!parts || parts.length === 0) return parts || []
 
   const result: MessagePart[] = []
   for (let i = 0; i < parts.length; i++) {
