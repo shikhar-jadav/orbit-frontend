@@ -86,7 +86,12 @@ async function fetchAfterBackendWake(
         healthResponse.ok &&
         (healthResponse.headers.get('content-type') || '').includes('application/json')
       ) {
-        return await request()
+        const retryResponse = await request()
+        if (isBackendGatewayUnavailable(retryResponse)) {
+          lastUnavailableResponse = retryResponse
+          continue
+        }
+        return retryResponse
       }
 
       if (isBackendGatewayUnavailable(healthResponse)) {
@@ -465,6 +470,7 @@ export function AuthScreen({
         setNotice('Orbit is waking up after being idle. Keep this page open; the first connection can take about a minute.')
       })
       if (!res.ok) {
+        setNotice(null)
         setError(await readErrorDetail(res, 'Could not look up that email address.'))
         return
       }
@@ -495,7 +501,8 @@ export function AuthScreen({
         goToSignupPage(data.email, true)
       }
     } catch {
-      setError('Unable to reach the authentication service.')
+      setNotice(null)
+      setError('Unable to reach the authentication service. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
