@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect, useRef, type FormEvent } from 'react'
 import { Icon } from './Icon'
 import { ModernDialog } from './ModernDialog'
-import { formatHumanSchedule } from './ProactiveChatCards'
+import { formatHumanSchedule } from './proactiveRoutineUtils'
 import './ProactiveRoutinesModal.css'
 
 export type Routine = {
