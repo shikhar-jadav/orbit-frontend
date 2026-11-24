@@ -1916,7 +1916,7 @@ function App() {
         const isApprove = submission.selectedTitles.some(
           (t) => /approve|allow|yes|proceed|every time|once|continue/i.test(t),
         )
-        action = isDecline ? 'decline' : (isApprove ? 'approve' : 'approve')
+        action = isDecline ? 'decline' : (isApprove ? 'approve' : 'decline')
       }
 
       // Resume interrupt natively via /chat/stream just like talos_v6
@@ -1952,17 +1952,6 @@ function App() {
         }).catch(() => {})
       }
 
-      // Persist setting in background without blocking resume
-      if (submission.alwaysAllow && submission.connectorId && submission.toolName) {
-        fetch(`/settings/personal-connectors/${encodeURIComponent(submission.connectorId)}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            tool_permissions: { [submission.toolName]: 'allow' },
-          }),
-        }).catch(() => {})
-      }
     },
     [activeThreadId],
   )
