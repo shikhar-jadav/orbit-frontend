@@ -1646,3 +1646,44 @@ dialog.thread-delete-dialog {
     opacity: 0.75;
   }
 }
+
+
+/* On phones, keep the first-chat composer docked at the bottom instead of
+   vertically centering it with the empty-state heading. */
+@media (max-width: 768px) {
+  .chat-layout.empty-chat {
+    justify-content: flex-start;
+    min-height: 0;
+    padding: 0 12px;
+  }
+
+  .empty-chat .chat-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding: 0 2px;
+  }
+
+  .empty-chat .chat-scroll > .empty-hero {
+    display: flex;
+    flex: 1 0 100%;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+    max-width: none;
+    min-height: 100%;
+    gap: 18px;
+    padding: 12vh 0 max(12px, env(safe-area-inset-bottom));
+  }
+
+  .empty-chat .empty-composer-slot {
+    width: 100%;
+    margin-top: auto;
+    padding-bottom: 0;
+  }
+}
