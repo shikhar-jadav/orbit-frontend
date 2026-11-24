@@ -256,7 +256,15 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
               : item.is_configured
                 ? 'active'
                 : 'needs_config'
-          return { ...item, is_enabled: enabled, status: nextStatus }
+          const disconnectedOAuth = !enabled && Boolean(item.oauthProvider)
+          return {
+            ...item,
+            is_enabled: enabled,
+            status: nextStatus,
+            ...(disconnectedOAuth
+              ? { is_authenticated: false, connected_account: null, reconnect_required: false, reconnect_message: null }
+              : {}),
+          }
         })
         return { ...current, connectors: updatedConnectors, stats: {
           ...current.stats,
@@ -264,6 +272,9 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         } }
       })
       window.dispatchEvent(new Event('orbit:marketplace-updated'))
+      if (!enabled && connector.oauthProvider) {
+        window.dispatchEvent(new Event('orbit:integrations-updated'))
+      }
       showToast(enabled ? `Connected ${connector.name}` : `Disconnected ${connector.name}`)
     } catch (err) {
       showToast(`Error: ${err instanceof Error ? err.message : 'Action failed'}`)

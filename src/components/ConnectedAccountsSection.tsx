@@ -124,6 +124,7 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
         setError('')
         setNotice(`${PROVIDERS.find((item) => item.id === provider)?.name || provider} connected successfully.`)
         window.dispatchEvent(new Event('orbit:integrations-updated'))
+        window.dispatchEvent(new Event('orbit:marketplace-updated'))
         void loadStatus()
       } else if (event.data?.type === 'orbit_integration_error') {
         if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
@@ -208,6 +209,7 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
       }
       if (!response.ok) throw new Error(await responseDetail(response, `Could not disconnect ${account.account_name}.`))
       setNotice(`${account.account_name} disconnected.`)
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
       await loadStatus()
     } catch (disconnectError) {
       setError(disconnectError instanceof Error ? disconnectError.message : 'Could not disconnect this account.')
