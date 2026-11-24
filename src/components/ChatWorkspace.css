@@ -226,6 +226,13 @@
   contain-intrinsic-size: auto 240px;
 }
 
+.message-entry:has(.message-action-menu) {
+  content-visibility: visible;
+  contain: none;
+  position: relative;
+  z-index: 30;
+}
+
 .branch-continuation {
   display: flex;
   align-items: center;
