@@ -333,10 +333,34 @@ function App() {
     'logout-active' | 'logout-all' | 'switch-active' | null
   >(null)
   const [loggingOut, setLoggingOut] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isLargeScreen, setIsLargeScreen] = useState(() =>
     window.matchMedia('(min-width: 1024px)').matches,
   )
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    window.matchMedia('(min-width: 1024px)').matches,
+  )
+
+  useEffect(() => {
+    const breakpoint = window.matchMedia('(min-width: 1024px)')
+    const syncLayout = () => {
+      const largeScreen = breakpoint.matches
+      setIsLargeScreen(largeScreen)
+      setSidebarOpen(largeScreen)
+    }
+
+    breakpoint.addEventListener('change', syncLayout)
+    return () => breakpoint.removeEventListener('change', syncLayout)
+  }, [])
+
+  useEffect(() => {
+    if (isLargeScreen || !sidebarOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [isLargeScreen, sidebarOpen])
+
   const [searchOpen, setSearchOpen] = useState(false)
   const [threads, setThreads] = useState<Thread[]>([])
   const [hasMoreThreads, setHasMoreThreads] = useState(false)
@@ -2271,7 +2295,7 @@ function App() {
   }
 
   const currentThread = threads.find((thread) => thread.thread_id === activeThreadId)
-  const sidebarExpanded = sidebarOpen && isLargeScreen
+  const sidebarExpanded = sidebarOpen
 
   if (authLoading) {
     return (
@@ -2306,7 +2330,7 @@ function App() {
 
   return (
     <div
-      className={`app-shell ${sidebarExpanded ? 'sidebar-expanded' : 'sidebar-collapsed'}`}
+      className={`app-shell ${sidebarExpanded ? 'sidebar-expanded' : 'sidebar-collapsed'} ${!isLargeScreen ? 'mobile-layout' : ''}`}
       data-appearance={userPreferences.appearance}
     >
       <input
@@ -2320,10 +2344,14 @@ function App() {
         }}
         aria-label="Choose files to attach"
       />
+      {(isLargeScreen || sidebarOpen) && (
       <ThreadSidebar
         user={currentUser}
         sidebarExpanded={sidebarExpanded}
-        navigateHome={navigateHome}
+        navigateHome={() => {
+          navigateHome()
+          if (!isLargeScreen) setSidebarOpen(false)
+        }}
         searchOpen={searchOpen}
         setSearchOpen={setSearchOpen}
         setSidebarOpen={setSidebarOpen}
@@ -2342,11 +2370,23 @@ function App() {
         renameThread={renameThread}
         threadMenuId={threadMenuId}
         setThreadMenuId={setThreadMenuId}
-        navigateThread={navigateThread}
+        navigateThread={(threadId) => {
+          navigateThread(threadId)
+          if (!isLargeScreen) setSidebarOpen(false)
+        }}
         setDeletingThread={setDeletingThread}
-        navigateSettings={navigateSettings}
-        navigateMarketplace={navigateMarketplace}
-        onOpenRoutines={() => setRoutinesModalOpen(true)}
+        navigateSettings={(section) => {
+          navigateSettings(section)
+          if (!isLargeScreen) setSidebarOpen(false)
+        }}
+        navigateMarketplace={() => {
+          navigateMarketplace()
+          if (!isLargeScreen) setSidebarOpen(false)
+        }}
+        onOpenRoutines={() => {
+          setRoutinesModalOpen(true)
+          if (!isLargeScreen) setSidebarOpen(false)
+        }}
         unreadRoutinesCount={unreadNotifCount}
         onRequestLogout={() => {
           if (sending) {
@@ -2369,9 +2409,43 @@ function App() {
         onPreloadMarketplace={preloadMarketplace}
         onPreloadRoutines={preloadRoutines}
       />
+      )}
+
+      {!isLargeScreen && sidebarOpen && (
+        <button
+          type="button"
+          className="mobile-sidebar-backdrop"
+          aria-label="Close navigation menu"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* -------------------- MAIN PANEL -------------------- */}
       <main className="main-panel">
+        {!isLargeScreen && (
+          <header className="mobile-app-header">
+            <button
+              type="button"
+              className="mobile-header-action"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={sidebarOpen}
+            >
+              <Icon name="panel" size={19} />
+            </button>
+            <div className="mobile-header-title" title={currentThread?.title || ''}>
+              {currentThread?.title || (settingsPage ? 'Settings' : marketplacePage ? 'Marketplace' : 'Orbit')}
+            </div>
+            <button
+              type="button"
+              className="mobile-header-action"
+              onClick={navigateHome}
+              aria-label="New chat"
+            >
+              <Icon name="newchat" size={19} />
+            </button>
+          </header>
+        )}
         {error && (
           <div className="error-toast" role="alert">
             <span className="error-text">{error}</span>
