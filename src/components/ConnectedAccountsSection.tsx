@@ -84,7 +84,8 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
   }, [onUnauthorized])
 
   useEffect(() => {
-    void loadStatus()
+    const timer = window.setTimeout(() => void loadStatus(), 0)
+    return () => window.clearTimeout(timer)
   }, [loadStatus])
 
   useEffect(() => {
@@ -103,13 +104,14 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
       const provider = popupProviderRef.current
       const apiUrl = status?.public_url
       if (!popup || !provider || event.source !== popup || !apiUrl) return
-      let expectedOrigin = ''
-      try {
-        expectedOrigin = new URL(apiUrl).origin
-      } catch {
-        return
-      }
-      if (event.origin !== expectedOrigin || event.data?.provider !== provider) return
+      const expectedOrigin = (() => {
+        try {
+          return new URL(apiUrl).origin
+        } catch {
+          return null
+        }
+      })()
+      if (!expectedOrigin || event.origin !== expectedOrigin || event.data?.provider !== provider) return
       if (event.data?.type === 'orbit_integration_connected') {
         if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
         popupPollRef.current = null
