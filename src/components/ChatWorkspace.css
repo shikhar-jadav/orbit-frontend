@@ -1575,3 +1575,74 @@ dialog.thread-delete-dialog {
     transition: none;
   }
 }
+
+
+/* Immediate assistant placeholder while the agent is preparing its first event. */
+.message-loading-skeleton {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 11px;
+  padding: 5px 0;
+  color: var(--text-muted, #a3a3a3);
+  animation: orbit-thinking-in 220ms ease both;
+}
+
+.message-loading-label {
+  color: #a5a5a5;
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+.message-loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 16px;
+}
+
+.message-loading-dots i {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-cyan, #9bdce3);
+  opacity: 0.38;
+  transform: translateY(0);
+  animation: orbit-thinking-pulse 1.05s ease-in-out infinite;
+}
+
+.message-loading-dots i:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.message-loading-dots i:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+@keyframes orbit-thinking-pulse {
+  0%, 60%, 100% {
+    opacity: 0.35;
+    transform: translateY(0) scale(0.82);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1);
+  }
+}
+
+@keyframes orbit-thinking-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-loading-skeleton {
+    animation: none;
+  }
+  .message-loading-dots i {
+    animation: none;
+    opacity: 0.75;
+  }
+}
