@@ -31,6 +31,26 @@ async function fetchMarketplaceJson<T>(url: string, options?: RequestInit): Prom
   return (await res.json()) as T
 }
 
+let marketplaceCatalogCache: { data: MarketplaceCatalog; fetchedAt: number } | null = null
+let marketplaceCatalogRequest: Promise<MarketplaceCatalog> | null = null
+
+async function loadMarketplaceCatalog(force = false): Promise<MarketplaceCatalog> {
+  if (!force && marketplaceCatalogCache && Date.now() - marketplaceCatalogCache.fetchedAt < 30_000) {
+    return marketplaceCatalogCache.data
+  }
+  if (marketplaceCatalogRequest) return marketplaceCatalogRequest
+  const request = fetchMarketplaceJson<MarketplaceCatalog>('/api/marketplace')
+    .then((data) => {
+      marketplaceCatalogCache = { data, fetchedAt: Date.now() }
+      return data
+    })
+    .finally(() => {
+      if (marketplaceCatalogRequest === request) marketplaceCatalogRequest = null
+    })
+  marketplaceCatalogRequest = request
+  return request
+}
+
 export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all', initialConnectorId }: MarketplaceViewProps) {
   const popupRef = useRef<Window | null>(null)
   const popupProviderRef = useRef<string | null>(null)
@@ -138,11 +158,16 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
 
   useEffect(() => {
     let active = true
+    const cached = marketplaceCatalogCache
+    if (cached) {
+      setCatalog(cached.data)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
     ;(async () => {
       try {
-        const data = await fetchMarketplaceJson<MarketplaceCatalog>(
-          '/api/marketplace',
-        )
+        const data = await loadMarketplaceCatalog(reloadNonce > 0)
         if (!active) return
         setCatalog(data)
         setError('')
@@ -160,15 +185,22 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   }, [reloadNonce])
 
   const triggerReload = useCallback(() => {
-    setLoading(true)
+    // Keep the last catalog visible while refreshing in the background.
+    if (!marketplaceCatalogCache) setLoading(true)
     setReloadNonce((n) => n + 1)
   }, [])
 
   useEffect(() => {
-    const refreshCatalog = () => triggerReload()
+    let refreshTimer: number | undefined
+    const refreshCatalog = () => {
+      // OAuth completion emits both events; coalesce them into one catalog request.
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
+      refreshTimer = window.setTimeout(() => triggerReload(), 120)
+    }
     window.addEventListener('orbit:marketplace-updated', refreshCatalog)
     window.addEventListener('orbit:integrations-updated', refreshCatalog)
     return () => {
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
       window.removeEventListener('orbit:marketplace-updated', refreshCatalog)
       window.removeEventListener('orbit:integrations-updated', refreshCatalog)
     }
