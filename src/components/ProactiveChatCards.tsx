@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Icon } from './Icon'
 import type { ProactiveCardData } from './types'
+import { formatHumanSchedule } from './proactiveRoutineUtils'
 import './ProactiveChatCards.css'
 
 export interface RoutineSetupCardProps {
