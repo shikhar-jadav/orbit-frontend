@@ -110,6 +110,11 @@ export function CapabilitiesSection({
         setMarketplaceConnectors(catalog.connectors ?? [])
       } else if (sectionKey === 'skills') {
         setPersonalSkills(cached.data as PersonalSkill[])
+        const marketplaceCached = capabilitiesDataCache.marketplace
+        if (marketplaceCached) {
+          const catalog = marketplaceCached.data as MarketplaceCatalog
+          setMarketplaceSkills(catalog.skills ?? [])
+        }
       } else {
         setPersonalConnectors(cached.data as PersonalConnector[])
         const marketplaceCached = capabilitiesDataCache.marketplace
@@ -139,12 +144,21 @@ export function CapabilitiesSection({
           setMarketplaceConnectors(catalog.connectors ?? [])
           capabilitiesDataCache.marketplace = { data: catalog, fetchedAt: Date.now() }
         } else if (sectionKey === 'skills') {
-          const response = await fetch('/settings/personal-skills')
-          if (!response.ok) return
-          const skills = (await response.json()) as PersonalSkill[]
+          const [skillsResponse, marketplaceResponse] = await Promise.all([
+            fetch('/settings/personal-skills'),
+            fetch('/marketplace'),
+          ])
+          if (!skillsResponse.ok) return
+          const skills = (await skillsResponse.json()) as PersonalSkill[]
           if (!active) return
           setPersonalSkills(skills)
           capabilitiesDataCache.skills = { data: skills, fetchedAt: Date.now() }
+          if (marketplaceResponse.ok) {
+            const catalog = (await marketplaceResponse.json()) as MarketplaceCatalog
+            if (!active) return
+            setMarketplaceSkills(catalog.skills ?? [])
+            capabilitiesDataCache.marketplace = { data: catalog, fetchedAt: Date.now() }
+          }
         } else {
           const [connectorsResponse, marketplaceResponse] = await Promise.all([
             fetch('/settings/personal-connectors'),
@@ -180,8 +194,9 @@ export function CapabilitiesSection({
     const refreshMarketplace = () => {
       loadedData.current.marketplace = false
       loadedData.current.connectors = false
+      loadedData.current.skills = false
       delete capabilitiesDataCache.marketplace
-      if (view === 'discover' || tab === 'connectors') {
+      if (view === 'discover' || tab === 'connectors' || tab === 'skills') {
         setReloadNonce((value) => value + 1)
       }
     }
