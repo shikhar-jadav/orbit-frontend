@@ -318,6 +318,57 @@ function routineExecutionToChatMessages(execution: RoutineExecutionPreview): Mes
 }
 
 function App() {
+  // Keep Render's free web service warm while Orbit is open. This is deliberately
+  // fire-and-forget: it never blocks rendering, auth, navigation, or chat requests.
+  useEffect(() => {
+    let stopped = false
+    let inFlight = false
+    let timeoutId: number | undefined
+
+    const pingBackend = () => {
+      if (
+        stopped ||
+        inFlight ||
+        document.visibilityState !== 'visible' ||
+        (typeof navigator !== 'undefined' && !navigator.onLine)
+      ) return
+
+      inFlight = true
+      const controller = new AbortController()
+      timeoutId = window.setTimeout(() => controller.abort(), 8000)
+
+      void fetch('/health', {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'omit',
+        keepalive: true,
+        signal: controller.signal,
+      })
+        .catch(() => {
+          // A heartbeat is best-effort; normal app requests handle user-facing errors.
+        })
+        .finally(() => {
+          if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+          inFlight = false
+        })
+    }
+
+    // Wake the service on page entry, then keep it warm every 10 minutes.
+    pingBackend()
+    const intervalId = window.setInterval(pingBackend, 10 * 60 * 1000)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') pingBackend()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      stopped = true
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+    }
+  }, [])
+
   const initialRoute = readRoute()
   const [authLoading, setAuthLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
