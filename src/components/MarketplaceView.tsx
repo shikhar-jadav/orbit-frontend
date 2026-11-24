@@ -35,7 +35,7 @@ let marketplaceCatalogCache: { data: MarketplaceCatalog; fetchedAt: number } | n
 let marketplaceCatalogRequest: Promise<MarketplaceCatalog> | null = null
 
 async function loadMarketplaceCatalog(force = false): Promise<MarketplaceCatalog> {
-  if (!force && marketplaceCatalogCache && Date.now() - marketplaceCatalogCache.fetchedAt < 30_000) {
+  if (!force && marketplaceCatalogCache && Date.now() - marketplaceCatalogCache.fetchedAt < 5 * 60_000) {
     return marketplaceCatalogCache.data
   }
   if (marketplaceCatalogRequest) return marketplaceCatalogRequest
