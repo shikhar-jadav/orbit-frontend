@@ -63,50 +63,56 @@ export function deduplicateMessageParts(parts: MessagePart[] | undefined): Messa
   if (!parts || parts.length === 0) return parts || []
 
   const result: MessagePart[] = []
+  const seenText = new Set<string>()
+  const seenToolCalls = new Set<string>()
+
   for (let i = 0; i < parts.length; i++) {
     const originalPart = parts[i]
-    const part: MessagePart =
-      originalPart.type === 'text'
-        ? { ...originalPart, text: collapseRepeatedResponse(originalPart.text) }
-        : originalPart
 
-    if (part.type === 'tool' && part.tool.status === 'done' && part.tool.output) {
-      const signature = JSON.stringify([
-        part.tool.name,
-        part.tool.args || {},
-        normalizeWhitespace(part.tool.output),
-      ])
-      const alreadyRendered = result.some((existing) => {
-        if (existing.type !== 'tool' || existing.tool.status !== 'done' || !existing.tool.output) return false
-        return JSON.stringify([
-          existing.tool.name,
-          existing.tool.args || {},
-          normalizeWhitespace(existing.tool.output),
-        ]) === signature
+    if (originalPart.type === 'text') {
+      const cleanedText = collapseRepeatedResponse(originalPart.text)
+      const normalizedText = normalizeWhitespace(cleanedText)
+      if (!normalizedText || seenText.has(normalizedText)) continue
+
+      // If a later text segment already contains this whole segment, keep
+      // the more complete version. Tool events may sit between the segments.
+      const superseded = parts.slice(i + 1).some((nextPart) => {
+        if (nextPart.type !== 'text') return false
+        const nextText = normalizeWhitespace(collapseRepeatedResponse(nextPart.text))
+        return nextText.length > normalizedText.length && nextText.startsWith(normalizedText)
       })
-      if (alreadyRendered) continue
+      if (superseded) continue
+
+      seenText.add(normalizedText)
+      result.push({ ...originalPart, text: cleanedText })
+      continue
     }
 
-    if (part.type === 'text') {
-      const text = normalizeWhitespace(part.text || '')
-      if (!text) continue
+    if (originalPart.type === 'tool' && originalPart.tool.status === 'done') {
+      const tool = originalPart.tool
+      const isWorkspaceWrite =
+        tool.name === 'workspace_files' &&
+        ['create', 'replace', 'append', 'edit', 'copy'].includes(
+          String((tool.args as Record<string, unknown> | undefined)?.action || '').toLowerCase(),
+        )
+      const callSignature = isWorkspaceWrite
+        ? JSON.stringify([tool.name, tool.args || {}])
+        : ''
+      const outputSignature = tool.output
+        ? JSON.stringify([tool.name, tool.args || {}, normalizeWhitespace(tool.output)])
+        : ''
 
-      let isDuplicate = false
-      for (let j = i + 1; j < parts.length; j++) {
-        const nextPart = parts[j]
-        if (nextPart.type === 'text') {
-          const nextText = normalizeWhitespace(nextPart.text || '')
-          if (nextText && (nextText === text || nextText.startsWith(text))) {
-            isDuplicate = true
-            break
-          }
-        }
-      }
-      if (isDuplicate) {
+      if (
+        (callSignature && seenToolCalls.has(callSignature)) ||
+        (outputSignature && seenToolCalls.has(outputSignature))
+      ) {
         continue
       }
+      if (callSignature) seenToolCalls.add(callSignature)
+      if (outputSignature) seenToolCalls.add(outputSignature)
     }
-    result.push(part)
+
+    result.push(originalPart)
   }
 
   return result
