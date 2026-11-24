@@ -112,6 +112,11 @@ export function CapabilitiesSection({
         setPersonalSkills(cached.data as PersonalSkill[])
       } else {
         setPersonalConnectors(cached.data as PersonalConnector[])
+        const marketplaceCached = capabilitiesDataCache.marketplace
+        if (marketplaceCached) {
+          const catalog = marketplaceCached.data as MarketplaceCatalog
+          setMarketplaceConnectors(catalog.connectors ?? [])
+        }
       }
       setLoading(false)
       if (!forceReload && Date.now() - cached.fetchedAt < CAPABILITIES_CACHE_TTL_MS) {
@@ -141,12 +146,21 @@ export function CapabilitiesSection({
           setPersonalSkills(skills)
           capabilitiesDataCache.skills = { data: skills, fetchedAt: Date.now() }
         } else {
-          const response = await fetch('/settings/personal-connectors')
-          if (!response.ok) return
-          const connectors = (await response.json()) as PersonalConnector[]
+          const [connectorsResponse, marketplaceResponse] = await Promise.all([
+            fetch('/settings/personal-connectors'),
+            fetch('/marketplace'),
+          ])
+          if (!connectorsResponse.ok) return
+          const connectors = (await connectorsResponse.json()) as PersonalConnector[]
           if (!active) return
           setPersonalConnectors(connectors)
           capabilitiesDataCache.connectors = { data: connectors, fetchedAt: Date.now() }
+          if (marketplaceResponse.ok) {
+            const catalog = (await marketplaceResponse.json()) as MarketplaceCatalog
+            if (!active) return
+            setMarketplaceConnectors(catalog.connectors ?? [])
+            capabilitiesDataCache.marketplace = { data: catalog, fetchedAt: Date.now() }
+          }
         }
 
         loadedData.current[sectionKey] = true
@@ -165,8 +179,11 @@ export function CapabilitiesSection({
   useEffect(() => {
     const refreshMarketplace = () => {
       loadedData.current.marketplace = false
+      loadedData.current.connectors = false
       delete capabilitiesDataCache.marketplace
-      if (view === 'discover') setReloadNonce((value) => value + 1)
+      if (view === 'discover' || tab === 'connectors') {
+        setReloadNonce((value) => value + 1)
+      }
     }
     window.addEventListener('orbit:marketplace-updated', refreshMarketplace)
     return () => window.removeEventListener('orbit:marketplace-updated', refreshMarketplace)
