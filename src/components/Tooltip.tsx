@@ -68,6 +68,8 @@ export function Tooltip({ content, children, disabled = false, side = 'top' }: T
 
   const childStyle = ((children.props.style as Record<string, unknown>) || {}) as Record<string, unknown>
 
+  // Preserve the caller's ref; this component reads only its own popover ref in event handlers.
+  // eslint-disable-next-line react-hooks/refs -- cloneElement forwards the caller's ref without reading it.
   const trigger = cloneElement(children, {
     // Platform-native interest trigger
     interestfor: tooltipId,
