@@ -371,8 +371,11 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
         if (!controller.signal.aborted) setLoadingEventResources(false)
       }
     }
-    void load()
-    return () => controller.abort()
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
   }, [isOpen, tab, createMode, eventProvider, activeEventAccountId])
 
   const loadRoutineActivity = useCallback(async (routineId: string) => {
