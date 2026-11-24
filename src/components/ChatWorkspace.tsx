@@ -217,7 +217,7 @@ function parseHistoricalProactiveCard(content: string, createdAt?: string) {
   if (createdAt) {
     try {
       formattedTime = new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    } catch {}
+    } catch { /* Unparseable timestamps fall back to an empty label. */ }
   }
 
   return {

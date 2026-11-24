@@ -55,8 +55,8 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   const popupRef = useRef<Window | null>(null)
   const popupProviderRef = useRef<string | null>(null)
   const pendingConnectorIdRef = useRef<string | null>(null)
-  const [catalog, setCatalog] = useState<MarketplaceCatalog | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [catalog, setCatalog] = useState<MarketplaceCatalog | null>(() => marketplaceCatalogCache?.data ?? null)
+  const [loading, setLoading] = useState(() => marketplaceCatalogCache === null)
   const [reloadNonce, setReloadNonce] = useState(0)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -66,7 +66,11 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
 
   // Modals state
   const [configuringConnector, setConfiguringConnector] = useState<MarketplaceConnector | null>(null)
-  const [selectedConnectorDetails, setSelectedConnectorDetails] = useState<MarketplaceConnector | null>(null)
+  const [selectedConnectorId, setSelectedConnectorId] = useState<string | null>(initialConnectorId ?? null)
+  const selectedConnectorDetails = useMemo(
+    () => catalog?.connectors.find((connector) => connector.id === selectedConnectorId) ?? null,
+    [catalog, selectedConnectorId],
+  )
   const [configFormValues, setConfigFormValues] = useState<Record<string, ConnectorConfigValue>>({})
   const [configEnabled, setConfigEnabled] = useState(true)
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({})
@@ -158,13 +162,6 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
 
   useEffect(() => {
     let active = true
-    const cached = marketplaceCatalogCache
-    if (cached) {
-      setCatalog(cached.data)
-      setLoading(false)
-    } else {
-      setLoading(true)
-    }
     ;(async () => {
       try {
         const data = await loadMarketplaceCatalog(reloadNonce > 0)
@@ -206,13 +203,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     }
   }, [triggerReload])
 
-  useEffect(() => {
-    if (!catalog) return
-    const targetId = initialConnectorId || selectedConnectorDetails?.id
-    if (!targetId) return
-    const connector = catalog.connectors.find((item) => item.id === targetId)
-    if (connector && connector !== selectedConnectorDetails) setSelectedConnectorDetails(connector)
-  }, [initialConnectorId, catalog, selectedConnectorDetails?.id])
+
 
   // Toggle skill install
   const toggleSkill = async (skill: MarketplaceSkill) => {
@@ -280,7 +271,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   }
 
   const openConnectorDetails = (connector: MarketplaceConnector) => {
-    setSelectedConnectorDetails(connector)
+    setSelectedConnectorId(connector.id)
   }
 
   const connectFromDetails = (connector: MarketplaceConnector) => {
@@ -726,7 +717,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         <div
           className="marketplace-modal-backdrop"
           onClick={(event) => {
-            if (event.target === event.currentTarget) setSelectedConnectorDetails(null)
+            if (event.target === event.currentTarget) setSelectedConnectorId(null)
           }}
         >
           <section className="marketplace-modal-card connector-details-modal" role="dialog" aria-modal="true" aria-labelledby="connector-details-title">
@@ -743,7 +734,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                   <span className="card-category">{selectedConnectorDetails.category} · {selectedConnectorDetails.authType}</span>
                 </div>
               </div>
-              <button type="button" className="modal-close-btn" onClick={() => setSelectedConnectorDetails(null)} aria-label="Close details"><Icon name="close" size={16} /></button>
+              <button type="button" className="modal-close-btn" onClick={() => setSelectedConnectorId(null)} aria-label="Close details"><Icon name="close" size={16} /></button>
             </div>
 
             <div className="modal-body connector-details-body">
@@ -805,13 +796,13 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
             </div>
 
             <div className="modal-footer connector-details-footer">
-              <button type="button" className="card-action-btn btn-secondary" onClick={() => setSelectedConnectorDetails(null)}>Close</button>
+              <button type="button" className="card-action-btn btn-secondary" onClick={() => setSelectedConnectorId(null)}>Close</button>
               {selectedConnectorDetails.configFields?.length > 0 && (
                 <button type="button" className="card-action-btn btn-secondary" onClick={() => {
                   setConfiguringConnector(selectedConnectorDetails)
                   setConfigFormValues(selectedConnectorDetails.config || {})
                   setConfigEnabled(true)
-                  setSelectedConnectorDetails(null)
+                  setSelectedConnectorId(null)
                 }}>Configure</button>
               )}
               <button

@@ -90,6 +90,7 @@ export function CapabilitiesSection({
 
   useEffect(() => {
     let active = true
+    const timer = window.setTimeout(() => {
     const sectionKey =
       view === 'discover' ? 'marketplace' : tab === 'skills' ? 'skills' : 'connectors'
     const forceReload = lastReloadNonce.current !== reloadNonce
@@ -97,9 +98,7 @@ export function CapabilitiesSection({
 
     if (loadedData.current[sectionKey] && !forceReload) {
       setLoading(false)
-      return () => {
-        active = false
-      }
+      return
     }
 
     const cached = capabilitiesDataCache[sectionKey]
@@ -126,9 +125,7 @@ export function CapabilitiesSection({
       setLoading(false)
       if (!forceReload && Date.now() - cached.fetchedAt < CAPABILITIES_CACHE_TTL_MS) {
         loadedData.current[sectionKey] = true
-        return () => {
-          active = false
-        }
+        return
       }
     }
 
@@ -185,8 +182,11 @@ export function CapabilitiesSection({
       }
     })()
 
+    return
+    }, 0)
     return () => {
       active = false
+      window.clearTimeout(timer)
     }
   }, [reloadNonce, tab, view])
 
@@ -202,7 +202,7 @@ export function CapabilitiesSection({
     }
     window.addEventListener('orbit:marketplace-updated', refreshMarketplace)
     return () => window.removeEventListener('orbit:marketplace-updated', refreshMarketplace)
-  }, [view])
+  }, [view, tab])
 
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {

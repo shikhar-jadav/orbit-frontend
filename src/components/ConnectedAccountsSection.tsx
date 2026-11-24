@@ -68,7 +68,6 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
   const popupPollRef = useRef<number | null>(null)
 
   const loadStatus = useCallback(async () => {
-    setLoading(true)
     try {
       const response = await fetch('/api/integrations/status', { credentials: 'same-origin' })
       if (response.status === 401) {
@@ -85,11 +84,15 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
   }, [onUnauthorized])
 
   useEffect(() => {
-    void loadStatus()
+    const timer = window.setTimeout(() => void loadStatus(), 0)
+    return () => window.clearTimeout(timer)
   }, [loadStatus])
 
   useEffect(() => {
-    const handleIntegrationUpdate = () => { void loadStatus() }
+    const handleIntegrationUpdate = () => {
+      setLoading(true)
+      void loadStatus()
+    }
     window.addEventListener('orbit:integrations-updated', handleIntegrationUpdate)
     return () => window.removeEventListener('orbit:integrations-updated', handleIntegrationUpdate)
   }, [loadStatus])
@@ -101,13 +104,14 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
       const provider = popupProviderRef.current
       const apiUrl = status?.public_url
       if (!popup || !provider || event.source !== popup || !apiUrl) return
-      let expectedOrigin = ''
-      try {
-        expectedOrigin = new URL(apiUrl).origin
-      } catch {
-        return
-      }
-      if (event.origin !== expectedOrigin || event.data?.provider !== provider) return
+      const expectedOrigin = (() => {
+        try {
+          return new URL(apiUrl).origin
+        } catch {
+          return null
+        }
+      })()
+      if (!expectedOrigin || event.origin !== expectedOrigin || event.data?.provider !== provider) return
       if (event.data?.type === 'orbit_integration_connected') {
         if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
         popupPollRef.current = null

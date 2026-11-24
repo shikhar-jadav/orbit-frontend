@@ -30,13 +30,22 @@ export function ModernDialog({
   const dialogRef = useRef<HTMLDialogElement>(null)
   const pressedOutsideRef = useRef(false)
   const [renderedContent, setRenderedContent] = useState<ReactNode>(isOpen ? children : null)
+  const [previousChildren, setPreviousChildren] = useState(children)
+  const [wasOpen, setWasOpen] = useState(isOpen)
+
+  if (isOpen && (!wasOpen || previousChildren !== children)) {
+    setPreviousChildren(children)
+    setWasOpen(true)
+    setRenderedContent(children)
+  } else if (!isOpen && wasOpen) {
+    setWasOpen(false)
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
 
     if (isOpen) {
-      setRenderedContent(children)
       if (!dialog.open) {
         try {
           dialog.showModal()
@@ -49,7 +58,7 @@ export function ModernDialog({
         dialog.close()
       }
     }
-  }, [isOpen, children])
+  }, [isOpen])
 
   // Clear retained content after exit animation finishes
   const handleTransitionEnd = (e: React.TransitionEvent<HTMLDialogElement>) => {
