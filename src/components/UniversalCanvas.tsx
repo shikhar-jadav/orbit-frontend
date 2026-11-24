@@ -120,13 +120,16 @@ export function UniversalCanvas({
           }
         })
     } else if (item.type === 'artifact' && item.content) {
-      setPreviewData({
-        type: 'text',
-        content: item.content,
-        extension: item.language || 'md',
-        filename: item.title || 'Artifact',
-      })
-      setLoading(false)
+      loadingTimer = window.setTimeout(() => {
+        if (!isMounted) return
+        setPreviewData({
+          type: 'text',
+          content: item.content,
+          extension: item.language || 'md',
+          filename: item.title || 'Artifact',
+        })
+        setLoading(false)
+      }, 0)
     }
 
     return () => {
