@@ -10,6 +10,9 @@ type ConnectedAccount = {
   account_name: string
   scopes: string[]
   updated_at?: string
+  credential_status?: 'active' | 'reconnect_required'
+  reconnect_required?: boolean
+  reconnect_message?: string | null
 }
 
 type ProviderStatus = {
@@ -121,6 +124,7 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
         setError('')
         setNotice(`${PROVIDERS.find((item) => item.id === provider)?.name || provider} connected successfully.`)
         window.dispatchEvent(new Event('orbit:integrations-updated'))
+        window.dispatchEvent(new Event('orbit:marketplace-updated'))
         void loadStatus()
       } else if (event.data?.type === 'orbit_integration_error') {
         if (popupPollRef.current !== null) window.clearInterval(popupPollRef.current)
@@ -205,6 +209,7 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
       }
       if (!response.ok) throw new Error(await responseDetail(response, `Could not disconnect ${account.account_name}.`))
       setNotice(`${account.account_name} disconnected.`)
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
       await loadStatus()
     } catch (disconnectError) {
       setError(disconnectError instanceof Error ? disconnectError.message : 'Could not disconnect this account.')
@@ -305,9 +310,27 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
                         <div className="ca-account-avatar">{account.account_name.slice(0, 1).toUpperCase()}</div>
                         <div className="ca-account-copy">
                           <strong>{account.account_name}</strong>
-                          <span>{account.scopes.length ? account.scopes.join(' · ') : 'Account connected'}</span>
+                          <span>
+                            {account.reconnect_required
+                              ? (account.reconnect_message || `Your ${provider.name} connection needs to be reconnected. Click Reconnect to authorize again.`)
+                              : (account.scopes.length ? account.scopes.join(' · ') : 'Account connected')}
+                          </span>
                         </div>
-                        <span className="ca-connected-pill"><Icon name="checkCircle" size={12} /> Connected</span>
+                        {account.reconnect_required ? (
+                          <>
+                            <span className="ca-connected-pill reconnect-required">Reconnect required</span>
+                            <button
+                              type="button"
+                              className="ca-connect-button"
+                              disabled={!canConnect || connecting !== null}
+                              onClick={() => void connect(provider.id)}
+                            >
+                              {connecting === provider.id ? 'Opening…' : 'Reconnect'}
+                            </button>
+                          </>
+                        ) : (
+                          <span className="ca-connected-pill"><Icon name="checkCircle" size={12} /> Connected</span>
+                        )}
                         <button
                           type="button"
                           className="ca-disconnect-button"
