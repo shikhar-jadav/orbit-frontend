@@ -10,6 +10,9 @@ type ConnectedAccount = {
   account_name: string
   scopes: string[]
   updated_at?: string
+  credential_status?: 'active' | 'reconnect_required'
+  reconnect_required?: boolean
+  reconnect_message?: string | null
 }
 
 type ProviderStatus = {
@@ -305,9 +308,27 @@ export function ConnectedAccountsSection({ onUnauthorized }: Props) {
                         <div className="ca-account-avatar">{account.account_name.slice(0, 1).toUpperCase()}</div>
                         <div className="ca-account-copy">
                           <strong>{account.account_name}</strong>
-                          <span>{account.scopes.length ? account.scopes.join(' · ') : 'Account connected'}</span>
+                          <span>
+                            {account.reconnect_required
+                              ? (account.reconnect_message || `Your ${provider.name} connection needs to be reconnected. Click Reconnect to authorize again.`)
+                              : (account.scopes.length ? account.scopes.join(' · ') : 'Account connected')}
+                          </span>
                         </div>
-                        <span className="ca-connected-pill"><Icon name="checkCircle" size={12} /> Connected</span>
+                        {account.reconnect_required ? (
+                          <>
+                            <span className="ca-connected-pill reconnect-required">Reconnect required</span>
+                            <button
+                              type="button"
+                              className="ca-connect-button"
+                              disabled={!canConnect || connecting !== null}
+                              onClick={() => void connect(provider.id)}
+                            >
+                              {connecting === provider.id ? 'Opening…' : 'Reconnect'}
+                            </button>
+                          </>
+                        ) : (
+                          <span className="ca-connected-pill"><Icon name="checkCircle" size={12} /> Connected</span>
+                        )}
                         <button
                           type="button"
                           className="ca-disconnect-button"
