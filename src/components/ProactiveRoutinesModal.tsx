@@ -115,6 +115,9 @@ type Props = {
   onOpenExecution: (execution: RoutineExecutionPreview) => void
 }
 
+let routinesListCache: { items: Routine[]; fetchedAt: number } | null = null
+let routinesListRequest: Promise<Routine[]> | null = null
+
 export const ProactiveRoutinesModal: React.FC<Props> = ({
   isOpen,
   onClose,
@@ -184,16 +187,33 @@ export const ProactiveRoutinesModal: React.FC<Props> = ({
   const routineActivityRequestRef = useRef(0)
 
   const loadRoutines = useCallback(async () => {
-    setLoading(true)
+    // Render the last known list immediately when the modal is reopened, then
+    // revalidate it so edits made elsewhere still appear without a hard wait.
+    if (routinesListCache) {
+      setRoutines(routinesListCache.items)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
     setRoutineLoadError('')
     try {
-      const res = await fetch('/api/routines', { credentials: 'same-origin' })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.detail || 'Could not load routines.')
+      if (!routinesListRequest) {
+        routinesListRequest = (async () => {
+          const res = await fetch('/api/routines', { credentials: 'same-origin' })
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            throw new Error(data.detail || 'Could not load routines.')
+          }
+          const data = await res.json()
+          const items = Array.isArray(data.routines) ? data.routines as Routine[] : []
+          routinesListCache = { items, fetchedAt: Date.now() }
+          return items
+        })().finally(() => {
+          routinesListRequest = null
+        })
       }
-      const data = await res.json()
-      setRoutines(Array.isArray(data.routines) ? data.routines : [])
+      const items = await routinesListRequest
+      setRoutines(items)
     } catch (err) {
       setRoutineLoadError(err instanceof Error ? err.message : 'Could not load routines.')
     } finally {
