@@ -1523,10 +1523,41 @@ function App() {
 
               if (eventType === 'token') {
                 const token = String(data.token || '')
+                if (!token) continue
                 setMessages((current) =>
                   current.map((msg) => {
                     if (msg.id !== assistantId) return msg
+
+                    // Some stream adapters emit cumulative snapshots instead of deltas.
+                    // Appending those snapshots repeats the entire answer on every event.
+                    // Detect that shape and replace the streamed text with the newer snapshot.
+                    const streamedText = msg.content || ''
+                    const isCumulativeSnapshot =
+                      streamedText.length > 0 && token.length > streamedText.length &&
+                      token.startsWith(streamedText)
                     const currentParts = msg.parts ? [...msg.parts] : []
+                    const lastTextIndex = currentParts.reduce(
+                      (lastIndex, part, index) => (part.type === 'text' ? index : lastIndex),
+                      -1,
+                    )
+
+                    if (isCumulativeSnapshot) {
+                      if (lastTextIndex >= 0) {
+                        const lastPart = currentParts[lastTextIndex]
+                        if (lastPart.type === 'text') {
+                          currentParts[lastTextIndex] = { ...lastPart, text: token }
+                        }
+                      } else {
+                        currentParts.push({ type: 'text', text: token })
+                      }
+                      return {
+                        ...msg,
+                        content: token,
+                        parts: currentParts,
+                        pending: true,
+                      }
+                    }
+
                     const lastPart = currentParts[currentParts.length - 1]
                     if (lastPart && lastPart.type === 'text') {
                       currentParts[currentParts.length - 1] = {
@@ -1538,7 +1569,7 @@ function App() {
                     }
                     return {
                       ...msg,
-                      content: msg.content + token,
+                      content: streamedText + token,
                       parts: currentParts,
                       pending: true,
                     }
