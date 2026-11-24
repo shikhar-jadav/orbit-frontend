@@ -1071,7 +1071,21 @@ export function CapabilitiesSection({
               ))}
 
               {filteredEnabledMarketplaceConnectors.map((conn) => (
-                <div key={`mkt-${conn.id}`} className="sp-conn-table-row">
+                <div
+                  key={`mkt-${conn.id}`}
+                  className="sp-conn-table-row"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${conn.name} connector details`}
+                  onClick={() => handleOpenMarketplace(conn.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      handleOpenMarketplace(conn.id)
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="sp-conn-cell-name">
                     <div className="sp-conn-row-icon">
                       <Icon name="cloud" size={15} />
