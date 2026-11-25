@@ -724,23 +724,21 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                             </form>
                           ) : (
                             <>
-                              <div className="user-bubble">
-                                <AttachmentChips
-                                  variant="message"
-                                  files={(message.attachments || []).map((attachment) => ({
-                                    key: attachment.attachment_id || attachment.filename,
-                                    filename: attachment.filename,
-                                    size: attachment.size_bytes,
-                                    contentType: attachment.content_type,
-                                    url:
-                                      attachment.preview_url ||
-                                      (attachment.attachment_id && currentThread?.thread_id
-                                        ? `/threads/${encodeURIComponent(currentThread.thread_id)}/attachments/${encodeURIComponent(attachment.attachment_id)}`
-                                        : undefined),
-                                  }))}
-                                />
-                                {message.content && <div className="user-bubble-text">{message.content}</div>}
-                              </div>
+                              <AttachmentChips
+                                variant="message"
+                                files={(message.attachments || []).map((attachment) => ({
+                                  key: attachment.attachment_id || attachment.filename,
+                                  filename: attachment.filename,
+                                  size: attachment.size_bytes,
+                                  contentType: attachment.content_type,
+                                  url:
+                                    attachment.preview_url ||
+                                    (attachment.attachment_id && currentThread?.thread_id
+                                      ? `/threads/${encodeURIComponent(currentThread.thread_id)}/attachments/${encodeURIComponent(attachment.attachment_id)}`
+                                      : undefined),
+                                }))}
+                              />
+                              {message.content && <div className="user-bubble">{message.content}</div>}
                               <div className="user-actions">
                                 {(message.variants?.length ?? message.version_count ?? 1) > 1 && (
                                   <div className="response-version-nav" aria-label="Prompt versions">
