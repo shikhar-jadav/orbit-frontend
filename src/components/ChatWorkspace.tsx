@@ -725,14 +725,20 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                           ) : (
                             <>
                               <div className="user-bubble">
-                                {message.content}
                                 <AttachmentChips
+                                  variant="message"
                                   files={(message.attachments || []).map((attachment) => ({
                                     key: attachment.attachment_id || attachment.filename,
                                     filename: attachment.filename,
                                     size: attachment.size_bytes,
+                                    contentType: attachment.content_type,
+                                    url:
+                                      attachment.attachment_id && currentThread?.thread_id
+                                        ? `/threads/${encodeURIComponent(currentThread.thread_id)}/attachments/${encodeURIComponent(attachment.attachment_id)}`
+                                        : undefined,
                                   }))}
                                 />
+                                {message.content && <div className="user-bubble-text">{message.content}</div>}
                               </div>
                               <div className="user-actions">
                                 {(message.variants?.length ?? message.version_count ?? 1) > 1 && (
@@ -1087,6 +1093,8 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                           key: `${file.name}-${file.size}-${file.lastModified}`,
                           filename: file.name,
                           size: file.size,
+                          contentType: file.type,
+                          file,
                         }))}
                         onRemove={removeAttachment}
                         disabled={sending}
@@ -1165,6 +1173,8 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                     key: `${file.name}-${file.size}-${file.lastModified}`,
                     filename: file.name,
                     size: file.size,
+                    contentType: file.type,
+                    file,
                   }))}
                   onRemove={removeAttachment}
                   disabled={sending}
