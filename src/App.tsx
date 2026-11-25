@@ -1425,17 +1425,31 @@ function App() {
   function addAttachments(fileList: FileList | null) {
     if (!fileList?.length) return
     const incoming = Array.from(fileList)
-    if (attachments.length + incoming.length > 10) {
-      setError('Attach up to 10 files per message.')
+    const existingCount = messages.reduce(
+      (total, message) => total + (message.attachments?.length || 0),
+      0,
+    )
+    const existingBytes = messages.reduce(
+      (total, message) =>
+        total +
+        (message.attachments || []).reduce((sum, item) => sum + (item.size_bytes || 0), 0),
+      0,
+    )
+    if (existingCount + attachments.length + incoming.length > 10) {
+      setError('You can attach up to 10 files per chat.')
       return
     }
     if (incoming.some((file) => file.size > 25 * 1024 * 1024)) {
       setError('Each file must be 25 MB or smaller.')
       return
     }
-    if (attachments.reduce((total, file) => total + file.size, 0) +
-      incoming.reduce((total, file) => total + file.size, 0) > 50 * 1024 * 1024) {
-      setError('Files in one message must total 50 MB or less.')
+    if (
+      existingBytes +
+        attachments.reduce((total, file) => total + file.size, 0) +
+        incoming.reduce((total, file) => total + file.size, 0) >
+      25 * 1024 * 1024
+    ) {
+      setError('Total files in one chat must be 25 MB or less.')
       return
     }
     setError('')
