@@ -51,19 +51,39 @@ async function loadMarketplaceCatalog(force = false): Promise<MarketplaceCatalog
   return request
 }
 
+function toFaviconDomain(hostname: string): string {
+  const host = hostname.toLowerCase().replace(/^www\./, '')
+  if (host === 'calendarmcp.googleapis.com') return 'calendar.google.com'
+  if (host === 'drivemcp.googleapis.com') return 'drive.google.com'
+  if (host === 'gmailmcp.googleapis.com') return 'mail.google.com'
+  const parts = host.split('.').filter(Boolean)
+  const twoPartTlds = new Set(['co.uk', 'org.uk', 'com.au', 'co.jp', 'com.br', 'co.in'])
+  const apex =
+    parts.length >= 3 && twoPartTlds.has(parts.slice(-2).join('.'))
+      ? parts.slice(-3).join('.')
+      : parts.length >= 2
+      ? parts.slice(-2).join('.')
+      : host
+  const apexAliases: Record<string, string> = {
+    'adobe.io': 'adobe.com',
+    'googleapis.com': 'google.com',
+    'githubapp.com': 'github.com',
+  }
+  return apexAliases[apex] || apex
+}
+
 function getConnectorFaviconUrl(connector: MarketplaceConnector): string | null {
   const rawUrl =
     connector.mcpUrl ||
-    String(connector.configFields?.find((f) => f.key === 'server_url')?.default || connector.configFields?.find((f) => f.key === 'server_url')?.placeholder || '') ||
-    ''
+    String(
+      connector.configFields?.find((f) => f.key === 'server_url')?.default ||
+        connector.configFields?.find((f) => f.key === 'server_url')?.placeholder ||
+        '',
+    )
   if (!rawUrl) return null
   try {
-    let host = new URL(rawUrl).hostname.toLowerCase()
-    if (host === 'calendarmcp.googleapis.com') host = 'calendar.google.com'
-    else if (host === 'drivemcp.googleapis.com') host = 'drive.google.com'
-    else if (host === 'gmailmcp.googleapis.com') host = 'mail.google.com'
-    else host = host.replace(/^(mcp|api|remote|server)\./, '')
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
+    const domain = toFaviconDomain(new URL(rawUrl).hostname)
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`
   } catch {
     return null
   }
@@ -85,6 +105,9 @@ function ConnectorBadgeIcon({ connector, size }: { connector: MarketplaceConnect
         height={size}
         className="connector-favicon-img"
         loading="lazy"
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth <= 16) setFailed(true)
+        }}
         onError={() => setFailed(true)}
       />
     )
