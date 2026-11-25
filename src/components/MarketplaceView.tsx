@@ -54,7 +54,7 @@ async function loadMarketplaceCatalog(force = false): Promise<MarketplaceCatalog
 function getConnectorFaviconUrl(connector: MarketplaceConnector): string | null {
   const rawUrl =
     connector.mcpUrl ||
-    connector.configFields?.find((f) => f.key === 'server_url')?.default ||
+    String(connector.configFields?.find((f) => f.key === 'server_url')?.default || connector.configFields?.find((f) => f.key === 'server_url')?.placeholder || '') ||
     (connector.website && !connector.website.includes('claude.com/') ? connector.website : '')
   if (!rawUrl) return null
   try {

@@ -324,6 +324,7 @@ export type ConnectorConfigField = {
   placeholder?: string
   helpText?: string
   defaultValue?: ConnectorConfigValue
+  default?: ConnectorConfigValue
 }
 
 export type MarketplaceConnector = {
