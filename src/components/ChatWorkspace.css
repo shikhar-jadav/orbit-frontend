@@ -1820,5 +1820,37 @@ dialog.thread-delete-dialog {
 }
 @media (max-width: 600px) {
   .tool-step-quiet .tool-activity-subject { max-width: 48vw; }
-  .tool-step-quiet .tool-activity-detail.tool-activity-result { margin-left: 20px; }
+  .tool-step-quiet .tool-activity-detail.tool-activity-result {
+  display: block;
+  box-sizing: border-box;
+  width: min(100%, 900px);
+  max-width: 100%;
+  max-height: none;
+  height: auto;
+  margin: 5px 0 10px 26px;
+  padding: 8px 0 8px 14px;
+  overflow: visible;
+  border: 0;
+  border-left: 1px solid rgba(255,255,255,.12);
+  border-radius: 0;
+  background: transparent;
+}
+.tool-step-quiet .tool-activity-result pre {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: none;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #b7b7b7;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
