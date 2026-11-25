@@ -99,15 +99,6 @@ type ThreadUpdatesResponse = {
 
 let onUnauthorizedCallback: (() => void) | null = null
 
-const initialSessionPromise: Promise<AuthSessionResponse | null> =
-  typeof window !== 'undefined'
-    ? fetch('/auth/session')
-        .then(async (res) => {
-          if (!res.ok) throw new Error('Unable to verify session.')
-          return (await res.json()) as AuthSessionResponse
-        })
-        .catch(() => null)
-    : Promise.resolve(null)
 
 class UnauthorizedError extends Error {
   constructor(message: string) {
@@ -404,6 +395,7 @@ function App() {
 
   const initialRoute = readRoute()
   const [authLoading, setAuthLoading] = useState(true)
+  const [backendBootMessage, setBackendBootMessage] = useState('Connecting to Orbit…')
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [hasUsers, setHasUsers] = useState(true)
   const [emailOtpEnabled, setEmailOtpEnabled] = useState(false)
@@ -729,34 +721,83 @@ function App() {
 
   useEffect(() => {
     let active = true
-    initialSessionPromise
-      .then((session) => {
-        if (!active) return
-        if (session) {
-          setHasUsers(session.has_users)
-          if (!session.has_users) {
-            clearRecentAccounts()
+    let requestController: AbortController | null = null
+    const retryDelaysMs = [1500, 3000, 5000, 8000, 10000]
+
+    const loadInitialSession = async () => {
+      let attempts = 0
+
+      while (active) {
+        requestController = new AbortController()
+        const timeoutId = window.setTimeout(() => requestController?.abort(), 15000)
+
+        try {
+          const response = await fetch('/auth/session', {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            signal: requestController.signal,
+          })
+          const contentType = response.headers.get('content-type') || ''
+
+          if (response.ok && contentType.includes('application/json')) {
+            const session = (await response.json()) as AuthSessionResponse
+            if (!active) return
+
+            setAuthMessage('')
+            setHasUsers(session.has_users)
+            if (!session.has_users) {
+              clearRecentAccounts()
+            }
+            setEmailOtpEnabled(Boolean(session.email_otp_enabled))
+            if (session.authenticated && session.user) {
+              rememberRecentAccount(session.user)
+              setCurrentUser(session.user)
+              setUnusedRecoveryCodes(session.unused_recovery_codes ?? 0)
+            } else {
+              setCurrentUser(null)
+            }
+            setAuthLoading(false)
+            return
           }
-          setEmailOtpEnabled(Boolean(session.email_otp_enabled))
-          if (session.authenticated && session.user) {
-            rememberRecentAccount(session.user)
-            setCurrentUser(session.user)
-            setUnusedRecoveryCodes(session.unused_recovery_codes ?? 0)
-          } else {
-            setCurrentUser(null)
+
+          const retryableStatus =
+            response.status >= 500 ||
+            response.status === 408 ||
+            response.status === 425 ||
+            response.status === 429 ||
+            response.ok
+
+          if (!retryableStatus) {
+            if (active) {
+              setCurrentUser(null)
+              setAuthMessage(`Orbit could not complete its startup check (HTTP ${response.status}). Please try again.`)
+              setAuthLoading(false)
+            }
+            return
           }
-        } else {
-          setCurrentUser(null)
+        } catch {
+          // A cold start, proxy timeout, or temporary network error is retried below.
+        } finally {
+          window.clearTimeout(timeoutId)
+          requestController = null
         }
-      })
-      .catch(() => {
-        if (active) setCurrentUser(null)
-      })
-      .finally(() => {
-        if (active) setAuthLoading(false)
-      })
+
+        if (!active) return
+        attempts += 1
+        if (attempts === 1) {
+          setBackendBootMessage('Orbit is waking up. Reconnecting automatically…')
+        }
+
+        const delayMs = retryDelaysMs[Math.min(attempts - 1, retryDelaysMs.length - 1)]
+        await new Promise<void>((resolve) => window.setTimeout(resolve, delayMs))
+      }
+    }
+
+    void loadInitialSession()
     return () => {
       active = false
+      requestController?.abort()
     }
   }, [])
 
@@ -2445,7 +2486,7 @@ function App() {
     return (
       <div className="orbit-auth-loading" role="status" aria-live="polite">
         <span className="orbit-auth-loading-spinner" aria-hidden="true" />
-        <span>Connecting to Orbit…</span>
+        <span>{backendBootMessage}</span>
       </div>
     )
   }

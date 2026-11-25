@@ -49,16 +49,23 @@ type PendingSignupResult = {
 }
 
 const BACKEND_WAKE_RETRY_DELAYS_MS = [
-  1500, 3000, 5000, 8000, 10000, 10000, 10000, 10000, 10000,
+  1500, 3000, 5000, 8000,
+  10000, 10000, 10000, 10000, 10000, 10000,
+  10000, 10000, 10000, 10000, 10000, 10000,
 ]
 
 function isBackendGatewayUnavailable(response: Response): boolean {
-  return response.status >= 502 && response.status <= 504
+  return (
+    response.status === 408 ||
+    response.status === 425 ||
+    response.status === 429 ||
+    response.status >= 500
+  )
 }
 
 /**
  * Render's free backend can sleep while idle. A failed first request wakes it,
- * but the service can take around a minute to become ready. Poll the cheap
+ * but the service and its database can take over a minute to become ready. Poll the cheap
  * session endpoint rather than repeating the POST (which also avoids consuming
  * the email-discovery rate limit during a cold start).
  */
@@ -66,46 +73,63 @@ async function fetchAfterBackendWake(
   request: () => Promise<Response>,
   onWake: () => void,
 ): Promise<Response> {
-  const initialResponse = await request()
-  if (!isBackendGatewayUnavailable(initialResponse)) return initialResponse
+  let lastUnavailableResponse: Response | null = null
+
+  try {
+    const initialResponse = await request()
+    if (!isBackendGatewayUnavailable(initialResponse)) return initialResponse
+    lastUnavailableResponse = initialResponse
+  } catch {
+    // A network failure during a cold start is transient too; continue probing.
+  }
 
   onWake()
-  let lastUnavailableResponse = initialResponse
 
   for (const delayMs of BACKEND_WAKE_RETRY_DELAYS_MS) {
     await new Promise<void>((resolve) => window.setTimeout(resolve, delayMs))
 
     try {
-      const healthResponse = await fetch('/auth/session', {
+      // This checks the session store as well as the HTTP service, so a 200 JSON
+      // response is a stronger readiness signal than the lightweight /health route.
+      const readinessResponse = await fetch('/auth/session', {
         method: 'GET',
         credentials: 'same-origin',
         cache: 'no-store',
       })
 
       if (
-        healthResponse.ok &&
-        (healthResponse.headers.get('content-type') || '').includes('application/json')
+        readinessResponse.ok &&
+        (readinessResponse.headers.get('content-type') || '').includes('application/json')
       ) {
-        const retryResponse = await request()
-        if (isBackendGatewayUnavailable(retryResponse)) {
-          lastUnavailableResponse = retryResponse
+        try {
+          const retryResponse = await request()
+          if (isBackendGatewayUnavailable(retryResponse)) {
+            lastUnavailableResponse = retryResponse
+            continue
+          }
+          return retryResponse
+        } catch {
+          // Retry the original action after the next readiness check.
           continue
         }
-        return retryResponse
       }
 
-      if (isBackendGatewayUnavailable(healthResponse)) {
-        lastUnavailableResponse = healthResponse
+      if (isBackendGatewayUnavailable(readinessResponse)) {
+        lastUnavailableResponse = readinessResponse
         continue
       }
 
-      if (!healthResponse.ok) return healthResponse
+      if (!readinessResponse.ok) return readinessResponse
+      // A successful non-JSON response is likely a proxy fallback, not readiness.
     } catch {
       // Keep polling through temporary proxy/network errors while the backend starts.
     }
   }
 
-  return lastUnavailableResponse
+  return lastUnavailableResponse ?? new Response(
+    JSON.stringify({ detail: 'Orbit could not reach its backend after waiting for it to start. Please try again.' }),
+    { status: 503, headers: { 'Content-Type': 'application/json' } },
+  )
 }
 
 async function readErrorDetail(res: Response, fallback: string): Promise<string> {
