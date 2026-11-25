@@ -55,7 +55,7 @@ function getConnectorFaviconUrl(connector: MarketplaceConnector): string | null 
   const rawUrl =
     connector.mcpUrl ||
     String(connector.configFields?.find((f) => f.key === 'server_url')?.default || connector.configFields?.find((f) => f.key === 'server_url')?.placeholder || '') ||
-    (connector.website && !connector.website.includes('claude.com/') ? connector.website : '')
+    ''
   if (!rawUrl) return null
   try {
     let host = new URL(rawUrl).hostname.toLowerCase()
