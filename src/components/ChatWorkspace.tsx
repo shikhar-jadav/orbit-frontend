@@ -129,23 +129,25 @@ function getToolLabel(
   if (normalized.includes('slack')) {
     return isRunning ? 'Querying Slack...' : 'Queried Slack'
   }
+  if (normalized === 'search_available_tools') {
+    return isRunning ? 'Discovering tools...' : 'Discovered tools'
+  }
   if (normalized.includes('search') && normalized.includes('web')) {
     return isRunning ? 'Searching the web...' : 'Searched the web'
-  }
-  if (normalized.includes('search')) {
-    return isRunning ? 'Searching workspace...' : 'Searched workspace'
   }
   if (normalized.includes('command') || normalized.includes('terminal') || normalized.includes('exec')) {
     return isRunning ? 'Running a command...' : 'Ran a command'
   }
-  if (normalized.includes('read') || normalized.includes('open')) {
-    return isRunning ? 'Reading a file...' : 'Read a file'
-  }
-  if (normalized.includes('write') || normalized.includes('create')) {
-    return isRunning ? 'Creating a file...' : 'Created a file'
-  }
-  if (normalized.includes('list')) {
-    return isRunning ? 'Listing files...' : 'Listed files'
+  if (normalized.includes('file')) {
+    if (normalized.includes('read') || normalized.includes('open')) {
+      return isRunning ? 'Reading a file...' : 'Read a file'
+    }
+    if (normalized.includes('write') || normalized.includes('create')) {
+      return isRunning ? 'Creating a file...' : 'Created a file'
+    }
+    if (normalized.includes('list')) {
+      return isRunning ? 'Listing files...' : 'Listed files'
+    }
   }
   return formatToolName(name).replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
