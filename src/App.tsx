@@ -2172,8 +2172,11 @@ function App() {
     setEditingMessageId(null)
     const controller = new AbortController()
     abortControllerRef.current = controller
-    setMessages((current) =>
-      current.map((message) => {
+    setMessages((current) => {
+      const assistantIndex = current.findIndex((message) => message.id === assistantMessage.id)
+      const activeBranch =
+        assistantIndex >= 0 ? current.slice(0, assistantIndex + 1) : current
+      return activeBranch.map((message) => {
         if (message.id === userMessage.id && editedContent !== undefined) {
           return { ...message, content: prompt }
         }
@@ -2181,8 +2184,8 @@ function App() {
           return { ...message, content: '', parts: [], pending: true, failed: false, tools: [] }
         }
         return message
-      }),
-    )
+      })
+    })
 
     let bufferedTokens = ''
     let tokenFrameId: number | null = null
