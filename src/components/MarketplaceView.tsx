@@ -942,6 +942,15 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                   setSelectedConnectorId(null)
                 }}>Configure</button>
               )}
+              {selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false && (
+                <button
+                  type="button"
+                  className="card-action-btn btn-secondary"
+                  onClick={() => void setConnectorEnabled(selectedConnectorDetails, false)}
+                >
+                  Disconnect
+                </button>
+              )}
               <button
                 type="button"
                 disabled={!selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured}
@@ -949,7 +958,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                 onClick={() => connectFromDetails(selectedConnectorDetails)}
                 title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}
               >
-                {selectedConnectorDetails.is_authenticated && selectedConnectorDetails.is_enabled ? 'Connected' : 'Connect'}
+                {selectedConnectorDetails.is_authenticated && selectedConnectorDetails.is_enabled ? (selectedConnectorDetails.oauthProvider ? 'Reconnect' : 'Connected') : 'Connect'}
               </button>
             </div>
           </section>
