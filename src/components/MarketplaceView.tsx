@@ -187,6 +187,19 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         popupProviderRef.current = null
         pendingConnectorIdRef.current = null
         showToast(String(event.data.message || 'The account could not be connected.'))
+      } else if (event.data?.type === 'mcp_oauth_success') {
+        popupRef.current = null
+        popupProviderRef.current = null
+        pendingConnectorIdRef.current = null
+        showToast(`${provider} connected successfully!`)
+        window.dispatchEvent(new Event('orbit:integrations-updated'))
+        window.dispatchEvent(new Event('orbit:marketplace-updated'))
+        setReloadNonce((n) => n + 1)
+      } else if (event.data?.type === 'mcp_oauth_cancelled') {
+        popupRef.current = null
+        popupProviderRef.current = null
+        pendingConnectorIdRef.current = null
+        showToast(String(event.data.error || 'Authentication was cancelled.'))
       }
     }
     window.addEventListener('message', handleMessage)
@@ -306,11 +319,50 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   }
 
   const setConnectorEnabled = async (connector: MarketplaceConnector, enabled: boolean) => {
+    let oauthPopup: Window | null = null
+    if (enabled && connector.mcpUrl) {
+      oauthPopup = window.open('about:blank', 'orbit-oauth-popup', 'popup,width=620,height=760')
+    }
     try {
-      await fetchMarketplaceJson(
+      const toggleRes = await fetchMarketplaceJson<{
+        enabled?: boolean
+        personal_connector_id?: string | null
+        is_connected?: boolean
+        needs_oauth?: boolean
+      }>(
         `/api/marketplace/connectors/${encodeURIComponent(connector.id)}/toggle`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ enabled }) },
       )
+      if (enabled && connector.mcpUrl && !toggleRes.is_connected) {
+        if (!toggleRes.personal_connector_id) {
+          oauthPopup?.close()
+          showToast(`Could not connect to ${connector.name}.`)
+          return
+        }
+        if (!oauthPopup) {
+          showToast('Please allow popups in your browser to authenticate this MCP.')
+          return
+        }
+        const oauthRes = await fetchMarketplaceJson<{
+          needs_oauth?: boolean
+          auth_url?: string
+          error?: string
+        }>(
+          `/api/settings/personal-connectors/${encodeURIComponent(toggleRes.personal_connector_id)}/oauth/start`,
+          { method: 'POST', credentials: 'same-origin' },
+        )
+        if (oauthRes.auth_url) {
+          popupRef.current = oauthPopup
+          popupProviderRef.current = connector.name
+          pendingConnectorIdRef.current = connector.id
+          oauthPopup.location.href = oauthRes.auth_url
+          return
+        }
+        oauthPopup.close()
+        showToast(oauthRes.error || `${connector.name} requires authentication or could not be reached.`)
+        return
+      }
+      oauthPopup?.close()
       setCatalog((current) => {
         if (!current) return current
         const updatedConnectors = current.connectors.map((item) => {
@@ -343,6 +395,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
       }
       showToast(enabled ? `Connected ${connector.name}` : `Disconnected ${connector.name}`)
     } catch (err) {
+      oauthPopup?.close()
       showToast(`Error: ${err instanceof Error ? err.message : 'Action failed'}`)
     }
   }
@@ -712,7 +765,14 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                       <button
                         type="button"
                         className={`card-action-btn ${connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`}
-                        onClick={() => openConnectorDetails(connector)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          if (connector.is_enabled && connector.is_configured && connector.is_authenticated !== false) {
+                            openConnectorDetails(connector)
+                          } else {
+                            connectFromDetails(connector)
+                          }
+                        }}
                       >
                         {connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'Connected' : 'Connect'}
                       </button>
