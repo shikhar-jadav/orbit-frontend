@@ -334,6 +334,7 @@ export type MarketplaceConnector = {
   icon: IconName | string
   badge?: string
   authType: string
+  mcpUrl?: string
   website?: string
   configFields: ConnectorConfigField[]
   capabilities: string[]

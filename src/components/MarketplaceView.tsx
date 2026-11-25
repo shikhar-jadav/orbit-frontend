@@ -51,6 +51,49 @@ async function loadMarketplaceCatalog(force = false): Promise<MarketplaceCatalog
   return request
 }
 
+function getConnectorFaviconUrl(connector: MarketplaceConnector): string | null {
+  const rawUrl =
+    connector.mcpUrl ||
+    connector.configFields?.find((f) => f.key === 'server_url')?.default ||
+    (connector.website && !connector.website.includes('claude.com/') ? connector.website : '')
+  if (!rawUrl) return null
+  try {
+    let host = new URL(rawUrl).hostname.toLowerCase()
+    if (host === 'calendarmcp.googleapis.com') host = 'calendar.google.com'
+    else if (host === 'drivemcp.googleapis.com') host = 'drive.google.com'
+    else if (host === 'gmailmcp.googleapis.com') host = 'mail.google.com'
+    else host = host.replace(/^(mcp|api|remote|server)\./, '')
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
+  } catch {
+    return null
+  }
+}
+
+function ConnectorBadgeIcon({ connector, size }: { connector: MarketplaceConnector; size: number }) {
+  const [failed, setFailed] = useState(false)
+  const faviconUrl = getConnectorFaviconUrl(connector)
+  useEffect(() => {
+    setFailed(false)
+  }, [faviconUrl])
+
+  if (faviconUrl && !failed) {
+    return (
+      <img
+        src={faviconUrl}
+        alt=""
+        width={size}
+        height={size}
+        className="connector-favicon-img"
+        loading="lazy"
+        onError={() => setFailed(true)}
+      />
+    )
+  }
+  const fallbackName: IconName =
+    connector.icon && connector.icon !== 'plug' ? (connector.icon as IconName) : 'link'
+  return <Icon name={fallbackName || 'tool'} size={size} />
+}
+
 export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all', initialConnectorId }: MarketplaceViewProps) {
   const popupRef = useRef<Window | null>(null)
   const popupProviderRef = useRef<string | null>(null)
@@ -584,7 +627,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                 >
                   <div className="card-top">
                     <div className="card-icon-badge connector-icon-badge">
-                      <Icon name={(connector.icon as IconName) || 'tool'} size={20} />
+                      <ConnectorBadgeIcon connector={connector} size={20} />
                     </div>
                     <div className="card-title-block">
                       <div className="card-title-row">
@@ -735,7 +778,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
             <div className="modal-header connector-details-header">
               <div className="modal-header-left">
                 <div className="card-icon-badge connector-icon-badge connector-details-icon">
-                  <Icon name={(selectedConnectorDetails.icon as IconName) || 'tool'} size={26} />
+                  <ConnectorBadgeIcon connector={selectedConnectorDetails} size={26} />
                 </div>
                 <div className="connector-details-heading">
                   <div className="connector-details-title-row">
@@ -842,7 +885,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
             <div className="modal-header">
               <div className="modal-header-left">
                 <div className="card-icon-badge connector-icon-badge">
-                  <Icon name={(configuringConnector.icon as IconName) || 'tool'} size={20} />
+                  <ConnectorBadgeIcon connector={configuringConnector} size={20} />
                 </div>
                 <div>
                   <h2>Configure {configuringConnector.name}</h2>

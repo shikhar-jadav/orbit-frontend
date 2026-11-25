@@ -429,6 +429,12 @@
   border: 1px solid var(--line-accent);
 }
 
+.connector-favicon-img {
+  border-radius: 5px;
+  object-fit: contain;
+  display: block;
+}
+
 .skill-icon-badge {
   background: rgba(168, 85, 247, 0.12);
   color: #c084fc;
