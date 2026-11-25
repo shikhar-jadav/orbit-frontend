@@ -2159,11 +2159,15 @@ function App() {
     const controller = new AbortController()
     abortControllerRef.current = controller
     setMessages((current) =>
-      current.map((message) =>
-        message.id === assistantMessage.id
-          ? { ...message, content: '', pending: true, failed: false, tools: [] }
-          : message,
-      ),
+      current.map((message) => {
+        if (message.id === userMessage.id && editedContent !== undefined) {
+          return { ...message, content: prompt }
+        }
+        if (message.id === assistantMessage.id) {
+          return { ...message, content: '', parts: [], pending: true, failed: false, tools: [] }
+        }
+        return message
+      }),
     )
 
     let bufferedTokens = ''
