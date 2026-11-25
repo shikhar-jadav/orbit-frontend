@@ -541,29 +541,23 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
   const renderToolStep = (tool: ToolEvent) => {
     const label = getToolLabel(tool.name, tool.status, tool.args)
     const subject = getToolSubject(tool)
-    const visibleArgs = Object.fromEntries(
-      Object.entries(tool.args || {}).filter(
-        ([key]) => !/html|spec|content/i.test(key),
-      ),
-    )
-    const safeOutput =
-      tool.name === 'render_generative_ui'
-        ? 'Visual displayed below.'
-        : tool.name === 'render_a2ui_canvas'
-          ? 'Canvas displayed below.'
-          : tool.name === 'create_artifact'
-            ? 'Artifact deliverable displayed below.'
-            : tool.name === 'manage_routine' &&
+    const output = tool.name === 'render_generative_ui'
+      ? 'Visual displayed below.'
+      : tool.name === 'render_a2ui_canvas'
+        ? 'Canvas displayed below.'
+        : tool.name === 'create_artifact'
+          ? 'Artifact deliverable displayed below.'
+          : tool.name === 'manage_routine' &&
               (String(tool.output || '').includes('Reminder scheduled:') ||
                 String(tool.output || '').includes('Recurring routine created:') ||
                 tool.args?.action === 'schedule' ||
                 tool.args?.action === 'create')
-              ? 'Schedule confirmed below.'
+            ? 'Schedule confirmed below.'
             : tool.name === 'workspace_files' &&
                 ['create', 'replace', 'append', 'edit'].includes(String(tool.args?.action || ''))
               ? 'Workspace file updated.'
-            : tool.output
-    const hasDetails = Object.keys(visibleArgs).length > 0 || Boolean(safeOutput)
+              : tool.output
+    const hasOutput = Boolean(output && String(output).trim())
 
     if (tool.status === 'running') {
       const isWaitingApproval = Boolean(
@@ -578,49 +572,31 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
           <span className="tool-activity-step-copy">
             <span className="tool-activity-step-title">{label}</span>
             {subject && <span className="tool-activity-subject">{subject}</span>}
-            {isWaitingApproval && (
-              <span className="tool-approval-pill">Needs approval</span>
-            )}
+            {isWaitingApproval && <span className="tool-approval-pill">Needs approval</span>}
           </span>
         </div>
       )
     }
 
     return (
-      <details className="tool-step-live tool-step-done" key={tool.id}>
-        <summary>
-          <svg
-            className="tool-activity-check"
-            aria-label="Complete"
-            role="img"
-            viewBox="0 0 20 20"
-            fill="none"
-          >
+      <details className="tool-step-live tool-step-done tool-step-quiet" key={tool.id}>
+        <summary aria-label={`${label}. ${hasOutput ? 'Show result' : 'Completed'}`}>
+          <svg className="tool-activity-check" aria-hidden="true" viewBox="0 0 20 20" fill="none">
             <path d="m5 10 3.2 3.2L15 6.5" />
           </svg>
           <span className="tool-activity-step-copy">
             <span className="tool-activity-step-title">{label}</span>
             {subject && <span className="tool-activity-subject">{subject}</span>}
           </span>
-          {hasDetails && (
-            <svg
-              className="tool-activity-chevron"
-              aria-hidden="true"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
+          {hasOutput && (
+            <svg className="tool-activity-chevron" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none">
               <path d="m9 18 6-6-6-6" />
             </svg>
           )}
         </summary>
-        {hasDetails && (
-          <div className="tool-activity-detail">
-            {Object.keys(visibleArgs).length > 0 && (
-              <pre>{JSON.stringify(visibleArgs, null, 2)}</pre>
-            )}
-            {safeOutput && <pre>{formatToolOutput(safeOutput)}</pre>}
+        {hasOutput && (
+          <div className="tool-activity-detail tool-activity-result">
+            <pre>{formatToolOutput(String(output))}</pre>
           </div>
         )}
       </details>
