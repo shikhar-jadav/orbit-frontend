@@ -1699,3 +1699,126 @@ dialog.thread-delete-dialog {
     padding-bottom: 0;
   }
 }
+
+
+/* Quiet, inline tool activity — no nested JSON cards or oversized call panels. */
+.tool-step-live.tool-step-quiet {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 3px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+}
+.tool-step-live.tool-step-quiet > summary {
+  display: inline-flex;
+  min-height: 27px;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 3px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #a6a6a6;
+  cursor: pointer;
+  list-style: none;
+  transition: color 140ms ease, background 140ms ease;
+}
+.tool-step-live.tool-step-quiet > summary::-webkit-details-marker { display: none; }
+.tool-step-live.tool-step-quiet > summary:hover {
+  color: #e5e5e5;
+  background: rgba(255,255,255,.045);
+}
+.tool-step-quiet .tool-activity-check {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  color: #8bba9b;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tool-step-quiet .tool-activity-step-copy {
+  display: inline-flex;
+  min-width: 0;
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.tool-step-quiet .tool-activity-step-title {
+  color: #c7c7c7;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.tool-step-quiet .tool-activity-subject {
+  overflow: hidden;
+  max-width: min(420px, 55vw);
+  color: #858585;
+  font-size: 12px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-step-quiet .tool-activity-chevron {
+  flex: 0 0 auto;
+  margin-left: 2px;
+  color: #777;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  transition: transform 140ms ease;
+}
+.tool-step-quiet[open] .tool-activity-chevron { transform: rotate(90deg); }
+.tool-step-quiet .tool-activity-detail.tool-activity-result {
+  width: min(100%, 700px);
+  max-height: 320px;
+  margin: 5px 0 8px 26px;
+  padding: 9px 12px;
+  overflow: auto;
+  border: 0;
+  border-left: 1px solid rgba(255,255,255,.12);
+  border-radius: 0;
+  background: transparent;
+}
+.tool-step-quiet .tool-activity-result pre {
+  margin: 0;
+  padding: 0;
+  color: #a7a7a7;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tool-step-live.tool-step-running {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 27px;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0;
+  padding: 2px 3px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.tool-step-running .tool-activity-step-title {
+  color: #a8a8a8;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.tool-step-running .tool-activity-subject {
+  color: #858585;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .tool-step-quiet .tool-activity-subject { max-width: 48vw; }
+  .tool-step-quiet .tool-activity-detail.tool-activity-result { margin-left: 20px; }
+}
