@@ -20,6 +20,7 @@ export type MessageAttachment = {
   filename: string
   content_type: string
   size_bytes: number
+  preview_url?: string
 }
 
 export type ProactiveCardData = {

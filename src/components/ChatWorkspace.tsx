@@ -733,9 +733,10 @@ export function ChatWorkspace(props: ChatWorkspaceProps) {
                                     size: attachment.size_bytes,
                                     contentType: attachment.content_type,
                                     url:
-                                      attachment.attachment_id && currentThread?.thread_id
+                                      attachment.preview_url ||
+                                      (attachment.attachment_id && currentThread?.thread_id
                                         ? `/threads/${encodeURIComponent(currentThread.thread_id)}/attachments/${encodeURIComponent(attachment.attachment_id)}`
-                                        : undefined,
+                                        : undefined),
                                   }))}
                                 />
                                 {message.content && <div className="user-bubble-text">{message.content}</div>}

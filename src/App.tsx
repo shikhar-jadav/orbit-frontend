@@ -977,7 +977,6 @@ function App() {
         setMessages([])
         setHasOlderMessages(false)
         setLoadingOlderMessages(false)
-        setAttachments([])
         setActiveCanvas(null)
       }
       setActiveThreadId(route.threadId)
@@ -1507,26 +1506,32 @@ function App() {
       sendInFlightRef.current = true
       const messageContent = content || 'Please review the attached files.'
 
+      const optimisticAttachments: MessageAttachment[] = filesToSend.map((file) => ({
+        filename: file.name,
+        content_type: file.type || 'application/octet-stream',
+        size_bytes: file.size,
+        preview_url: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+      }))
+
       setError('')
       setSending(true)
       setInput('')
+      setAttachments([])
       let currentMessages = messages
       let threadId = activeThreadId
       let messageAdded = false
       const optimisticMessageId = `user-${Date.now()}`
       const assistantId = `assistant-${Date.now()}`
 
-      // Show the user's message immediately while a new thread is being created.
-      // On a cold backend, POST /threads can take several seconds; that network
-      // round-trip must not block the composer from giving instant feedback.
-      if (!threadId && !pendingRoutineExecution) {
+      // Show the user's message and attachments immediately while thread/uploads run.
+      if (!pendingRoutineExecution) {
         setMessages((current) => [
           ...current,
           {
             id: optimisticMessageId,
             role: 'user',
             content: messageContent,
-            attachments: [],
+            attachments: optimisticAttachments,
           },
           { id: assistantId, role: 'assistant', content: '', pending: true, tools: [], parts: [] },
         ])
@@ -1606,7 +1611,8 @@ function App() {
             await apiError(`Could not upload ${file.name}.`, uploadResponse)
           }
           const uploaded = (await uploadResponse.json()) as MessageAttachment
-          uploadedAttachments.push(uploaded)
+          const previewUrl = optimisticAttachments[uploadedAttachments.length]?.preview_url
+          uploadedAttachments.push(previewUrl ? { ...uploaded, preview_url: previewUrl } : uploaded)
         }
 
         if (messageAdded) {
