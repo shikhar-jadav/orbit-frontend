@@ -12,15 +12,6 @@ export type AttachmentChipItem = {
   file?: File
 }
 
-const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'])
-const PDF_EXTENSIONS = new Set(['pdf'])
-const DOC_EXTENSIONS = new Set(['doc', 'docx', 'rtf', 'odt', 'pages'])
-const SHEET_EXTENSIONS = new Set(['xls', 'xlsx', 'csv', 'tsv', 'ods', 'numbers'])
-const CODE_EXTENSIONS = new Set([
-  'js', 'jsx', 'ts', 'tsx', 'py', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'cs',
-  'rb', 'php', 'sh', 'bash', 'sql', 'json', 'yaml', 'yml', 'toml', 'xml', 'html', 'css', 'md',
-])
-
 function getExtension(filename: string): string {
   const idx = filename.lastIndexOf('.')
   if (idx < 0 || idx === filename.length - 1) return ''
@@ -28,19 +19,30 @@ function getExtension(filename: string): string {
 }
 
 function isImageFile(filename: string, contentType?: string): boolean {
-  if (contentType && contentType.toLowerCase().startsWith('image/')) return true
-  return IMAGE_EXTENSIONS.has(getExtension(filename))
+  const mime = (contentType || '').toLowerCase()
+  if (mime.startsWith('image/')) return true
+  if (!mime) {
+    const ext = getExtension(filename)
+    return ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'gif' || ext === 'webp' || ext === 'svg' || ext === 'avif'
+  }
+  return false
 }
 
 function getFileBadge(filename: string, contentType?: string): { label: string; tone: string } {
   const ext = getExtension(filename)
-  if (PDF_EXTENSIONS.has(ext) || contentType === 'application/pdf') return { label: 'PDF', tone: 'pdf' }
-  if (DOC_EXTENSIONS.has(ext)) return { label: ext.toUpperCase() || 'DOC', tone: 'doc' }
-  if (SHEET_EXTENSIONS.has(ext)) return { label: ext.toUpperCase() || 'CSV', tone: 'sheet' }
-  if (CODE_EXTENSIONS.has(ext)) return { label: ext.toUpperCase(), tone: 'code' }
-  if (contentType?.startsWith('audio/')) return { label: 'AUDIO', tone: 'media' }
-  if (contentType?.startsWith('video/')) return { label: 'VIDEO', tone: 'media' }
-  return { label: ext ? ext.toUpperCase().slice(0, 5) : 'FILE', tone: 'default' }
+  const mime = (contentType || '').toLowerCase()
+  const label = ext
+    ? ext.toUpperCase().slice(0, 5)
+    : mime.includes('/')
+      ? mime.split('/')[0].toUpperCase().slice(0, 5)
+      : 'FILE'
+
+  if (mime === 'application/pdf' || ext === 'pdf') return { label, tone: 'pdf' }
+  if (mime.startsWith('audio/') || mime.startsWith('video/')) return { label, tone: 'media' }
+  if (mime.startsWith('text/')) return { label, tone: 'code' }
+  if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv')) return { label, tone: 'sheet' }
+  if (mime.includes('wordprocessing') || mime.includes('msword') || mime.includes('document')) return { label, tone: 'doc' }
+  return { label, tone: 'default' }
 }
 
 function formatFileSize(size: number) {
