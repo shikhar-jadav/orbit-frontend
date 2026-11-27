@@ -342,6 +342,7 @@ export type MarketplaceConnector = {
   type: 'connector'
   is_enabled: boolean
   is_configured: boolean
+  is_connected?: boolean
   is_authenticated?: boolean
   connected_account?: {
     account_name?: string

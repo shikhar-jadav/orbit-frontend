@@ -162,6 +162,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'connectors' | 'skills'>(initialTab)
+  const [connectorView, setConnectorView] = useState<'ready' | 'directory'>('ready')
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [installedOnly, setInstalledOnly] = useState(false)
 
@@ -372,11 +373,13 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         personal_connector_id?: string | null
         is_connected?: boolean
         needs_oauth?: boolean
+        status_code?: number | null
+        error?: string | null
       }>(
         `/api/marketplace/connectors/${encodeURIComponent(connector.id)}/toggle`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ enabled }) },
       )
-      if (enabled && connector.mcpUrl && !toggleRes.is_connected) {
+      if (enabled && connector.mcpUrl && !toggleRes.is_connected && toggleRes.needs_oauth) {
         if (!toggleRes.personal_connector_id) {
           oauthPopup?.close()
           showToast(`Could not connect to ${connector.name}.`)
@@ -403,6 +406,14 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         }
         oauthPopup.close()
         showToast(oauthRes.error || `${connector.name} requires authentication or could not be reached.`)
+        return
+      }
+      if (enabled && connector.mcpUrl && !toggleRes.is_connected) {
+        oauthPopup?.close()
+        const diagnostic = toggleRes.error || (toggleRes.status_code
+          ? `The MCP server returned HTTP ${toggleRes.status_code}.`
+          : 'Orbit could not reach the MCP server. Check the URL, network, and server status.')
+        showToast(`Could not connect to ${connector.name}: ${diagnostic}`)
         return
       }
       oauthPopup?.close()
@@ -522,6 +533,9 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     if (activeTab === 'skills') return []
     const q = searchQuery.toLowerCase().trim()
     return catalog.connectors.filter((c) => {
+      const hasEndpoint = Boolean(c.mcpUrl || c.server_url)
+      const ready = hasEndpoint && !['unsupported', 'deprecated', 'package_available', 'setup_required', 'unverified', 'failed'].includes(c.status)
+      if (connectorView === 'ready' ? !ready : ready) return false
       if (installedOnly && !c.is_enabled) return false
       if (selectedCategory !== 'All' && c.category !== selectedCategory) return false
       if (!q) return true
@@ -532,7 +546,12 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         c.capabilities.some((cap) => cap.toLowerCase().includes(q))
       )
     })
-  }, [catalog, activeTab, searchQuery, selectedCategory, installedOnly])
+  }, [catalog, activeTab, connectorView, searchQuery, selectedCategory, installedOnly])
+
+  const readyConnectorCount = useMemo(() => catalog?.connectors.filter((c) =>
+    Boolean(c.mcpUrl || c.server_url) && !['unsupported', 'deprecated', 'package_available', 'setup_required', 'unverified', 'failed'].includes(c.status),
+  ).length ?? 0, [catalog])
+  const directoryConnectorCount = (catalog?.connectors.length ?? 0) - readyConnectorCount
 
   const filteredSkills = useMemo(() => {
     if (!catalog) return []
@@ -672,6 +691,31 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                   {cat}
                 </button>
               ))}
+            </div>
+          )}
+          {(activeTab === 'connectors' || activeTab === 'all') && (
+            <div className="connector-view-switch" role="tablist" aria-label="Connector group">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={connectorView === 'ready'}
+                className={`connector-view-tab ${connectorView === 'ready' ? 'active' : ''}`}
+                onClick={() => setConnectorView('ready')}
+              >
+                Ready to connect <span>{readyConnectorCount}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={connectorView === 'directory'}
+                className={`connector-view-tab ${connectorView === 'directory' ? 'active' : ''}`}
+                onClick={() => setConnectorView('directory')}
+              >
+                Directory <span>{directoryConnectorCount}</span>
+              </button>
+              {connectorView === 'directory' && (
+                <p className="connector-view-note">Listings here may need setup or verification, may be unsupported, or may not include a server URL.</p>
+              )}
             </div>
           )}
         </div>
@@ -905,8 +949,15 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
               {totalFilteredCount === 0 && (
                 <div className="marketplace-empty-search">
                   <Icon name="search" size={28} />
-                  <h3>No matching connectors or skills found</h3>
-                  <p>Try clearing filters or adjusting your search keywords.</p>
+                  <h3>{activeTab !== 'skills' && connectorView === 'ready' ? 'No ready connectors match' : 'No matching connectors or skills found'}</h3>
+                  <p>{activeTab !== 'skills' && connectorView === 'ready'
+                    ? 'Try the Directory view to browse entries that need setup or verification.'
+                    : 'Try clearing filters or adjusting your search keywords.'}</p>
+                  {activeTab !== 'skills' && connectorView === 'ready' && (
+                    <button type="button" className="card-action-btn btn-secondary" onClick={() => setConnectorView('directory')}>
+                      Browse directory
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -978,7 +1029,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                 </div>
               </section>
 
-              {selectedConnectorDetails.tools && selectedConnectorDetails.tools.length > 0 && (
+              {selectedConnectorDetails.tools && selectedConnectorDetails.tools.length > 0 ? (
                 <section className="connector-detail-section">
                   <h3>Discovered MCP tools ({selectedConnectorDetails.tools.length})</h3>
                   <ul className="connector-capability-list">
@@ -992,6 +1043,18 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                       </li>
                     ))}
                   </ul>
+                </section>
+              ) : selectedConnectorDetails.mcpUrl ? (
+                <section className="connector-detail-section">
+                  <h3>Discovered MCP tools</h3>
+                  <p>{selectedConnectorDetails.is_connected
+                    ? 'Connected, but this server reported no tools.'
+                    : selectedConnectorDetails.connect_error || selectedConnectorDetails.verification_notes || 'Tools have not been discovered yet. Connect this server to check its tools.'}</p>
+                </section>
+              ) : (
+                <section className="connector-detail-section">
+                  <h3>Connection</h3>
+                  <p>This marketplace entry does not include an MCP server URL, so Orbit cannot connect it directly.</p>
                 </section>
               )}
 
