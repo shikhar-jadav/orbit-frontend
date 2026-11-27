@@ -348,8 +348,39 @@ export type MarketplaceConnector = {
     email?: string
   } | null
   oauthProvider?: string
-  status: 'active' | 'needs_config' | 'needs_auth' | 'available'
+  status:
+    | 'active'
+    | 'needs_config'
+    | 'needs_auth'
+    | 'available'
+    | 'unsupported'
+    | 'deprecated'
+    | 'setup_required'
+    | 'package_available'
+    | 'unverified'
+    | 'failed'
+    | 'checking'
   config: Record<string, ConnectorConfigValue>
+  // Extended fields from registry
+  verification_status?: string
+  implementation_type?: 'mcp_server' | 'orbit_adapter' | 'none'
+  source?: 'official' | 'third_party' | 'orbit_adapter'
+  server_url?: string | null
+  documentation_url?: string | null
+  repository_url?: string | null
+  transport?: string
+  supports_dynamic_registration?: boolean
+  verification_notes?: string
+  icon_url?: string | null
+  support_status?: string
+  last_verified_at?: string | null
+  last_checked_at?: string | null
+  last_status_code?: number | null
+  personal_connector_id?: string | null
+  tool_count?: number | null
+  tools?: McpToolDefinition[]
+  connect_error?: string | null
+  setup_instructions?: string | null
 }
 
 export type MarketplaceCatalog = {

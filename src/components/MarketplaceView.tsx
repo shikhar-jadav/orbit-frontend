@@ -34,6 +34,11 @@ async function fetchMarketplaceJson<T>(url: string, options?: RequestInit): Prom
 let marketplaceCatalogCache: { data: MarketplaceCatalog; fetchedAt: number } | null = null
 let marketplaceCatalogRequest: Promise<MarketplaceCatalog> | null = null
 
+export function resetMarketplaceCatalogCache(): void {
+  marketplaceCatalogCache = null
+  marketplaceCatalogRequest = null
+}
+
 async function loadMarketplaceCatalog(force = false): Promise<MarketplaceCatalog> {
   if (!force && marketplaceCatalogCache && Date.now() - marketplaceCatalogCache.fetchedAt < 5 * 60_000) {
     return marketplaceCatalogCache.data
@@ -89,12 +94,42 @@ function getConnectorFaviconUrl(connector: MarketplaceConnector): string | null 
   }
 }
 
+function getConnectorStatusLabel(connector: MarketplaceConnector, isChecking = false): string {
+  if (isChecking || connector.status === 'checking') return 'Checking...'
+  if (connector.status === 'unsupported') return 'Unsupported'
+  if (connector.status === 'deprecated') return 'Deprecated'
+  if (connector.status === 'setup_required') return 'Setup Required'
+  if (connector.status === 'package_available') return 'Package Available'
+  if (connector.status === 'unverified') return 'Unverified'
+  if (connector.status === 'failed') return 'Failed'
+  if (connector.is_enabled && connector.is_configured && connector.is_authenticated !== false) {
+    if (typeof connector.tool_count === 'number' && connector.tool_count > 0) {
+      return `Connected (${connector.tool_count} tools)`
+    }
+    return 'Connected'
+  }
+  return 'Not connected'
+}
+
+function getConnectorStatusDotClass(connector: MarketplaceConnector): string {
+  if (connector.status === 'unsupported') return 'unavailable'
+  if (connector.status === 'deprecated') return 'needs-config'
+  if (connector.status === 'setup_required') return 'needs-config'
+  if (connector.status === 'package_available') return 'available'
+  if (connector.status === 'unverified') return 'available'
+  if (connector.status === 'failed') return 'unavailable'
+  if (connector.status === 'checking') return 'available'
+  if (connector.is_enabled) {
+    if (!connector.is_authenticated && connector.oauthProvider) return 'needs-config'
+    return connector.is_configured ? 'active' : 'needs-config'
+  }
+  return 'available'
+}
+
 function ConnectorBadgeIcon({ connector, size }: { connector: MarketplaceConnector; size: number }) {
-  const [failed, setFailed] = useState(false)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const faviconUrl = getConnectorFaviconUrl(connector)
-  useEffect(() => {
-    setFailed(false)
-  }, [faviconUrl])
+  const failed = Boolean(faviconUrl && failedUrl === faviconUrl)
 
   if (faviconUrl && !failed) {
     return (
@@ -106,9 +141,9 @@ function ConnectorBadgeIcon({ connector, size }: { connector: MarketplaceConnect
         className="connector-favicon-img"
         loading="lazy"
         onLoad={(e) => {
-          if (e.currentTarget.naturalWidth <= 16) setFailed(true)
+          if (e.currentTarget.naturalWidth <= 16) setFailedUrl(faviconUrl)
         }}
-        onError={() => setFailed(true)}
+        onError={() => setFailedUrl(faviconUrl)}
       />
     )
   }
@@ -133,6 +168,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   // Modals state
   const [configuringConnector, setConfiguringConnector] = useState<MarketplaceConnector | null>(null)
   const [selectedConnectorId, setSelectedConnectorId] = useState<string | null>(initialConnectorId ?? null)
+  const [checkingConnectorId, setCheckingConnectorId] = useState<string | null>(null)
   const selectedConnectorDetails = useMemo(
     () => catalog?.connectors.find((connector) => connector.id === selectedConnectorId) ?? null,
     [catalog, selectedConnectorId],
@@ -179,7 +215,8 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
             }
           }
           window.dispatchEvent(new Event('orbit:integrations-updated'))
-          window.dispatchEvent(new Event('orbit:marketplace-updated'))
+          resetMarketplaceCatalogCache()
+      window.dispatchEvent(new Event('orbit:marketplace-updated'))
         }
         void refreshAfterConnect()
       } else if (event.data?.type === 'orbit_integration_error') {
@@ -191,6 +228,7 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
         popupRef.current = null
         popupProviderRef.current = null
         pendingConnectorIdRef.current = null
+        resetMarketplaceCatalogCache()
         showToast(`${provider} connected successfully!`)
         window.dispatchEvent(new Event('orbit:integrations-updated'))
         window.dispatchEvent(new Event('orbit:marketplace-updated'))
@@ -319,6 +357,11 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   }
 
   const setConnectorEnabled = async (connector: MarketplaceConnector, enabled: boolean) => {
+    if (enabled && (connector.status === 'unsupported' || connector.status === 'deprecated' || connector.status === 'package_available')) {
+      showToast(connector.verification_notes || `${connector.name} is ${connector.status} and cannot be connected.`)
+      return
+    }
+    setCheckingConnectorId(connector.id)
     let oauthPopup: Window | null = null
     if (enabled && connector.mcpUrl) {
       oauthPopup = window.open('about:blank', 'orbit-oauth-popup', 'popup,width=620,height=760')
@@ -374,13 +417,13 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
               : item.is_configured
                 ? 'active'
                 : 'needs_config'
-          const disconnectedOAuth = !enabled && Boolean(item.oauthProvider)
+          const disconnectedAuth = !enabled && (Boolean(item.oauthProvider) || Boolean(item.mcpUrl))
           return {
             ...item,
             is_enabled: enabled,
             status: nextStatus,
-            ...(disconnectedOAuth
-              ? { is_authenticated: false, connected_account: null, reconnect_required: false, reconnect_message: null }
+            ...(disconnectedAuth
+              ? { is_authenticated: false, connected_account: null, reconnect_required: false, reconnect_message: null, tool_count: null, tools: [] }
               : {}),
           }
         })
@@ -397,6 +440,8 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
     } catch (err) {
       oauthPopup?.close()
       showToast(`Error: ${err instanceof Error ? err.message : 'Action failed'}`)
+    } finally {
+      setCheckingConnectorId((curr) => (curr === connector.id ? null : curr))
     }
   }
 
@@ -405,8 +450,17 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
   }
 
   const connectFromDetails = (connector: MarketplaceConnector) => {
-    if (connector.oauthProvider) void startOAuth(connector.oauthProvider, connector.id)
-    else if (!connector.is_enabled) void setConnectorEnabled(connector, true)
+    if (connector.status === 'unsupported' || connector.status === 'deprecated' || connector.status === 'package_available') {
+      showToast(connector.verification_notes || `${connector.name} is ${connector.status}.`)
+      return
+    }
+    if (connector.mcpUrl) {
+      void setConnectorEnabled(connector, true)
+    } else if (connector.oauthProvider) {
+      void startOAuth(connector.oauthProvider, connector.id)
+    } else if (!connector.is_enabled) {
+      void setConnectorEnabled(connector, true)
+    }
   }
 
   // Open Configure Modal
@@ -719,6 +773,12 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                   <div className="card-body">
                     <p className="card-description">{connector.description}</p>
 
+                    {(connector.status === 'unsupported' || connector.status === 'setup_required') && connector.verification_notes && (
+                      <p className="card-verification-note" style={{ fontSize: '0.78rem', color: '#a1a1aa', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                        {connector.verification_notes}
+                      </p>
+                    )}
+
                     {connector.capabilities && connector.capabilities.length > 0 && (
                       <div className="card-capabilities">
                         {connector.capabilities.slice(0, 3).map((cap, idx) => (
@@ -735,20 +795,8 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                       className="card-status-indicator"
                       title={connector.connected_account?.email ? `Connected as ${connector.connected_account.email}` : undefined}
                     >
-                      <span
-                        className={`status-dot ${
-                          connector.is_enabled
-                            ? !connector.is_authenticated && connector.oauthProvider
-                              ? 'needs-config'
-                              : connector.is_configured
-                                ? 'active'
-                                : 'needs-config'
-                            : 'available'
-                        }`}
-                      />
-                      <span>
-                        {connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'Connected' : 'Not connected'}
-                      </span>
+                      <span className={`status-dot ${getConnectorStatusDotClass(connector)}`} />
+                      <span>{getConnectorStatusLabel(connector, checkingConnectorId === connector.id)}</span>
                     </div>
 
                     <div className="card-actions">
@@ -762,20 +810,37 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                           <span>Configure</span>
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className={`card-action-btn ${connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          if (connector.is_enabled && connector.is_configured && connector.is_authenticated !== false) {
-                            openConnectorDetails(connector)
-                          } else {
-                            connectFromDetails(connector)
-                          }
-                        }}
-                      >
-                        {connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'Connected' : 'Connect'}
-                      </button>
+                      {connector.status === 'unsupported' ? (
+                        <span
+                          className="card-action-btn btn-secondary"
+                          title={connector.verification_notes || 'This connector is not supported'}
+                          style={{ cursor: 'default', opacity: 0.6 }}
+                          aria-disabled="true"
+                        >
+                          <Icon name="ban" size={13} />
+                          <span>Unsupported</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={checkingConnectorId === connector.id}
+                          className={`card-action-btn ${connector.is_enabled && connector.is_configured && connector.is_authenticated !== false ? 'btn-secondary' : 'btn-primary'}`}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            if (connector.is_enabled && connector.is_configured && connector.is_authenticated !== false) {
+                              void setConnectorEnabled(connector, false)
+                            } else {
+                              connectFromDetails(connector)
+                            }
+                          }}
+                        >
+                          {checkingConnectorId === connector.id
+                            ? 'Checking...'
+                            : connector.is_enabled && connector.is_configured && connector.is_authenticated !== false
+                              ? 'Disconnect'
+                              : 'Connect'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -877,9 +942,16 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
             <div className="modal-body connector-details-body">
               <p className="connector-details-description">{selectedConnectorDetails.description}</p>
 
+              {selectedConnectorDetails.verification_notes && (
+                <div className="connector-verification-note" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', background: 'rgba(113,113,122,0.12)', marginBottom: '0.75rem', fontSize: '0.825rem', color: '#a1a1aa' }}>
+                  <Icon name="alertTriangle" size={14} />
+                  <span>{selectedConnectorDetails.verification_notes}</span>
+                </div>
+              )}
+
               <div className="connector-details-status">
-                <span className={`status-dot ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'active' : 'available'}`} />
-                <strong>{selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'Connected' : selectedConnectorDetails.is_enabled ? 'Setup required' : 'Not connected'}</strong>
+                <span className={`status-dot ${getConnectorStatusDotClass(selectedConnectorDetails)}`} />
+                <strong>{getConnectorStatusLabel(selectedConnectorDetails, checkingConnectorId === selectedConnectorDetails.id)}</strong>
                 {selectedConnectorDetails.connected_account?.email && <span>· {selectedConnectorDetails.connected_account.email}</span>}
                 {selectedConnectorDetails.connected_account?.account_name && !selectedConnectorDetails.connected_account?.email && <span>· {selectedConnectorDetails.connected_account.account_name}</span>}
               </div>
@@ -890,9 +962,38 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                 <div className="connector-detail-meta">
                   <div><span>Category</span><strong>{selectedConnectorDetails.category}</strong></div>
                   <div><span>Authentication</span><strong>{selectedConnectorDetails.authType}</strong></div>
-                  <div><span>Connection status</span><strong>{selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured && selectedConnectorDetails.is_authenticated !== false ? 'Active' : 'Not connected'}</strong></div>
+                  <div><span>Verification</span><strong>{selectedConnectorDetails.verification_status || 'unverified'}</strong></div>
+                  {selectedConnectorDetails.source && (
+                    <div><span>Source</span><strong>{selectedConnectorDetails.source}</strong></div>
+                  )}
+                  {selectedConnectorDetails.transport && (
+                    <div><span>Transport</span><strong>{selectedConnectorDetails.transport}</strong></div>
+                  )}
+                  {typeof selectedConnectorDetails.tool_count === 'number' && (
+                    <div><span>Discovered tools</span><strong>{selectedConnectorDetails.tool_count}</strong></div>
+                  )}
+                  {selectedConnectorDetails.last_checked_at && (
+                    <div><span>Last checked</span><strong>{new Date(selectedConnectorDetails.last_checked_at).toLocaleString()}</strong></div>
+                  )}
                 </div>
               </section>
+
+              {selectedConnectorDetails.tools && selectedConnectorDetails.tools.length > 0 && (
+                <section className="connector-detail-section">
+                  <h3>Discovered MCP tools ({selectedConnectorDetails.tools.length})</h3>
+                  <ul className="connector-capability-list">
+                    {selectedConnectorDetails.tools.slice(0, 20).map((tool) => (
+                      <li key={tool.name}>
+                        <Icon name="tool" size={14} />
+                        <span>
+                          <strong>{tool.name}</strong>
+                          {tool.description ? ` — ${tool.description}` : ''}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
               <section className="connector-detail-section">
                 <h3>What you can do</h3>
@@ -951,15 +1052,26 @@ export function MarketplaceView({ onClose, onOpenCapabilities, initialTab = 'all
                   Disconnect
                 </button>
               )}
-              <button
-                type="button"
-                disabled={!selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured}
-                className={`card-action-btn ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`}
-                onClick={() => connectFromDetails(selectedConnectorDetails)}
-                title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}
-              >
-                {selectedConnectorDetails.is_authenticated && selectedConnectorDetails.is_enabled ? (selectedConnectorDetails.oauthProvider ? 'Reconnect' : 'Connected') : 'Connect'}
-              </button>
+              {selectedConnectorDetails.status === 'unsupported' || selectedConnectorDetails.status === 'deprecated' || selectedConnectorDetails.status === 'package_available' ? (
+                <span className="card-action-btn btn-secondary" style={{ opacity: 0.65, cursor: 'default' }} aria-disabled="true">
+                  <Icon name="ban" size={13} />
+                  <span>{getConnectorStatusLabel(selectedConnectorDetails)}</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={checkingConnectorId === selectedConnectorDetails.id || (!selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_configured)}
+                  className={`card-action-btn ${selectedConnectorDetails.is_enabled && selectedConnectorDetails.is_authenticated !== false ? 'btn-installed' : 'btn-primary'}`}
+                  onClick={() => connectFromDetails(selectedConnectorDetails)}
+                  title={selectedConnectorDetails.oauthProvider && selectedConnectorDetails.is_authenticated ? 'Reconnect or choose an account' : 'Connect this service'}
+                >
+                  {checkingConnectorId === selectedConnectorDetails.id
+                    ? 'Checking...'
+                    : selectedConnectorDetails.is_authenticated && selectedConnectorDetails.is_enabled
+                      ? (selectedConnectorDetails.oauthProvider ? 'Reconnect' : 'Connected')
+                      : 'Connect'}
+                </button>
+              )}
             </div>
           </section>
         </div>
