@@ -2599,7 +2599,10 @@ function App() {
       <ThreadSidebar
         user={currentUser}
         bots={bots}
-        onCreateBot={createBot}
+        onCreateBot={async (name, instructions) => {
+          await createBot(name, instructions)
+          if (!isLargeScreen) setSidebarOpen(false)
+        }}
         onOpenBot={(bot) => {
           void openBot(bot)
           if (!isLargeScreen) setSidebarOpen(false)
