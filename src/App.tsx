@@ -65,6 +65,7 @@ import { collapseRepeatedResponse, deduplicateMessageParts, extractRemainingMess
 import type {
   AuthSessionResponse,
   AuthUser,
+  BotProfile,
   Message,
   MessageAttachment,
   MessageVariant,
@@ -439,6 +440,7 @@ function App() {
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [threads, setThreads] = useState<Thread[]>([])
+  const [bots, setBots] = useState<BotProfile[]>([])
   const [hasMoreThreads, setHasMoreThreads] = useState(false)
   const [loadingMoreThreads, setLoadingMoreThreads] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -942,12 +944,14 @@ function App() {
     Promise.all([
       getJson<ThreadPageResponse>('/threads/page?limit=30&offset=0'),
       getJson<Settings>('/settings'),
+      getJson<BotProfile[]>('/api/bots').catch(() => []),
     ])
-      .then(([threadData, settingData]) => {
+      .then(([threadData, settingData, botData]) => {
         if (!active) return
         setThreads(threadData.items)
         setHasMoreThreads(threadData.has_more)
         setSettings(settingData)
+        setBots(botData)
       })
       .catch((loadError: unknown) => {
         if (active && !(loadError instanceof UnauthorizedError)) {
@@ -1401,6 +1405,41 @@ function App() {
       setRenameValue('')
     } catch (renameError) {
       setError(renameError instanceof Error ? renameError.message : 'Conversation could not be renamed.')
+    }
+  }
+
+  async function createBot(name: string, instructions: string) {
+    const response = await fetch('/api/bots', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify({ name, instructions }),
+    })
+    if (!response.ok) await apiError('The bot could not be created.', response)
+    const bot = (await response.json()) as BotProfile
+    setBots((current) => [...current.filter((item) => item.id !== bot.id), bot])
+    const threadResponse = await fetch(`/api/bots/${encodeURIComponent(bot.id)}/threads`, {
+      method: 'POST', credentials: 'same-origin',
+    })
+    if (!threadResponse.ok) await apiError('The bot was created, but its conversation could not be opened.', threadResponse)
+    const thread = (await threadResponse.json()) as Thread
+    setThreads((current) => [thread, ...current.filter((item) => item.thread_id !== thread.thread_id)])
+    navigateThread(thread.thread_id)
+  }
+
+  async function openBot(bot: BotProfile) {
+    try {
+      const latest = await getJson<{ thread: Thread | null }>(`/api/bots/${encodeURIComponent(bot.id)}/threads/latest`)
+      let thread = latest.thread
+      if (!thread) {
+        const response = await fetch(`/api/bots/${encodeURIComponent(bot.id)}/threads`, {
+          method: 'POST', credentials: 'same-origin',
+        })
+        if (!response.ok) await apiError('A conversation for this bot could not be created.', response)
+        thread = (await response.json()) as Thread
+      }
+      setThreads((current) => [thread!, ...current.filter((item) => item.thread_id !== thread!.thread_id)])
+      navigateThread(thread.thread_id)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Could not open this bot.')
     }
   }
 
@@ -2559,6 +2598,12 @@ function App() {
       {(isLargeScreen || sidebarOpen) && (
       <ThreadSidebar
         user={currentUser}
+        bots={bots}
+        onCreateBot={createBot}
+        onOpenBot={(bot) => {
+          void openBot(bot)
+          if (!isLargeScreen) setSidebarOpen(false)
+        }}
         sidebarExpanded={sidebarExpanded}
         navigateHome={() => {
           navigateHome()

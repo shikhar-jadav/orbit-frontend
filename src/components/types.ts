@@ -72,6 +72,15 @@ export type Thread = {
 
 export type SidebarThread = Thread & { depth: number }
 
+export type BotProfile = {
+  id: string
+  user_id: string
+  name: string
+  instructions: string
+  created_at: string
+  updated_at: string
+}
+
 export type Provider = {
   index: number
   name: string

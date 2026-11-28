@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { Icon } from './Icon'
 import { Tooltip } from './Tooltip'
-import type { AuthUser, SettingsSection, SidebarThread, Thread } from './types'
+import type { AuthUser, BotProfile, SettingsSection, SidebarThread, Thread } from './types'
 import { computeInitials } from './userUtils'
 import './ThreadSidebar.css'
 
@@ -40,6 +41,9 @@ type ThreadSidebarProps = {
   onPreloadSettings?: () => void
   onPreloadMarketplace?: () => void
   onPreloadRoutines?: () => void
+  bots: BotProfile[]
+  onCreateBot: (name: string, instructions: string) => Promise<void>
+  onOpenBot: (bot: BotProfile) => void
 }
 
 export function ThreadSidebar(props: ThreadSidebarProps) {
@@ -77,9 +81,17 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
     onPreloadSettings,
     onPreloadMarketplace,
     onPreloadRoutines,
+    bots,
+    onCreateBot,
+    onOpenBot,
   } = props
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [createBotOpen, setCreateBotOpen] = useState(false)
+  const [newBotName, setNewBotName] = useState('')
+  const [newBotInstructions, setNewBotInstructions] = useState('')
+  const [botSaving, setBotSaving] = useState(false)
+  const [botError, setBotError] = useState('')
   const initials = computeInitials(user.display_name)
 
   useEffect(() => {
@@ -99,6 +111,26 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
       document.removeEventListener('keydown', closeOnEscape)
     }
   }, [profileMenuOpen])
+  async function submitNewBot(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const name = newBotName.trim()
+    const instructions = newBotInstructions.trim()
+    if (!name || !instructions || botSaving) return
+    setBotSaving(true)
+    setBotError('')
+    try {
+      await onCreateBot(name, instructions)
+      setCreateBotOpen(false)
+      setNewBotName('')
+      setNewBotInstructions('')
+      if (!sidebarExpanded) setSidebarOpen(false)
+    } catch (error) {
+      setBotError(error instanceof Error ? error.message : 'Could not create bot.')
+    } finally {
+      setBotSaving(false)
+    }
+  }
+
   return (
     <>
       {sidebarExpanded ? (
@@ -187,6 +219,24 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
             </button>
           </div>
 
+          <div className="sidebar-section-divider bot-section-heading">
+            <span className="section-label">Bots</span>
+            <button type="button" className="bot-create-button" onClick={() => {
+              setBotError('')
+              setCreateBotOpen(true)
+            }} aria-label="Create bot" title="Create bot">
+              <Icon name="plus" size={14} />
+            </button>
+          </div>
+          <div className="bot-list">
+            {bots.map((bot) => (
+              <button type="button" className="bot-row" key={bot.id} onClick={() => onOpenBot(bot)} title={bot.name}>
+                <Icon name="sparkles" size={15} />
+                <span>{bot.name}</span>
+              </button>
+            ))}
+            {!bots.length && <p className="empty-bots">Your bots will appear here.</p>}
+          </div>
           <div className="sidebar-section-divider">
             <span className="section-label">Sessions</span>
           </div>
@@ -406,6 +456,14 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
                 <Icon name="newchat" size={17} />
               </button>
             </Tooltip>
+            <Tooltip side="right" content="Create a bot">
+              <button className="rail-btn" onClick={() => {
+                setBotError('')
+                setCreateBotOpen(true)
+              }} aria-label="Create a bot">
+                <Icon name="plus" size={17} />
+              </button>
+            </Tooltip>
             <Tooltip side="right" content="Marketplace & Skills">
               <button
                 className="rail-btn"
@@ -479,6 +537,36 @@ export function ThreadSidebar(props: ThreadSidebarProps) {
             </Tooltip>
           </div>
         </aside>
+      )}
+      {createBotOpen && (
+        <div className="bot-modal-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !botSaving) setCreateBotOpen(false)
+        }}>
+          <form className="bot-create-modal" role="dialog" aria-modal="true" aria-labelledby="bot-create-title" onSubmit={(event) => void submitNewBot(event)}>
+            <div className="bot-modal-heading">
+              <div>
+                <h2 id="bot-create-title">Create a bot</h2>
+                <p>Give your new teammate a name and tell it what to do.</p>
+              </div>
+              <button type="button" className="bot-modal-close" onClick={() => setCreateBotOpen(false)} disabled={botSaving} aria-label="Close">
+                <Icon name="close" size={17} />
+              </button>
+            </div>
+            <label className="bot-form-field">
+              <span>Name</span>
+              <input autoFocus value={newBotName} onChange={(event) => setNewBotName(event.target.value)} placeholder="e.g. Research Assistant" maxLength={60} required />
+            </label>
+            <label className="bot-form-field">
+              <span>Instructions</span>
+              <textarea value={newBotInstructions} onChange={(event) => setNewBotInstructions(event.target.value)} placeholder="Describe its role, responsibilities, working style and any rules it should follow..." maxLength={12000} rows={6} required />
+            </label>
+            {botError && <p className="bot-modal-error" role="alert">{botError}</p>}
+            <div className="bot-modal-actions">
+              <button type="button" className="bot-modal-cancel" onClick={() => setCreateBotOpen(false)} disabled={botSaving}>Cancel</button>
+              <button type="submit" className="bot-modal-submit" disabled={botSaving || !newBotName.trim() || !newBotInstructions.trim()}>{botSaving ? 'Creating…' : 'Create bot'}</button>
+            </div>
+          </form>
+        </div>
       )}
     </>
   )
